@@ -201,14 +201,15 @@ STATUS LBE_Initialize(UINT threads, STRING modconditions, SLM_vMods* varMod)
  * INPUT : threads
  * OUTPUT: status of execution
  */
-STATUS LBE_WritePEPREC(UINT threads, CHAR *dbpath, UINT peplen, UINT charge)
+STATUS LBE_WritePEPREC(UINT threads, CHAR *outpath, UINT peplen, UINT charge)
 {
     STATUS status = SLM_SUCCESS;
 
     line = "spec_id modifications peptide charge\n";
 
     /* Do not apply the append flag in here */
-    outfile.open((const CHAR *) dbpath, std::ofstream::out);
+	std::cout << outpath << std::endl;
+    outfile.open((const CHAR *) outpath, std::ofstream::out);
 
     outfile << line;
 
@@ -264,6 +265,7 @@ STATUS LBE_WritePEPREC(UINT threads, CHAR *dbpath, UINT peplen, UINT charge)
         outfile << line;
     }
 
+	outfile.close();
 
     return status;
 }

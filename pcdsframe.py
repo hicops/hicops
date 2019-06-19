@@ -205,7 +205,7 @@ if __name__ == '__main__':
 	params.close()
 	
 	# Run the digestor now
-	digesteddb = database[:-6] + '_digested.fasta'
+	digesteddb = './digested_db.fasta'
 	digestcommand = "Digestor.exe -in " + database + " -out " + digesteddb + " -out_type fasta -threads " + str(threads) + " -missed_cleavages " + str(mcleavages) + " -enzyme " + enzyme +  " -min_length " + str(min_length) + " -max_length " + str(max_length) + " -FASTA:ID number -FASTA:description remove"
 	
 	print ('\nRunning: '+ digestcommand + '\n')
@@ -244,6 +244,12 @@ if __name__ == '__main__':
 	modfile.close()
 
 	# Generate sequences
+	makeseqs = call("make -C seqgen clean", shell=True)
+	makeseqs = call("make -C seqgen", shell=True)
+	genseqs = subprocess.run(['./seqgen/seqgen.exe ', './parts', './mods.txt', str(min_length), str(max_length), str(maxz)], stdout=subprocess.PIPE, shell=True)
+	print (genseqs.stdout.decode('utf-8'))
+	
+	# Install deps for MS2PIP, set up the config.txt and run for all PEPREC files.
 
 
 	# Construct CFIR index and compute shared peak count

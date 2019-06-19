@@ -7,6 +7,12 @@
 *.o
 *.obj
 
+# Directories
+parts
+*.fasta
+mods.txt
+sampleparams.txt
+
 # Precompiled Headers
 *.gch
 *.pch
@@ -30,3 +36,4 @@
 *.exe
 *.out
 *.app
+*.map
