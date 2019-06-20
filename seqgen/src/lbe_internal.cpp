@@ -223,7 +223,7 @@ STATUS LBE_WritePEPREC(UINT threads, CHAR *outpath, UINT peplen, UINT charge)
             line += seqPep.seqs[(peplen * ii) + jj];
         }
 
-        line += " " + std::to_string(MAXz) + "\n";
+        line += " " + std::to_string(charge) + "\n";
 
         outfile << line;
     }
