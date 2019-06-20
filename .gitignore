@@ -37,3 +37,4 @@ sampleparams.txt
 *.out
 *.app
 *.map
+*.pyc
