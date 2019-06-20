@@ -231,7 +231,7 @@ STATUS LBE_WritePEPREC(UINT threads, CHAR *outpath, UINT peplen, UINT charge)
     for (UINT ii = 0; ii < modCount; ii++)
     {
         UINT modsSeen = 0;
-        line = "mod" + std::to_string(ii+1) + " ";
+        line = "var" + std::to_string(ii+1) + " ";
 
         /* Write the mod and position info */
         for (UINT mm = 0; mm < peplen; mm++)
@@ -247,7 +247,7 @@ STATUS LBE_WritePEPREC(UINT threads, CHAR *outpath, UINT peplen, UINT charge)
 
                 modsSeen++;
 
-                line += std::to_string(mm+1) + "|mod" + std::to_string(modNum);
+                line += std::to_string(mm+1) + "|mod" + std::to_string(modNum) + seqPep.seqs[(peplen * modEntries[ii].seqID) + mm];
             }
         }
 
