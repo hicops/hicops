@@ -20,10 +20,8 @@
 
 #include "dslim.h"
 
-/* Sanity check for fragment ion mass tolerance */
-#if (dF <= 0)
-#error "ERROR: The fragment mass tolerance must be > 0"
-#endif /* (dF <= 0) */
+extern gParams params;
+
 
 #ifdef FUTURE
 extern pepEntry    *pepEntries; /* SLM Peptide Index */
@@ -55,6 +53,10 @@ STATUS DSLIM_QuerySpectrum(UINT *QA, UINT len, ULONGLONG &Matches, UINT threads,
 {
     STATUS status = SLM_SUCCESS;
     UINT *QAPtr = NULL;
+    UINT maxz = params.maxz;
+    UINT scale = params.scale;
+    UINT dF = params.dF * scale;
+    DOUBLE maxmass = params.max_mass;
 
 #ifdef _OPENMP
     if (sCArr == NULL)
@@ -97,7 +99,7 @@ STATUS DSLIM_QuerySpectrum(UINT *QA, UINT len, ULONGLONG &Matches, UINT threads,
 
         for (UINT ixx = 0; ixx < idxchunk; ixx++)
         {
-            UINT speclen = (index[ixx].pepIndex.peplen - 1) * MAXz * iSERIES;
+            UINT speclen = (index[ixx].pepIndex.peplen - 1) * maxz * iSERIES;
 
             for (UINT chno = 0; chno < index[ixx].nChunks; chno++)
             {
@@ -113,7 +115,7 @@ STATUS DSLIM_QuerySpectrum(UINT *QA, UINT len, ULONGLONG &Matches, UINT threads,
                 {
                     /* Check for any zeros
                      * Zero = Trivial query */
-                    if (QAPtr[k] < dF || QAPtr[k] > ((MAX_MASS * SCALE) - 1 - dF))
+                    if (QAPtr[k] < dF || QAPtr[k] > ((maxmass * scale) - 1 - dF))
                     {
                         continue;
                     }
@@ -141,7 +143,7 @@ STATUS DSLIM_QuerySpectrum(UINT *QA, UINT len, ULONGLONG &Matches, UINT threads,
 
                 for (UINT cntr = 0; cntr < size; cntr++)
                 {
-                    if (SCPtr[cntr] >= MIN_SHRD_PKS)
+                    if (SCPtr[cntr] >= params.min_shp)
                     {
                         localMatches++;
                     }

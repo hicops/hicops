@@ -25,6 +25,8 @@ using namespace MSToolkit;
 /* Global Variables */
 MSReader     gReader;
 
+extern gParams params;
+
 /* Static global variables */
 static UINT   firstScan = 0;
 static UINT   currScan  = 0;
@@ -277,7 +279,7 @@ STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, UINT *QAPtr, UINT threads)
 
         for (UINT j = 0; j < SpectrumSize; j++)
         {
-            mzArray[j] = (UINT)(Spectrum.at(j).mz * SCALE);
+            mzArray[j] = (UINT)(Spectrum.at(j).mz * params.scale);
             dIntArr[j] = Spectrum.at(j).intensity;
         }
 

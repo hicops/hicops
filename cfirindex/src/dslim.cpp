@@ -25,6 +25,9 @@ using namespace std;
 UINT          *SpecArr = NULL; /* Spectra Array     */
 UINT reduce = 0;
 
+
+extern gParams params;
+
 #ifdef GENFEATS
 BOOL          *features;
 #endif
@@ -42,14 +45,16 @@ BOOL          *features;
  * OUTPUT:
  * @status: status of execution
  */
-STATUS DSLIM_Construct(UINT threads, SLM_vMods *modInfo, STRING dirpath, Index *index)
+STATUS DSLIM_Construct(UINT threads, Index *index)
 {
     STATUS status = SLM_SUCCESS;
+    UINT maxz = params.maxz;
     UINT peplen_1 = index->pepIndex.peplen - 1;
 
+    DOUBLE maxmass = params.max_mass;
+    UINT scale = params.scale;
+
 #ifdef VMODS
-    /* Update gModInfo */
-    status = UTILS_InitializeModInfo(modInfo);
 #else
     LBE_UNUSED_PARAM(modInfo);
 #endif /* VMODS */
@@ -57,11 +62,6 @@ STATUS DSLIM_Construct(UINT threads, SLM_vMods *modInfo, STRING dirpath, Index *
 #ifndef _OPENMP
     threads = 1;
 #endif /* _OPENMP */
-
-    if (modInfo == NULL)
-    {
-        status = ERR_INVLD_PTR;
-    }
 
     if (status == SLM_SUCCESS && SpecArr == NULL)
     {
@@ -100,7 +100,7 @@ STATUS DSLIM_Construct(UINT threads, SLM_vMods *modInfo, STRING dirpath, Index *
 
     if (status == SLM_SUCCESS)
     {
-        UINT speclen = peplen_1 * MAXz * iSERIES;
+        UINT speclen = peplen_1 * maxz * iSERIES;
 
         /* Construct DSLIM.bA */
 #ifdef _OPENMP
@@ -119,9 +119,9 @@ STATUS DSLIM_Construct(UINT threads, SLM_vMods *modInfo, STRING dirpath, Index *
 
             /* Initialize first and last bA entries */
             bAPtr[0] = 0;
-            bAPtr[(MAX_MASS * SCALE)] = (csize * speclen);
+            bAPtr[(INT)(maxmass * scale)] = (csize * speclen);
 
-            for (UINT li = 1; li <= (MAX_MASS * SCALE); li++)
+            for (UINT li = 1; li <= (UINT)(maxmass * scale); li++)
             {
                 UINT tmpcount = bAPtr[li];
                 bAPtr[li] = bAPtr[li - 1] + count;
@@ -138,7 +138,7 @@ STATUS DSLIM_Construct(UINT threads, SLM_vMods *modInfo, STRING dirpath, Index *
             }
 
             /* Check if all correctly done */
-            if (bAPtr[(MAX_MASS * SCALE)] != (csize * speclen))
+            if (bAPtr[(INT)(maxmass * scale)] != (csize * speclen))
             {
                 status = ERR_INVLD_SIZE;
             }
@@ -179,7 +179,11 @@ STATUS DSLIM_AllocateMemory(Index *index)
     UINT chsize = index->chunksize;
     UINT Chunks = index->nChunks;
 
-    UINT speclen = ((index->pepIndex.peplen-1) * iSERIES * MAXz);
+    UINT maxmass = params.max_mass;
+    UINT maxz = params.maxz;
+    UINT scale = params.scale;
+
+    UINT speclen = ((index->pepIndex.peplen-1) * iSERIES * maxz);
 
     /* Initialize DSLIM pepChunks */
     index->ionIndex = new SLMchunk[Chunks];
@@ -194,7 +198,7 @@ STATUS DSLIM_AllocateMemory(Index *index)
         for (UINT i = 0; i < Chunks && totalpeps > 0 && status == SLM_SUCCESS; i++)
         {
             /* Initialize direct hashing bA */
-            index->ionIndex[i].bA = new UINT[(MAX_MASS * SCALE) + 1];
+            index->ionIndex[i].bA = new UINT[(maxmass * scale) + 1];
 
             if (index->ionIndex[i].bA != NULL)
             {
@@ -250,7 +254,11 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
     STATUS status = SLM_SUCCESS;
     UINT peplen_1 = index->pepIndex.peplen - 1;
     UINT peplen   = index->pepIndex.peplen;
-    UINT speclen  = MAXz * iSERIES * peplen_1;
+    UINT speclen  = params.maxz * iSERIES * peplen_1;
+
+    DOUBLE minmass = params.min_mass;
+    DOUBLE maxmass = params.max_mass;
+    UINT scale = params.scale;
 
     /* Check if this chunk is the last chunk */
     BOOL lastChunk = (chunk_number == (index->nChunks - 1))? true: false;
@@ -263,7 +271,7 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
     UINT *Spectra = new UINT[threads * speclen];
 
     UINT *BAPtrs[threads] = {NULL};
-    UINT *bA = new UINT[threads * SCALE * MAX_MASS];
+    UINT *bA = new UINT[(INT)(threads * scale * maxmass)];
 
     /* Initialize SAPtrs for each thread */
     if (Spectra != NULL && bA != NULL)
@@ -271,14 +279,14 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
         for (UINT i = 0; i < threads; i++)
         {
             SAPtrs[i] = Spectra + (i * speclen);
-            BAPtrs[i] = bA + (i * SCALE * MAX_MASS);
+            BAPtrs[i] = bA + (INT)(i * scale * maxmass);
         }
 
         /* Clear the bAPtrs and SAPtrs */
 #pragma omp parallel for num_threads(threads) schedule (static)
         for (UINT i = 0; i < threads; i++)
         {
-            std::memset(BAPtrs[i], 0x0, (SCALE * MAX_MASS * sizeof(UINT)));
+            std::memset(BAPtrs[i], 0x0, (scale * maxmass * sizeof(UINT)));
             std::memset(SAPtrs[i], 0x0, (speclen * sizeof(UINT)));
         }
     }
@@ -354,7 +362,7 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
             }
 
             /* If a legal peptide */
-            if (pepMass >= MIN_MASS && pepMass <= MAX_MASS)
+            if (pepMass >= minmass && pepMass <= maxmass)
             {
                 /* Sort by ion Series and Mass */
 //                UTILS_Sort<UINT>(Spec, half_len, false);
@@ -364,9 +372,9 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
                 for (UINT ion = 0; ion < speclen; ion++)
                 {
                     /* Check if legal b-ion */
-                    if (Spec[ion] >= (MAX_MASS * SCALE))
+                    if (Spec[ion] >= (maxmass * scale))
                     {
-                        Spec[ion] = (MAX_MASS * SCALE) - 1;
+                        Spec[ion] = (maxmass * scale) - 1;
                     }
 
                     SpecArr[nfilled + ion] = Spec[ion]; // Fill in the b-ion
@@ -388,7 +396,7 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
 
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads) schedule (static)
-        for (UINT i = 0; i < (MAX_MASS * SCALE); i++)
+        for (UINT i = 0; i < (UINT)(maxmass * scale); i++)
         {
             /* Initialize to zero */
             index->ionIndex[chunk_number].bA[i] = 0;
@@ -431,7 +439,7 @@ STATUS DSLIM_SLMTransform(UINT threads, Index *index, UINT chunk_number)
                  index->lastchunksize                                  :
                  index->chunksize;
 
-    UINT speclen = (index->pepIndex.peplen - 1) * MAXz * iSERIES;
+    UINT speclen = (index->pepIndex.peplen - 1) * params.maxz * iSERIES;
     UINT *iAPtr = index->ionIndex[chunk_number].iA;
     UINT iAsize = size * speclen;
 
@@ -509,9 +517,9 @@ STATUS DSLIM_Optimize(UINT threads, Index *index, UINT chunk_number)
 
     /* Stablize the entries in iAPtr */
 #ifdef _OPENMP
-#pragma omp parallel for num_threads(threads) schedule(dynamic, 50 * SCALE)
+#pragma omp parallel for num_threads(threads) schedule(dynamic, 50 * params.scale)
 #endif /* _OPENMP */
-    for (UINT kk = 0; kk < (MAX_MASS * SCALE); kk++)
+    for (UINT kk = 0; kk < (UINT)(params.max_mass * params.scale); kk++)
     {
         UINT offset = bAPtr[kk];
         UINT size = bAPtr[kk + 1] - offset;

@@ -43,7 +43,7 @@
  * OUTPUT:
  * @status: status of execution
  */
-STATUS DSLIM_Construct(UINT threads, SLM_vMods *modInfo, STRING dirpath, Index *index);
+STATUS DSLIM_Construct(UINT threads, Index *index);
 
 /*
  * FUNCTION: DSLIM_AllocateMemory

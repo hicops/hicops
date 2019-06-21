@@ -1,5 +1,5 @@
 /*
- * This file is part of SLM-Transform
+ *  This file is part of SLM-Transform
  *  Copyright (C) 2019  Muhammad Haseeb, Fahad Saeed
  *  Florida International University, Miami, FL
  *
@@ -14,7 +14,7 @@
  *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *  along with this program. If not, see <https://www.gnu.org/licenses/>.
  *
  */
 
@@ -26,12 +26,16 @@
 
 using namespace std;
 
+/* Global Variables */
 Index *slm_index = NULL;
-STRING dbpath;
-STRING querypath;
-STRING params;
+DIR*    dir;
+dirent* pdir;
+vector<STRING> queryfiles;
 STRING dbfile;
-STRING outfile;
+
+gParams params;
+
+static STATUS ParseParams(CHAR* paramfile);
 
 /* FUNCTION: SLM_Main (main)
  *
@@ -51,121 +55,60 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     time_t start_time = chrono::system_clock::to_time_t(start_tim);
     ULONGLONG Matches = 0;
 
-    SLM_vMods vModInfo;
-
     /* Benchmarking */
     auto start = chrono::system_clock::now();
     auto end   = chrono::system_clock::now();
     chrono::duration<double> elapsed_seconds = end - start;
     chrono::duration<double> qtime = end - start;
-    UINT maxz = MAXz;
-    STRING modconditions;
-    STRING line;
+
+    cout << endl << "Start Time: " << ctime(&start_time) << endl;
+
+
+    STRING patt[3] = {".ms2", ".mzML", "mzXML"};
+    CHAR extension[] = ".peps";
 
     /* Print Header */
     LBE_PrintHeader();
 
-    cout << endl << "Start Time: " << ctime(&start_time) << endl;
-
-    if (argc < 5)
+    if (argc < 2)
     {
-        cout << "ERROR: Missing Params\n"
-        cout << "Format: ./pseq.exe /<dbpath>/ /<mods.txt> <minlen> <maxlen> <opt:charge> \n";
+        cout << "ERROR: Missing arguments\n";
+        cout << "Format: ./cfir.exe <uparams.txt>\n";
         status = ERR_INVLD_PARAM;
         exit (status);
     }
 
-    /* Database and Dataset files */
-    dbpath = argv[1];
-    STRING extension = ".peps";
 
-    STRING params = argv[2];
-    UINT minlen = atoi(argv[3]);
-    UINT maxlen = atoi(argv[4]);
-
-    /* Max Charge info provided */
-    if (argc == 6)
-    {
-        maxz = atoi(argv[5]);
-    }
-
-    /* Open the params file and parse for mods */
-    ifstream pfile(params);
-
-    /* Check if mods file is open */
-    if (pfile.is_open())
-    {
-        /* Get number of mods */
-        getline(pfile, line);
-        vModInfo.num_vars = std::atoi((const char *) line.c_str());
-
-        /* If no mods then init to 0 M 0 */
-        if (vModInfo.num_vars == 0)
-        {
-            modconditions = "0 M 0";
-        }
-        else
-        {
-            /* Get max vmods per peptide sequence */
-            getline(pfile, line);
-            vModInfo.vmods_per_pep = std::atoi((const char *) line.c_str());
-            modconditions = std::to_string(vModInfo.vmods_per_pep);
-
-            /* Fill in information for each vmod */
-            for (USHORT md = 0; md < vModInfo.num_vars; md++)
-            {
-                /* Get and set the modAAs */
-                getline(pfile, line);
-                modconditions += " " + line;
-
-                std::strncpy((char *) vModInfo.vmods[md].residues, (const char *) line.c_str(),
-                        std::min(4, (const int) line.length()));
-
-                /* Get and set the modmass */
-                getline(pfile, line);
-                vModInfo.vmods[md].modMass = (UINT) (std::atof((const char *) line.c_str()) * SCALE);
-
-                /* Get and set the modAAs_per_peptide */
-                getline(pfile, line);
-                modconditions += " " + line;
-
-                vModInfo.vmods[md].aa_per_peptide = std::atoi((const char *) line.c_str());
-            }
-        }
-
-        pfile.close();
-    }
-    else
-    {
-//        status = ERR_FILE_NOT_FOUND;
-        cout << "WARNING: mods file not found, generating seqs without mods";
-        modconditions = "0 M 0";
-    }
+    /* Parse the parameters */
+    status = ParseParams(argv[1]);
 
 #ifdef _PROFILE
     ProfilerStart("C:/work/lbe.prof");
 #endif /* _PROFILE */
 
-    /* Check for a dangling / character */
-    if (querypath.at(querypath.length()- 1) == '/')
-    {
-        querypath = querypath.substr(0, querypath.size() - 1);
-    }
 
-    /* Open all the query files */
-    dir = opendir(querypath.c_str());
+    /* Add all the query files to the vector */
+    dir = opendir(params.datapath.c_str());
 
     /* Check if opened */
     if (dir != NULL)
     {
         while ((pdir = readdir(dir)) != NULL)
         {
-            string cfile(pdir->d_name);
+            STRING cfile(pdir->d_name);
 
-            /* Only add if there is a matching file */
-            if (cfile.find(patt) != std::string::npos)
+            /* Add the matching files */
+            if (cfile.find(patt[0]) != std::string::npos)
             {
-                queryfiles.push_back(querypath + '/' + pdir->d_name);
+                queryfiles.push_back(params.datapath + '/' + pdir->d_name);
+            }
+            if (cfile.find(patt[1]) != std::string::npos)
+            {
+                queryfiles.push_back(params.datapath + '/' + pdir->d_name);
+            }
+            if (cfile.find(patt[2]) != std::string::npos)
+            {
+                queryfiles.push_back(params.datapath + '/' + pdir->d_name);
             }
         }
     }
@@ -178,9 +121,14 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     threads = 1;
 #endif /* _OPENMP */
 
+    /* Create local variables to avoid trouble */
+    UINT minlen = params.min_len;
+    UINT maxlen = params.max_len;
+    UINT threads = params.threads;
+
     for (UINT peplen = minlen; peplen <= maxlen; peplen++)
     {
-        dbfile = dbpath + "/" + std::to_string(peplen) + extension;
+        dbfile = params.dbpath + "/" + std::to_string(peplen) + extension;
 
         /* Set the peptide length in the pepIndex */
         slm_index[peplen-minlen].pepIndex.peplen = peplen;
@@ -188,7 +136,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         /* Count the number of ">" entries in FASTA */
         if (status == SLM_SUCCESS)
         {
-            status = LBE_CountPeps(threads, (CHAR *) dbfile.c_str(), modconditions, (slm_index + peplen-minlen));
+            status = LBE_CountPeps(threads, (CHAR *) dbfile.c_str(), (slm_index + peplen-minlen));
         }
 
         /* Initialize internal structures */
@@ -197,7 +145,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
             start = chrono::system_clock::now();
 
             /* Initialize the LBE */
-            status = LBE_Initialize(threads, modconditions, (slm_index + peplen-minlen));
+            status = LBE_Initialize(threads, (slm_index + peplen-minlen));
 
             end = chrono::system_clock::now();
 
@@ -223,7 +171,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
             start = chrono::system_clock::now();
 
             /* Construct DSLIM by SLM Transformation */
-            status = DSLIM_Construct(threads, &vModInfo, dbpath, (slm_index + peplen - minlen));
+            status = DSLIM_Construct(threads, (slm_index + peplen - minlen));
 
             end = chrono::system_clock::now();
 
@@ -322,4 +270,136 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 
     return status;
 }
+
+
+static STATUS ParseParams(CHAR* paramfile)
+{
+    STATUS status = SLM_SUCCESS;
+
+    STRING line;
+
+    ifstream pfile(paramfile);
+
+    /* Check if mods file is open */
+    if (pfile.is_open())
+    {
+        /* Get path to DBparts */
+        getline(pfile, line);
+
+        /* Check for a dangling / character */
+        if (line.at(line.length()- 1) == '/')
+        {
+            line = line.substr(0, line.size() - 1);
+        }
+
+        params.dbpath = line;
+
+        /* Get path to MS2 data */
+        getline(pfile, line);
+
+        /* Check for a dangling / character */
+        if (line.at(line.length()- 1) == '/')
+        {
+            line = line.substr(0, line.size() - 1);
+        }
+
+        params.datapath = line;
+
+        /* Get the max threads to use */
+        getline(pfile, line);
+        params.threads = std::atoi(line.c_str());
+
+        /* Get the min peptide length */
+        getline(pfile, line);
+        params.min_len = std::atoi(line.c_str());
+
+        /* Get the max peptide length */
+        getline(pfile, line);
+        params.max_len = std::atoi(line.c_str());
+
+        /* Get the max fragment charge */
+        getline(pfile, line);
+        params.maxz = std::atoi(line.c_str());
+
+        /* Get the fragment mass tolerance */
+        getline(pfile, line);
+        params.dF = std::atof(line.c_str());
+
+        /* Get the precursor mass tolerance */
+        getline(pfile, line);
+        params.dM = std::atof(line.c_str());
+
+        /* Get the m/z axis resolution */
+        getline(pfile, line);
+        params.res = std::atof(line.c_str());
+
+        /* Get the scaling factor */
+        getline(pfile, line);
+        params.scale = std::atoi(line.c_str());
+
+        /* Get the min mass */
+        getline(pfile, line);
+        params.min_mass = std::atoi(line.c_str());
+
+        /* Get the max mass */
+        getline(pfile, line);
+        params.max_mass = std::atoi(line.c_str());
+
+        /* Get the top matches to report */
+        getline(pfile, line);
+        params.topmatches = std::atoi(line.c_str());
+
+        /* Get the shp threshold */
+        getline(pfile, line);
+        params.min_shp = std::atoi(line.c_str());
+
+        /* Get number of mods */
+        getline(pfile, line);
+        params.vModInfo.num_vars = std::atoi((const CHAR *) line.c_str());
+
+        /* If no mods then init to 0 M 0 */
+        if (params.vModInfo.num_vars == 0)
+        {
+            params.modconditions = "0 M 0";
+        }
+        else
+        {
+            /* Get max vmods per peptide sequence */
+            getline(pfile, line);
+            params.vModInfo.vmods_per_pep = std::atoi((const CHAR *) line.c_str());
+            params.modconditions = std::to_string(params.vModInfo.vmods_per_pep);
+
+            /* Fill in information for each vmod */
+            for (USHORT md = 0; md < params.vModInfo.num_vars; md++)
+            {
+                /* Get and set the modAAs */
+                getline(pfile, line);
+                params.modconditions += " " + line;
+
+                std::strncpy((char *) params.vModInfo.vmods[md].residues, (const char *) line.c_str(),
+                        std::min(4, (const int) line.length()));
+
+                /* get and set the modmass */
+                getline(pfile, line);
+                params.vModInfo.vmods[md].modMass = (UINT) (std::atof((const char *) line.c_str()) * params.scale);
+
+                /* Get and set the modAAs_per_peptide */
+                getline(pfile, line);
+                params.modconditions += " " + line;
+
+                params.vModInfo.vmods[md].aa_per_peptide = std::atoi((const char *) line.c_str());
+            }
+        }
+
+        pfile.close();
+    }
+    else
+    {
+        status = ERR_FILE_NOT_FOUND;
+    }
+
+    return status;
+}
+
+
 

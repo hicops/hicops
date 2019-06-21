@@ -46,7 +46,7 @@
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_Initialize(UINT threads, STRING modconditions, Index *index);
+STATUS LBE_Initialize(UINT threads, Index *index);
 
 /*
  * FUNCTION: LBE_Deinitialize
@@ -103,7 +103,7 @@ STATUS LBE_Distribute(UINT threads, DistPolicy policy, Index *index);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_CountPeps(UINT threads, CHAR *filename, STRING modconditions);
+STATUS LBE_CountPeps(UINT threads, CHAR *filename, Index *index);
 
 /*
  * FUNCTION: LBE_PrintHeader

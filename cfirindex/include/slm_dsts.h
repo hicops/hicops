@@ -24,9 +24,10 @@
 #include "common.h"
 
 /* Types of modifications allowed by SLM_Mods     */
-#define MAX_MOD_TYPES                        7
+#define MAX_MOD_TYPES                        15
 
 /************************* Common DSTs ************************/
+
 /* Add distribution policies */
 typedef enum _DistPolicy
 {
@@ -275,6 +276,31 @@ typedef struct _Index
 #endif /* VMODS */
     SLMchunk        *ionIndex;
 } Index;
+
+/* Structure for global Parameters */
+typedef struct _globalParams
+{
+    UINT threads = 1;
+    UINT min_len = 4;
+    UINT max_len = 40;
+    UINT maxz     = 3;
+    UINT topmatches = 10;
+    UINT scale      = 100;
+    UINT min_shp    = 4;
+
+    DOUBLE min_mass = 500.0;
+    DOUBLE max_mass = 5000.0;
+    DOUBLE dF       = 0.05;
+    DOUBLE res      = 0.01;
+    DOUBLE dM       = 500.0;
+
+    STRING dbpath;
+    STRING datapath;
+    STRING modconditions;
+
+    SLM_vMods vModInfo;
+
+}gParams;
 
 /************************* SLM Query DSTs ************************/
 typedef struct _Query

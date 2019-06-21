@@ -38,6 +38,8 @@
 SLM_vMods      gModInfo;
 #endif /* VMODS */
 
+extern gParams params;
+
 /* Amino Acids Masses */
 FLOAT AAMass[26] = {
                     71.03712,   // A
@@ -221,38 +223,41 @@ FLOAT UTILS_GenerateSpectrum(CHAR *seq, UINT len, UINT *Spectrum)
     /* Calculate Peptide sequences Mass */
     FLOAT mass = UTILS_CalculatePepMass(seq, len);
 
+    UINT maxz = params.maxz;
+    UINT scale = params.scale;
+
     /* If there is a non-AA char, the mass will be -ve */
     /* FIXME: No stupid characters should be allowed in
      *        peptide sequence */
     if (mass > 0)
     {
         /* Set the array to zeros */
-        std::memset(Spectrum, 0x0, (sizeof(UINT) * (iSERIES * MAXz * (len-1))));
+        std::memset(Spectrum, 0x0, (sizeof(UINT) * (iSERIES * maxz * (len-1))));
 
         /* Generate Spectrum */
-        for (UINT z = 0; z < MAXz; z++)
+        for (UINT z = 0; z < maxz; z++)
         {
             /* Indices for b and y series start */
             UINT bstart = z * (len - 1);
-            UINT ystart = z * (len - 1) + MAXz * (len - 1);
+            UINT ystart = z * (len - 1) + maxz * (len - 1);
 
             /* Mass of fragment = [M + (z-1)H]/z */
 
             /* First b-ion */
-            Spectrum[bstart] = (UINT)((GETAA(seq[0], z+1) * SCALE)/(z+1));
+            Spectrum[bstart] = (UINT)((GETAA(seq[0], z+1) * scale)/(z+1));
             /* First y-ion */
-            Spectrum[ystart] = (UINT)(((GETAA(seq[len-1], z+1) + H2O) * SCALE)/(z+1));
+            Spectrum[ystart] = (UINT)(((GETAA(seq[len-1], z+1) + H2O) * scale)/(z+1));
 
             /* Loop until length - 1 only */
             for (UINT l = 1; l < len - 1; l++)
             {
                 /* Extract b-ions */
                 Spectrum[bstart + l] = Spectrum[bstart + (l-1)] +
-                                       (UINT)((GETAA(seq[l], 0) * SCALE)/(z+1));
+                                       (UINT)((GETAA(seq[l], 0) * scale)/(z+1));
 
                 /* Extract y-ions */
                 Spectrum[ystart + l] = Spectrum[ystart + (l-1)] +
-                                       (UINT)(((GETAA(seq[len-1-l], 0)) * SCALE)/(z+1));
+                                       (UINT)(((GETAA(seq[len-1-l], 0)) * scale)/(z+1));
             }
         }
     }
@@ -287,34 +292,6 @@ FLOAT UTILS_CalculatePepMass(AA *seq, UINT len)
 }
 
 #ifdef VMODS
-
-/*
- * FUNCTION: UTILS_InitializeModInfo
- *
- * DESCRIPTION: Initialize the gModInfo structure
- *
- * INPUT:
- * @modconditions: The initialization information
- *
- * OUTPUT:
- * @status: Status of execution
- */
-STATUS UTILS_InitializeModInfo(STRING modconditions)
-{
-    STATUS status = SLM_SUCCESS;
-
-    gModInfo.num_vars = 1; /* <= 7 */
-
-    gModInfo.vmods_per_pep = 5; /* Limit */
-
-    gModInfo.vmods[0].residues[0] = 'S'; /* Residues */
-    gModInfo.vmods[0].residues[1] = 'T'; /* Residues */
-    gModInfo.vmods[0].residues[2] = 'Y'; /* Residues */
-    gModInfo.vmods[0].aa_per_peptide = 3; /* Allowed residues per pep */
-    gModInfo.vmods[0].modMass = 79.97 * SCALE; /* Scaled mass */
-
-    return status;
-}
 
 /*
  * FUNCTION: UTILS_InitializeModInfo
@@ -365,7 +342,7 @@ FLOAT UTILS_CalculateModMass(AA *seq, UINT len, UINT vModInfo)
 
     while (modNum != 0)
     {
-        mass += (gModInfo.vmods[modNum - 1].modMass/SCALE);
+        mass += (gModInfo.vmods[modNum - 1].modMass/params.scale);
         start = (start << 4);
         modNum = ((vModInfo & start) >> start);
     }
@@ -393,6 +370,13 @@ FLOAT UTILS_GenerateModSpectrum(CHAR *seq, UINT len, UINT *Spectrum, modAA modIn
     /* Calculate Mod Peptide Mass */
     STATUS status = SLM_SUCCESS;
     FLOAT mass = 0;
+
+    DOUBLE minmass = params.min_mass;
+    DOUBLE maxmass = params.max_mass;
+    UINT maxz = params.maxz;
+    UINT scale = params.scale;
+
+
     CHAR modPos[MAX_SEQ_LEN] = {};
     INT modNums[MAX_MOD_TYPES] = {};
     INT modSeen = 0;
@@ -411,7 +395,7 @@ FLOAT UTILS_GenerateModSpectrum(CHAR *seq, UINT len, UINT *Spectrum, modAA modIn
     }
 
     /* Check if a valid precursor mass */
-    if (mass > MIN_MASS && mass < MAX_MASS)
+    if (mass > minmass && mass < maxmass)
     {
         for (UINT i = 0; i < MAX_MOD_TYPES; i++)
         {
@@ -433,34 +417,34 @@ FLOAT UTILS_GenerateModSpectrum(CHAR *seq, UINT len, UINT *Spectrum, modAA modIn
             //std::memset(Spectrum, 0x0, (sizeof(UINT) * (iSERIES * MAXz * (len-1))));
 
             /* Generate Normal Spectrum */
-            for (UINT z = 0; z < MAXz; z++)
+            for (UINT z = 0; z < maxz; z++)
             {
                 /* Indices for b and y series start */
                 UINT bstart = z * (len - 1);
-                UINT ystart = z * (len -1)  + MAXz * (len - 1);
+                UINT ystart = z * (len -1)  + maxz * (len - 1);
 
                 /* Mass of fragment = [M + (z-1)H]/z */
 
                 /* First b-ion */
-                Spectrum[bstart] = (UINT)((GETAA(seq[0], z+1) * SCALE));
+                Spectrum[bstart] = (UINT)((GETAA(seq[0], z+1) * scale));
                 /* First y-ion */
-                Spectrum[ystart] = (UINT)(((GETAA(seq[len-1], z+1) + H2O) * SCALE));
+                Spectrum[ystart] = (UINT)(((GETAA(seq[len-1], z+1) + H2O) * scale));
 
                 /* Loop until length - 1 only */
                 for (UINT l = 1; l < len - 1; l++)
                 {
                     /* Extract b-ions */
                     Spectrum[bstart + l] = Spectrum[bstart + (l - 1)] +
-                                           (UINT)((GETAA(seq[l], 0) * SCALE));
+                                           (UINT)((GETAA(seq[l], 0) * scale));
 
                     /* Extract y-ions */
                     Spectrum[ystart + l] = Spectrum[ystart + (l - 1)] +
-                                           (UINT)(((GETAA(seq[len-1-l], 0)) * SCALE));
+                                           (UINT)(((GETAA(seq[len-1-l], 0)) * scale));
                 }
             }
 
             /* Adjust b-ions with additional masses */
-            for (UINT z = 0; z < MAXz; z++)
+            for (UINT z = 0; z < maxz; z++)
             {
                 /* Indices for b series start */
                 UINT bstart = z * (len-1);
@@ -482,10 +466,10 @@ FLOAT UTILS_GenerateModSpectrum(CHAR *seq, UINT len, UINT *Spectrum, modAA modIn
             }
 
             /*  Adjust y-ions with additional masses */
-            for (UINT z = 0; z < MAXz; z++)
+            for (UINT z = 0; z < maxz; z++)
             {
                 /* Indices for y series start */
-                UINT ystart = z * (len -1) + MAXz * (len -1);
+                UINT ystart = z * (len -1) + maxz * (len -1);
                 UINT counter = 0;
 
                 /* Loop until length - 1 only */

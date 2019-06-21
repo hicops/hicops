@@ -26,6 +26,8 @@ UINT cumusize = 0;
 
 ifstream file;
 
+extern gParams params;
+
 /* Static function Prototypes */
 static STATUS LBE_AllocateMem(Index *index);
 
@@ -89,11 +91,12 @@ static STATUS LBE_AllocateMem(Index *index)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_Initialize(UINT threads, STRING modconditions, Index *index)
+STATUS LBE_Initialize(UINT threads, Index *index)
 {
     STATUS status = SLM_SUCCESS;
     UINT iCount = 1;
     STRING seq;
+    STRING modconditions = params.modconditions;
 
     /* Check if ">" entries are > 0 */
     if (index->pepCount > 0)
@@ -156,9 +159,6 @@ STATUS LBE_Initialize(UINT threads, STRING modconditions, Index *index)
 
 #ifdef VMODS
 
-    /* Initialize gModInfo */
-    //status = UTILS_InitializeModInfo(modconditions);
-
     if (index->modCount > 0)
     {
         /* Fill in the mods entry */
@@ -214,7 +214,7 @@ STATUS LBE_Distribute(UINT threads, DistPolicy policy, Index *index)
 {
     STATUS status = 0;
     UINT N = index->totalCount;
-    UINT maxchunksize = (MAX_IONS / (index->pepIndex.peplen * MAXz * iSERIES));
+    UINT maxchunksize = (MAX_IONS / (index->pepIndex.peplen * params.maxz * iSERIES));
     UINT nchunks;
     UINT chunksize;
     UINT lastchunksize;
@@ -294,11 +294,14 @@ STATUS LBE_Distribute(UINT threads, DistPolicy policy, Index *index)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_CountPeps(UINT threads, STRING filename, STRING modconditions, Index *index)
+STATUS LBE_CountPeps(UINT threads, CHAR *filename, Index *index)
 {
     STATUS status = SLM_SUCCESS;
     STRING line;
     FLOAT pepmass = 0.0;
+    STRING modconditions = params.modconditions;
+    UINT maxmass= params.max_mass;
+    UINT minmass= params.max_mass;
 
     /* Initialize Index parameters */
     index->pepIndex.AAs = 0;
@@ -331,7 +334,7 @@ STATUS LBE_CountPeps(UINT threads, STRING filename, STRING modconditions, Index 
                 pepmass = UTILS_CalculatePepMass((AA *)line.c_str(), line.length());
 
                 /* Check if the peptide mass is legal */
-                if (pepmass >= MIN_MASS && pepmass <= MAX_MASS)
+                if (pepmass >= minmass && pepmass <= maxmass)
                 {
                     index->pepCount++;
                     index->pepIndex.AAs += line.length();
@@ -351,6 +354,8 @@ STATUS LBE_CountPeps(UINT threads, STRING filename, STRING modconditions, Index 
      * modification information */
     if (status == SLM_SUCCESS)
     {
+        status = UTILS_InitializeModInfo(&params.vModInfo);
+
         index->modCount = MODS_ModCounter(threads, modconditions);
     }
 
