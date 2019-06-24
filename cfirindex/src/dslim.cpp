@@ -145,15 +145,6 @@ STATUS DSLIM_Construct(UINT threads, Index *index)
         }
     }
 
-    /* Optimize DSLIM chunks */
-    if (status == SLM_SUCCESS)
-    {
-        for (UINT chno = 0; chno < index->nChunks; chno++)
-        {
-            status = DSLIM_Optimize(threads, index, chno);
-        }
-    }
-
     /* Remove the temporary SpecArray (SA) */
 //    delete[] SpecArr;
 //    SpecArr = NULL;

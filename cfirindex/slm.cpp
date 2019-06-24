@@ -53,7 +53,6 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     /* Print start time */
     auto start_tim = chrono::system_clock::now();
     time_t start_time = chrono::system_clock::to_time_t(start_tim);
-    ULONGLONG Matches = 0;
 
     /* Benchmarking */
     auto start = chrono::system_clock::now();
@@ -229,7 +228,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
                     start = chrono::system_clock::now();
 
                     /* Query the chunk */
-                    status = DSLIM_QuerySpectrum(QA, ms2specs, Matches, threads, slm_index, (maxlen-minlen+1));
+                    status = DSLIM_QuerySpectrum(QA, ms2specs, slm_index, (maxlen-minlen+1));
                     end = chrono::system_clock::now();
 
                     /* Compute Duration */

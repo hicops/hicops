@@ -56,6 +56,7 @@ STATUS DSLIM_QuerySpectrum(UINT *QA, UINT len, Index *index, UINT idxchunk)
     UINT maxz = params.maxz;
     UINT dF = params.dF;
     UINT threads = params.threads;
+    UINT scale = params.scale;
 
     DOUBLE maxmass = params.max_mass;
 
