@@ -49,13 +49,14 @@ UCHAR *sCArr = NULL;
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_QuerySpectrum(UINT *QA, UINT len, ULONGLONG &Matches, UINT threads, Index *index, UINT idxchunk)
+STATUS DSLIM_QuerySpectrum(UINT *QA, UINT len, Index *index, UINT idxchunk)
 {
     STATUS status = SLM_SUCCESS;
     UINT *QAPtr = NULL;
     UINT maxz = params.maxz;
-    UINT scale = params.scale;
-    UINT dF = params.dF * scale;
+    UINT dF = params.dF;
+    UINT threads = params.threads;
+
     DOUBLE maxmass = params.max_mass;
 
 #ifdef _OPENMP
@@ -80,95 +81,86 @@ STATUS DSLIM_QuerySpectrum(UINT *QA, UINT len, ULONGLONG &Matches, UINT threads,
 
 #ifdef _OPENMP
 #pragma omp parallel  num_threads(threads)
-{
-    UINT threadMatches = 0;
+    {
+        UINT threadMatches = 0;
 
 #pragma omp for schedule(dynamic, 10) private(threadMatches)
 #endif
-    /* Process all the queries in the chunk */
-    for (UINT queries = 0; queries < len; queries++)
-    {
-        /* Pointer to each query spectrum */
-        QAPtr = QA + (queries * QALEN);
+        /* Process all the queries in the chunk */
+        for (UINT queries = 0; queries < len; queries++)
+        {
+            /* Pointer to each query spectrum */
+            QAPtr = QA + (queries * QALEN);
 
 #ifdef _OPENMP
-        UCHAR *SCPtr = sCArr + (omp_get_thread_num() * SCSIZE);
+            UCHAR *SCPtr = sCArr + (omp_get_thread_num() * SCSIZE);
 #else
-        UCHAR *SCPtr  = sCArr;
+            UCHAR *SCPtr = sCArr;
 #endif
 
-        for (UINT ixx = 0; ixx < idxchunk; ixx++)
-        {
-            UINT speclen = (index[ixx].pepIndex.peplen - 1) * maxz * iSERIES;
-
-            for (UINT chno = 0; chno < index[ixx].nChunks; chno++)
+            for (UINT ixx = 0; ixx < idxchunk; ixx++)
             {
-                /* Query each chunk in parallel */
-                UINT *bAPtr = index[ixx].ionIndex[chno].bA;
-                UINT *iAPtr = index[ixx].ionIndex[chno].iA;
+                UINT speclen = (index[ixx].pepIndex.peplen - 1) * maxz * iSERIES;
 
-                /* Check if this chunk is the last chunk */
-                UINT size = index[ixx].chunksize;
-
-                /* Query all fragments in each spectrum */
-                for (UINT k = 0; k < QALEN; k++)
+                for (UINT chno = 0; chno < index[ixx].nChunks; chno++)
                 {
-                    /* Check for any zeros
-                     * Zero = Trivial query */
-                    if (QAPtr[k] < dF || QAPtr[k] > ((maxmass * scale) - 1 - dF))
+                    /* Query each chunk in parallel */
+                    UINT *bAPtr = index[ixx].ionIndex[chno].bA;
+                    UINT *iAPtr = index[ixx].ionIndex[chno].iA;
+
+                    /* Check if this chunk is the last chunk */
+                    UINT size = index[ixx].chunksize;
+
+                    /* Query all fragments in each spectrum */
+                    for (UINT k = 0; k < QALEN; k++)
                     {
-                        continue;
+                        /* Check for any zeros
+                         * Zero = Trivial query */
+                        if (QAPtr[k] < dF || QAPtr[k] > ((maxmass * scale) - 1 - dF))
+                        {
+                            continue;
+                        }
+
+                        /* Locate iAPtr start and end */
+                        UINT start = bAPtr[QAPtr[k] - dF];
+                        UINT end = bAPtr[QAPtr[k] + 1 + dF];
+
+                        /* Loop through located iAions */
+                        for (UINT ion = start; ion < end; ion++)
+                        {
+                            /* Calculate parent peptide ID */
+                            UINT ppid = (iAPtr[ion] / speclen);
+
+                            /* Update corresponding SC entry */
+                            SCPtr[ppid] += 1;
+
+                        }
                     }
 
-                    /* Locate iAPtr start and end */
-                    UINT start = bAPtr[QAPtr[k] - dF];
-                    UINT end = bAPtr[QAPtr[k] + 1 + dF];
+                    /* Count the number of candidate peptides
+                     * from each chunk
+                     */
+                    UINT localMatches = 0;
 
-                    /* Loop through located iAions */
-                    for (UINT ion = start; ion < end; ion++)
+                    for (UINT cntr = 0; cntr < size; cntr++)
                     {
-                        /* Calculate parent peptide ID */
-                        UINT ppid = (iAPtr[ion] / speclen);
-
-                        /* Update corresponding SC entry */
-                        SCPtr[ppid] += 1;
-
+                        if (SCPtr[cntr] >= params.min_shp)
+                        {
+                            localMatches++;
+                        }
                     }
+
+                    /* Avoid too many updates to the Matches */
+                    threadMatches += localMatches;
+
+                    /* bitmask not active,
+                     * reset the SC instead */
+                    std::memset(SCPtr, 0x0, size);
                 }
-
-                /* Count the number of candidate peptides
-                 * from each chunk
-                 */
-                UINT localMatches = 0;
-
-                for (UINT cntr = 0; cntr < size; cntr++)
-                {
-                    if (SCPtr[cntr] >= params.min_shp)
-                    {
-                        localMatches++;
-                    }
-                }
-
-                /* Avoid too many updates to the Matches */
-                threadMatches += localMatches;
-
-                /* bitmask not active,
-                 * reset the SC instead */
-                std::memset(SCPtr, 0x0, size);
             }
         }
+
     }
-
-#ifdef _OPENMP
-#pragma omp atomic
-    Matches += threadMatches;
-#else
-    Matches += threadMatches;
-#endif
-
-        
-
-}
 
     return status;
 }

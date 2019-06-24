@@ -288,11 +288,12 @@ typedef struct _globalParams
     UINT scale      = 100;
     UINT min_shp    = 4;
 
-    DOUBLE min_mass = 500.0;
-    DOUBLE max_mass = 5000.0;
-    DOUBLE dF       = 0.05;
-    DOUBLE res      = 0.01;
+    UINT min_mass = 500.0;
+    UINT max_mass = 5000.0;
+    UINT dF       = (UINT)(0.02 * scale);
+
     DOUBLE dM       = 500.0;
+    DOUBLE res      = 0.01;
 
     STRING dbpath;
     STRING datapath;

@@ -301,7 +301,7 @@ STATUS LBE_CountPeps(UINT threads, CHAR *filename, Index *index)
     FLOAT pepmass = 0.0;
     STRING modconditions = params.modconditions;
     UINT maxmass= params.max_mass;
-    UINT minmass= params.max_mass;
+    UINT minmass= params.min_mass;
 
     /* Initialize Index parameters */
     index->pepIndex.AAs = 0;
