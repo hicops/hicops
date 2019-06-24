@@ -61,14 +61,13 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     chrono::duration<double> elapsed_seconds = end - start;
     chrono::duration<double> qtime = end - start;
 
-    cout << endl << "Start Time: " << ctime(&start_time) << endl;
-
-
     STRING patt[3] = {".ms2", ".mzML", "mzXML"};
     CHAR extension[] = ".peps";
 
     /* Print Header */
     LBE_PrintHeader();
+
+    cout << endl << "Start Time: " << ctime(&start_time) << endl;
 
     if (argc < 2)
     {
@@ -126,6 +125,13 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     UINT maxlen = params.max_len;
     UINT threads = params.threads;
 
+    slm_index = new Index[maxlen - minlen + 1];
+
+    if (slm_index == NULL)
+    {
+        status = ERR_INVLD_MEMORY;
+    }
+
     for (UINT peplen = minlen; peplen <= maxlen; peplen++)
     {
         dbfile = params.dbpath + "/" + std::to_string(peplen) + extension;
@@ -182,6 +188,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         }
     }
 
+    /* We don't need the original data anymore - Deallocate */
     if (status == SLM_SUCCESS)
     {
         status = DSLIM_DeallocateSpecArr();
@@ -271,7 +278,15 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     return status;
 }
 
-
+/* FUNCTION: ParseParams
+ *
+ * DESCRIPTION: Parse the input params and initialize
+ *
+ * INPUT: none
+ *
+ * OUTPUT
+ * @status: Status of execution
+ */
 static STATUS ParseParams(CHAR* paramfile)
 {
     STATUS status = SLM_SUCCESS;
@@ -323,7 +338,7 @@ static STATUS ParseParams(CHAR* paramfile)
 
         /* Get the fragment mass tolerance */
         getline(pfile, line);
-        params.dF = std::atof(line.c_str());
+        params.dF = (UINT)(std::atof(line.c_str()) * params.scale);
 
         /* Get the precursor mass tolerance */
         getline(pfile, line);
