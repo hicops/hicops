@@ -38,7 +38,7 @@
 #define QALEN                    100
 
 /* How many query spectra per chunk */
-#define QCHUNK                   1000
+#define QCHUNK                   50000
 
 /* How many top matches required at max */
 #define MAXMATCHES               99999

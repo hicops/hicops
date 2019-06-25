@@ -19,6 +19,7 @@
  */
 
 #include "dslim.h"
+#include "hyperscore.h"
 
 extern gParams params;
 
@@ -32,7 +33,7 @@ extern varEntry    *modEntries;
 #endif /* FUTURE */
 
 /* Global Variables */
-#define SCSIZE              10000000
+FLOAT *hyperscores = NULL;
 UCHAR *sCArr = NULL;
 
 /* FUNCTION: DSLIM_QuerySpectrum
@@ -49,10 +50,11 @@ UCHAR *sCArr = NULL;
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_QuerySpectrum(UINT *QA, UINT len, Index *index, UINT idxchunk)
+STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
 {
     STATUS status = SLM_SUCCESS;
     UINT *QAPtr = NULL;
+    FLOAT *iPtr = NULL;
     UINT maxz = params.maxz;
     UINT dF = params.dF;
     UINT threads = params.threads;
@@ -60,107 +62,97 @@ STATUS DSLIM_QuerySpectrum(UINT *QA, UINT len, Index *index, UINT idxchunk)
 
     DOUBLE maxmass = params.max_mass;
 
-#ifdef _OPENMP
-    if (sCArr == NULL)
+    /* Process all the queries in the chunk */
+    for (UINT queries = 0; queries < len; queries++)
     {
-        sCArr = new UCHAR[SCSIZE * threads];
-        std::memset(sCArr, 0x0, sizeof(UCHAR) * SCSIZE * threads);
-    }
-#else
-    if (sCArr == NULL)
-    {
-        sCArr = new UCHAR[SCSIZE];
-        std::memset(sCArr, 0x0, sizeof(UCHAR) * SCSIZE);
-    }
-
-#endif /* _OPENMP */
-
-    if (sCArr == NULL)
-    {
-        return ERR_BAD_MEM_ALLOC;
-    }
+        /* Pointer to each query spectrum */
+        QAPtr = ss.moz + (queries * QALEN);
+        iPtr = ss.intensity + (queries * QALEN);
 
 #ifdef _OPENMP
-#pragma omp parallel  num_threads(threads)
-    {
-        UINT threadMatches = 0;
-
-#pragma omp for schedule(dynamic, 10) private(threadMatches)
+#pragma omp parallel for schedule(dynamic, 1) num_threads(threads)
 #endif
-        /* Process all the queries in the chunk */
-        for (UINT queries = 0; queries < len; queries++)
+        for (UINT ixx = 0; ixx < idxchunk; ixx++)
         {
-            /* Pointer to each query spectrum */
-            QAPtr = QA + (queries * QALEN);
+            UINT speclen = (index[ixx].pepIndex.peplen - 1) * maxz * iSERIES;
 
-#ifdef _OPENMP
-            UCHAR *SCPtr = sCArr + (omp_get_thread_num() * SCSIZE);
-#else
-            UCHAR *SCPtr = sCArr;
-#endif
-
-            for (UINT ixx = 0; ixx < idxchunk; ixx++)
+            for (UINT chno = 0; chno < index[ixx].nChunks; chno++)
             {
-                UINT speclen = (index[ixx].pepIndex.peplen - 1) * maxz * iSERIES;
+                /* Query each chunk in parallel */
+                UINT *bAPtr = index[ixx].ionIndex[chno].bA;
+                UINT *iAPtr = index[ixx].ionIndex[chno].iA;
+                UCHAR *bcPtr = index[ixx].ionIndex[chno].sc.bc;
+                UCHAR *ycPtr = index[ixx].ionIndex[chno].sc.yc;
+                FLOAT *ibcPtr = index[ixx].ionIndex[chno].sc.ibc;
+                FLOAT *iycPtr = index[ixx].ionIndex[chno].sc.iyc;
 
-                for (UINT chno = 0; chno < index[ixx].nChunks; chno++)
+                /* Query all fragments in each spectrum */
+                for (UINT k = 0; k < QALEN; k++)
                 {
-                    /* Query each chunk in parallel */
-                    UINT *bAPtr = index[ixx].ionIndex[chno].bA;
-                    UINT *iAPtr = index[ixx].ionIndex[chno].iA;
-
-                    /* Check if this chunk is the last chunk */
-                    UINT size = index[ixx].chunksize;
-
-                    /* Query all fragments in each spectrum */
-                    for (UINT k = 0; k < QALEN; k++)
+                    /* Check for any zeros
+                     * Zero = Trivial query */
+                    if (QAPtr[k] < dF || QAPtr[k] > ((maxmass * scale) - 1 - dF))
                     {
-                        /* Check for any zeros
-                         * Zero = Trivial query */
-                        if (QAPtr[k] < dF || QAPtr[k] > ((maxmass * scale) - 1 - dF))
-                        {
-                            continue;
-                        }
-
-                        /* Locate iAPtr start and end */
-                        UINT start = bAPtr[QAPtr[k] - dF];
-                        UINT end = bAPtr[QAPtr[k] + 1 + dF];
-
-                        /* Loop through located iAions */
-                        for (UINT ion = start; ion < end; ion++)
-                        {
-                            /* Calculate parent peptide ID */
-                            UINT ppid = (iAPtr[ion] / speclen);
-
-                            /* Update corresponding SC entry */
-                            SCPtr[ppid] += 1;
-
-                        }
+                        continue;
                     }
 
-                    /* Count the number of candidate peptides
-                     * from each chunk
-                     */
-                    UINT localMatches = 0;
+                    /* Locate iAPtr start and end */
+                    UINT start = bAPtr[QAPtr[k] - dF];
+                    UINT end = bAPtr[QAPtr[k] + 1 + dF];
 
-                    for (UINT cntr = 0; cntr < size; cntr++)
+                    /* Loop through located iAions */
+                    for (UINT ion = start; ion < end; ion++)
                     {
-                        if (SCPtr[cntr] >= params.min_shp)
+                        UINT raw = iAPtr[ion];
+
+                        /* Calculate parent peptide ID */
+                        UINT ppid = (raw / speclen);
+
+                        /* Update corresponding scorecard entries */
+                        if ((raw % speclen) < speclen / 2)
                         {
-                            localMatches++;
+                            bcPtr[ppid] += 1;
+                            ibcPtr[ppid] += iPtr[k];
+                        }
+                        else
+                        {
+                            ycPtr[ppid] += 1;
+                            iycPtr[ppid] += iPtr[k];
                         }
                     }
-
-                    /* Avoid too many updates to the Matches */
-                    threadMatches += localMatches;
-
-                    /* bitmask not active,
-                     * reset the SC instead */
-                    std::memset(SCPtr, 0x0, size);
                 }
+
+                index[ixx].ionIndex[chno].sc.especid = queries;
+
+                INT idaa = -1;
+                FLOAT maxhv = 0.0;
+
+                for (UINT i = 0; i < ss.numSpecs; i++)
+                {
+                    if (bcPtr[i] + ycPtr[i] > params.min_shp)
+                    {
+                        FLOAT hyperscore = log(HYPERSCORE_Factorial(ULONGLONG(bcPtr[i])) *
+                                HYPERSCORE_Factorial(ULONGLONG(ycPtr[i])) *
+                                ibcPtr[i] *
+                                iycPtr[i]);
+
+                        if (hyperscore > maxhv)
+                        {
+                            idaa = i;
+                            maxhv = hyperscore;
+                        }
+                    }
+
+                    bcPtr[i] = 0;
+                    ycPtr[i] = 0;
+                    ibcPtr[i] = 0;
+                    iycPtr[i] = 0;
+                }
+
+                /* FIXME: Printing the hyperscore in OpenMP mode - Use some other filename. How will we merge in multiple nodes? */
+                status = HYPERSCORE_Calculate(queries, idaa, maxhv);
             }
         }
-
     }
 
     return status;

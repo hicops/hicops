@@ -66,7 +66,7 @@ STATUS MSQuery_InitializeQueryFile(UINT& start, UINT& count, CHAR *filename);
  * OUTPUT:
  * @size: Size of the extracted chunk
  */
-INT    MSQuery_ExtractQueryChunk(UINT *QA, UINT threads);
+INT    MSQuery_ExtractQueryChunk(UINT *QA);
 
 /*
  * FUNCTION: MSQuery_InitializeQueryFile
@@ -82,8 +82,9 @@ INT    MSQuery_ExtractQueryChunk(UINT *QA, UINT threads);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS MSQuery_ExtractQueryChunk(UINT start, UINT count, UINT *QA, UINT threads);
+STATUS MSQuery_ExtractQueryChunk(UINT start, UINT count, UINT *QA);
 
+STATUS MSQuery_ExtractQueryChunk(UINT count, ESpecSeqs &expSpecs);
 /*
  * FUNCTION: MSQUERY_ProcessQuerySpectrum
  *
@@ -97,4 +98,6 @@ STATUS MSQuery_ExtractQueryChunk(UINT start, UINT count, UINT *QA, UINT threads)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, UINT *QAPtr, UINT threads);
+STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, UINT *QAPtr);
+
+STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, ESpecSeqs &expSpecs, UINT offset);

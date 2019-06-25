@@ -145,6 +145,26 @@ STATUS DSLIM_Construct(UINT threads, Index *index)
         }
     }
 
+    if (status == SLM_SUCCESS)
+    {
+        for (UINT chunk_number = 0; chunk_number < index->nChunks; chunk_number++)
+        {
+            /* Get size of the chunk */
+            UINT csize = ((chunk_number == index->nChunks - 1) && (index->nChunks > 1)) ?
+                           index->lastchunksize                                 :
+                           index->chunksize;
+
+            index->ionIndex->sc.bc = new UCHAR[csize];
+            memset(index->ionIndex->sc.bc, 0x0, sizeof(UCHAR) * csize);
+            index->ionIndex->sc.yc = new UCHAR[csize];
+            memset(index->ionIndex->sc.yc, 0x0, sizeof(UCHAR) * csize);
+            index->ionIndex->sc.ibc = new FLOAT[csize];
+            memset(index->ionIndex->sc.ibc, 0x0, sizeof(FLOAT) * csize);
+            index->ionIndex->sc.iyc = new FLOAT[csize];
+            memset(index->ionIndex->sc.iyc, 0x0, sizeof(FLOAT) * csize);
+            index->ionIndex->sc.size = csize;
+        }
+    }
     /* Remove the temporary SpecArray (SA) */
 //    delete[] SpecArr;
 //    SpecArr = NULL;
@@ -288,7 +308,7 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
 #else
 
     UINT SAPtr[speclen] = {};
-    std::memset(index->ionIndex[chunk_number].bA, 0x0, (((SCALE * MAX_MASS) + 1) * sizeof(UINT)));
+    std::memset(index->ionIndex[chunk_number].bA, 0x0, (((params.scale * params.max_mass) + 1) * sizeof(UINT)));
 
 #endif /* _OPENMP */
 
@@ -667,6 +687,19 @@ STATUS DSLIM_Deinitialize(Index *index)
         {
             delete[] curr_chunk.iA;
             curr_chunk.iA = NULL;
+        }
+
+        if (curr_chunk.sc.bc != NULL)
+        {
+            delete[] curr_chunk.sc.bc;
+            delete[] curr_chunk.sc.yc;
+            delete[] curr_chunk.sc.ibc;
+            delete[] curr_chunk.sc.iyc;
+
+            curr_chunk.sc.bc = NULL;
+            curr_chunk.sc.yc = NULL;
+            curr_chunk.sc.ibc = NULL;
+            curr_chunk.sc.iyc = NULL;
         }
 
     }

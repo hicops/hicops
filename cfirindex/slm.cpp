@@ -116,7 +116,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     }
 
 #ifndef _OPENMP
-    threads = 1;
+    params.threads = 1;
 #endif /* _OPENMP */
 
     /* Create local variables to avoid trouble */
@@ -182,7 +182,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 
             /* Compute Duration */
             elapsed_seconds = end - start;
-            cout << "SLM-Transform with status:\t" << status << endl;
+            cout << "CFIR Index with status:\t" << status << endl;
             cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
         }
     }
@@ -196,45 +196,43 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     /* Query the index */
     if (status == SLM_SUCCESS)
     {
-        /* Allocate the Query Array */
-        UINT *QA = new UINT[QCHUNK * QALEN];
-
         /* Initialize and process Query Spectra */
         for (UINT qf = 0; qf < queryfiles.size(); qf++)
         {
             /* Initialize Query MS/MS file */
             status = MSQuery_InitializeQueryFile((CHAR *) queryfiles[qf].c_str());
             cout << "Query File: " << queryfiles[qf] << endl;
+            ESpecSeqs ss;
 
             UINT spectra = 0;
 
             /* DSLIM Query Algorithm */
             if (status == SLM_SUCCESS)
             {
-                /* Extract a chunk of MS/MS spectra and
-                 * query against DSLIM Index */
-                for (; QA != NULL;)
+
+                /* Extract a chunk and return the chunksize */
+                status = MSQuery_ExtractQueryChunk(QCHUNK, ss);
+
+                UINT ms2specs = ss.numSpecs;
+
+                /* If the chunksize is zero, all done */
+                if (ms2specs <= 0)
                 {
-                    /* Extract a chunk and return the chunksize */
-                    UINT ms2specs = MSQuery_ExtractQueryChunk(QA, threads);
-
-                    /* If the chunksize is zero, all done */
-                    if (ms2specs <= 0)
-                    {
-                        break;
-                    }
-                    spectra += ms2specs;
-
-                    start = chrono::system_clock::now();
-
-                    /* Query the chunk */
-                    status = DSLIM_QuerySpectrum(QA, ms2specs, slm_index, (maxlen-minlen+1));
-                    end = chrono::system_clock::now();
-
-                    /* Compute Duration */
-                    qtime += end - start;
-
+                    break;
                 }
+
+                spectra += ms2specs;
+
+                start = chrono::system_clock::now();
+
+                /* Query the chunk */
+                status = DSLIM_QuerySpectrum(ss, ms2specs, slm_index, (maxlen - minlen + 1));
+
+                end = chrono::system_clock::now();
+
+                /* Compute Duration */
+                qtime += end - start;
+
             }
 
             /* Compute Duration */
@@ -242,12 +240,26 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
             cout << "Query Time: " << qtime.count() << "s" << endl;
             cout << "Queried with status:\t\t" << status << endl << endl;
             end = chrono::system_clock::now();
-        }
 
-        if (QA != NULL)
-        {
-            delete[] QA;
-            QA = NULL;
+            if (ss.moz != NULL)
+            {
+                delete[] ss.moz;
+            }
+
+            if (ss.intensity != NULL)
+            {
+                delete[] ss.intensity;
+            }
+
+            if (ss.precurse != NULL)
+            {
+                delete[] ss.precurse;
+            }
+
+            if (ss.idx != NULL)
+            {
+                delete[] ss.idx;
+            }
         }
     }
 

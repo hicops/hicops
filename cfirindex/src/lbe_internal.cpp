@@ -214,7 +214,8 @@ STATUS LBE_Distribute(UINT threads, DistPolicy policy, Index *index)
 {
     STATUS status = 0;
     UINT N = index->totalCount;
-    UINT maxchunksize = (MAX_IONS / (index->pepIndex.peplen * params.maxz * iSERIES));
+    UINT speclen = (index->pepIndex.peplen-1) * params.maxz * iSERIES;
+    UINT maxchunksize = (MAX_IONS / speclen);
     UINT nchunks;
     UINT chunksize;
     UINT lastchunksize;

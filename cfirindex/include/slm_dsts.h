@@ -251,10 +251,26 @@ typedef struct _varEntry
 } varEntry;
 
 /************************* SLM Index DSTs ************************/
+/*
+ * Structure to store the sum of matched b and y ions and
+ * their summed intensities for a given experimental spectrum
+ * against all the candidate peptides.
+ */
+typedef struct _BYICount
+{
+    UCHAR   *bc;        /* b ion count */
+    FLOAT   *ibc;       /* Sum of b ion intensities */
+    UCHAR   *yc;        /* y ion count */
+    FLOAT   *iyc;       /* Sum of y ion intensities */
+    UINT     size;      /* Length of score card (above declared arrays) */
+    UINT     especid;   /* Experimental spectrum id */
+} BYICount;
+
 typedef struct _SLMchunk
 {
     UINT    *iA = NULL; /* Ions Array (iA)   */
     UINT    *bA = NULL; /* Bucket Array (bA) */
+    BYICount sc;
 #ifdef FUTURE
     UCHAR *bits = NULL; /* Scorecard bits    */
 #endif /* FUTURE */
@@ -302,6 +318,19 @@ typedef struct _globalParams
     SLM_vMods vModInfo;
 
 }gParams;
+
+
+/* Same as specSeqs below but has intensity values for experimental spectra */
+typedef struct _eSpecSeqs
+{
+    UINT                *moz;       /* Stores the m/z values of the spectra */
+    FLOAT                *intensity; /* Stores the intensity values of the experimental spectra */
+    //BOOL              *iType;     /* Stores the ion type of the coresponding peak in miz */
+    UINT                *idx;       /* Row ptr. Starting index of each row */
+    UINT                *precurse;  /* Stores the precursor mass of each spectrum. */
+    UINT                 numPeaks;  /* Total length of moz array i.e. total number of peaks */
+    UINT                 numSpecs;  /* Number of theoretical spectra */
+} ESpecSeqs;
 
 /************************* SLM Query DSTs ************************/
 typedef struct _Query
