@@ -166,7 +166,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
             start = chrono::system_clock::now();
 
             /* Distribute peptides among cores */
-            status = LBE_Distribute(threads, _chunk, (slm_index + peplen - minlen));
+            status = LBE_Distribute(threads, _chunk, slm_index + peplen - minlen);
 
         }
 
@@ -415,6 +415,14 @@ static STATUS ParseParams(CHAR* paramfile)
 
                 params.vModInfo.vmods[md].aa_per_peptide = std::atoi((const char *) line.c_str());
             }
+        }
+
+        params.perf = new DOUBLE[params.nodes];
+
+        /* Initialize to 1.0 for now */
+        for (UINT nn = 0; nn < params.nodes; nn++)
+        {
+            params.perf[nn] = 1.0;
         }
 
         pfile.close();

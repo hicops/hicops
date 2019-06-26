@@ -32,6 +32,7 @@
 typedef enum _DistPolicy
 {
     _chunk,
+    _loop,
 } DistPolicy;
 
 typedef struct _SLM_varAA
@@ -303,6 +304,8 @@ typedef struct _globalParams
     UINT topmatches = 10;
     UINT scale      = 100;
     UINT min_shp    = 4;
+    UINT nodes      = 1;
+    UINT myid       = 0;
 
     UINT min_mass = 500.0;
     UINT max_mass = 5000.0;
@@ -310,6 +313,8 @@ typedef struct _globalParams
 
     DOUBLE dM       = 500.0;
     DOUBLE res      = 0.01;
+
+    DOUBLE *perf    = NULL;
 
     STRING dbpath;
     STRING datapath;

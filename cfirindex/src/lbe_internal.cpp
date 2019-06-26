@@ -192,8 +192,6 @@ STATUS LBE_Deinitialize(Index *index)
 {
     (VOID) DSLIM_Deinitialize(index);
 
-
-
     return SLM_SUCCESS;
 }
 
@@ -270,16 +268,81 @@ STATUS LBE_Distribute(UINT threads, DistPolicy policy, Index *index)
 }
 
 /*
- * FUNCTION: LBE_RevDist
+ * FUNCTION: LBE_CreatePartitions
  *
- * DESCRIPTION: Returns the actual peptide ID
+ * DESCRIPTION: Creates the partition size for the current node
  *
  * INPUT:
- * @virtID : (Distributed) Virtual Peptide ID.
+ * @index : (Distributed) Virtual Peptide ID.
  *
  * OUTPUT:
- * @realID: Actual SPI peptide ID
+ * @status: Actual SPI peptide ID
  */
+STATUS LBE_CreatePartitions(Index *index)
+{
+    STATUS status = SLM_SUCCESS;
+
+    UINT N = index->pepCount;
+    UINT p = params.nodes;
+    UINT myid = params.myid;
+
+    UINT chunksize;
+    UINT lastchunksize;
+
+    chunksize = ((N % p) == 0)?
+                          (N/p)    :
+                          ((N+p)/p);
+
+     /* Calculate the size of last chunk */
+     UINT factor = N / chunksize;
+
+     lastchunksize = ((N % chunksize) == 0)?
+                      chunksize            :
+                      N - (chunksize * factor);
+
+     if (myid < (p-1))
+     {
+         index->pepCount = chunksize;
+     }
+     else if (myid == (p-1))
+     {
+         index->pepCount = lastchunksize;
+     }
+     else
+     {
+         status = ERR_INVLD_NODE_RANK;
+     }
+
+     N = index->modCount;
+
+     chunksize = ((N % p) == 0)?
+                           (N/p)    :
+                           ((N+p)/p);
+
+      /* Calculate the size of last chunk */
+      UINT factor = N / chunksize;
+
+      lastchunksize = ((N % chunksize) == 0)?
+                       chunksize            :
+                       N - (chunksize * factor);
+
+      if (myid < (p-1))
+      {
+          index->modCount = chunksize;
+      }
+      else if (myid == (p-1))
+      {
+          index->modCount = lastchunksize;
+      }
+      else
+      {
+          status = ERR_INVLD_NODE_RANK;
+      }
+
+      index->totalCount = index->pepCount + index->modCount;
+
+    return status;
+}
 
 /*
  * FUNCTION: LBE_CountPeps

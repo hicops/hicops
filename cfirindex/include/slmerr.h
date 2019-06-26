@@ -40,5 +40,6 @@
 #define ERR_INVLD_PTR            (SLM_ERROR_BASE -  8)
 #define ERR_INVLD_SORT           (SLM_ERROR_BASE -  9)
 #define ERR_INVLD_MOD            (SLM_ERROR_BASE - 10)
+#define ERR_INVLD_NODE_RANK      (SLM_ERROR_BASE - 11)
 
 #endif /* INCLUDE_SLMERR_H_ */
