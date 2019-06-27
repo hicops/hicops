@@ -304,7 +304,7 @@ typedef struct _globalParams
     UINT topmatches = 10;
     UINT scale      = 100;
     UINT min_shp    = 4;
-    UINT nodes      = 1;
+    UINT nodes      = 2;
     UINT myid       = 0;
 
     UINT min_mass = 500.0;

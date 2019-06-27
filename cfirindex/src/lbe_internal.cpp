@@ -91,7 +91,7 @@ static STATUS LBE_AllocateMem(Index *index)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_Initialize(UINT threads, Index *index)
+STATUS LBE_Initialize(UINT threads, DistPolicy policy, Index *index)
 {
     STATUS status = SLM_SUCCESS;
     UINT iCount = 1;
@@ -111,6 +111,7 @@ STATUS LBE_Initialize(UINT threads, Index *index)
     /* If Seqs was successfully filled */
     if (Seqs.size() != 0 && status == SLM_SUCCESS)
     {
+
         UINT idx = 0;
 
         /* Extract First Sequence manually */
@@ -150,12 +151,12 @@ STATUS LBE_Initialize(UINT threads, Index *index)
         status = ERR_FILE_NOT_FOUND;
     }
 
-    /* Make sure that the '>' == PEPTIDES */
+    /* Make sure that the '>' == PEPTIDES
     if (iCount != index->pepCount && status == SLM_SUCCESS)
     {
         cout << endl << "pepCount != iCount - Please check the FASTA file";
         status = ERR_INVLD_SIZE;
-    }
+    } */
 
 #ifdef VMODS
 
@@ -289,57 +290,52 @@ STATUS LBE_CreatePartitions(Index *index)
     UINT chunksize;
     UINT lastchunksize;
 
-    chunksize = ((N % p) == 0)?
-                          (N/p)    :
-                          ((N+p)/p);
+    if (p > 1)
+    {
+        chunksize = ((N % p) == 0) ? (N / p) : ((N + p) / p);
 
-     /* Calculate the size of last chunk */
-     UINT factor = N / chunksize;
+        /* Calculate the size of last chunk */
+        UINT factor = N / chunksize;
 
-     lastchunksize = ((N % chunksize) == 0)?
-                      chunksize            :
-                      N - (chunksize * factor);
+        lastchunksize = ((N % chunksize) == 0) ? chunksize : N - (chunksize * factor);
 
-     if (myid < (p-1))
-     {
-         index->pepCount = chunksize;
-     }
-     else if (myid == (p-1))
-     {
-         index->pepCount = lastchunksize;
-     }
-     else
-     {
-         status = ERR_INVLD_NODE_RANK;
-     }
+        if (myid < (p - 1))
+        {
+            index->pepCount = chunksize;
+        }
+        else if (myid == (p - 1))
+        {
+            index->pepCount = lastchunksize;
+        }
+        else
+        {
+            status = ERR_INVLD_NODE_RANK;
+        }
 
-     N = index->modCount;
+        N = index->modCount;
 
-     chunksize = ((N % p) == 0)?
-                           (N/p)    :
-                           ((N+p)/p);
+        chunksize = ((N % p) == 0) ? (N / p) : ((N + p) / p);
 
-      /* Calculate the size of last chunk */
-      UINT factor = N / chunksize;
+        /* Calculate the size of last chunk */
+        factor = N / chunksize;
 
-      lastchunksize = ((N % chunksize) == 0)?
-                       chunksize            :
-                       N - (chunksize * factor);
+        lastchunksize = ((N % chunksize) == 0) ? chunksize : N - (chunksize * factor);
 
-      if (myid < (p-1))
-      {
-          index->modCount = chunksize;
-      }
-      else if (myid == (p-1))
-      {
-          index->modCount = lastchunksize;
-      }
-      else
-      {
-          status = ERR_INVLD_NODE_RANK;
-      }
+        if (myid < (p - 1))
+        {
+            index->modCount = chunksize;
+        }
+        else if (myid == (p - 1))
+        {
+            index->modCount = lastchunksize;
+        }
+        else
+        {
+            status = ERR_INVLD_NODE_RANK;
+        }
 
-      index->totalCount = index->pepCount + index->modCount;
+        index->totalCount = index->pepCount + index->modCount;
+    }
 
     return status;
 }

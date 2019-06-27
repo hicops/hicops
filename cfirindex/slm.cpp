@@ -141,7 +141,12 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         /* Count the number of ">" entries in FASTA */
         if (status == SLM_SUCCESS)
         {
-            status = LBE_CountPeps(threads, (CHAR *) dbfile.c_str(), (slm_index + peplen-minlen));
+            status = LBE_CountPeps(1 /* threads */, (CHAR *) dbfile.c_str(), (slm_index + peplen-minlen));
+        }
+
+        if (status == SLM_SUCCESS)
+        {
+            status  = LBE_CreatePartitions((slm_index + peplen-minlen));
         }
 
         /* Initialize internal structures */
@@ -150,7 +155,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
             start = chrono::system_clock::now();
 
             /* Initialize the LBE */
-            status = LBE_Initialize(threads, (slm_index + peplen-minlen));
+            status = LBE_Initialize(threads, _loop, (slm_index + peplen-minlen));
 
             end = chrono::system_clock::now();
 
