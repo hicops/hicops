@@ -62,6 +62,12 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
 
     DOUBLE maxmass = params.max_mass;
 
+#ifndef _OPENMP
+    LBE_UNUSED_PARAM(threads);
+#endif
+
+    status = HS_InitFile();
+
     /* Process all the queries in the chunk */
     for (UINT queries = 0; queries < len; queries++)
     {
@@ -138,7 +144,7 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
 
                         if (hyperscore > maxhv)
                         {
-                            idaa = i;
+                            idaa = DSLIM_GenerateIndex(&index[ixx], i);
                             maxhv = hyperscore;
                         }
                     }
@@ -149,8 +155,12 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                     iycPtr[i] = 0;
                 }
 
-                /* FIXME: Printing the hyperscore in OpenMP mode - Use some other filename. How will we merge in multiple nodes? */
-                status = HYPERSCORE_Calculate(queries, idaa, maxhv);
+                /* Print the highest hyperscore per chunk */
+#pragma omp critical
+                {
+                    /* Printing the hyperscore in OpenMP mode */
+                    status = HYPERSCORE_Calculate(queries, idaa, maxhv);
+                }
             }
         }
     }

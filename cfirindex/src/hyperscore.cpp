@@ -20,14 +20,14 @@
 #include "hyperscore.h"
 
 /* Data structures related to the current experimental spectrum */
-extern FLOAT *hyperscores;				/* Array to store the scores for the current especid */
-UINT size;						/* Size of the above array */
-UINT especid;					/* Current especid (experimental spectrum id) */
+extern FLOAT *hyperscores;          /* Array to store the scores for the current especid */
+UINT size;                          /* Size of the above array */
+UINT especid;                       /* Current especid (experimental spectrum id) */
 
 /* Data structures for the output file */
-BOOL FileInitiated = false;		/* Flag to indicate that the output file has been initialized */
-BOOL HeadersDone = false;		/* Flag that the headers have bee written to the output file */
-std::ofstream myfile;			/* The output file */
+BOOL FileInitiated = false;      /* Flag to indicate that the output file has been initialized */
+BOOL HeadersDone = false;        /* Flag that the headers have bee written to the output file */
+std::ofstream myfile;            /* The output file */
 
 /*
  * FUNCTION: HYPERSCORE_Calculate
@@ -41,24 +41,32 @@ std::ofstream myfile;			/* The output file */
  * OUTPUT:
  * @status: Status of execution
  */
+
+STATUS HS_InitFile()
+{
+    if (!FileInitiated)
+    {
+        std::stringstream sst;
+        sst << HYPERSCORE_Datetime() << ".tsv";
+        myfile.open(sst.str());
+        FileInitiated = true;
+    }
+
+    return SLM_SUCCESS;
+}
+
 STATUS HYPERSCORE_Calculate(UINT specid, INT psid, FLOAT maxhv)
 {
+    if (FileInitiated)
+    {
+        myfile << "Spectrum ID: " << specid + 1;
 
-	if (!FileInitiated)
-	{
-		std::stringstream sst;
-		sst << HYPERSCORE_Datetime() << ".tsv";
-		myfile.open (sst.str());
-		FileInitiated = true;
-	}
+        myfile << '\t' << std::to_string(psid);
 
-    myfile << "Spectrum ID: " << specid+1;
+        myfile << '\t' << std::to_string(maxhv);
 
-    myfile << '\t' << std::to_string(psid);
-
-    myfile << '\t' << std::to_string(maxhv);
-
-    myfile << std::endl;
+        myfile << std::endl;
+    }
 
     return SLM_SUCCESS;
 }
@@ -90,14 +98,14 @@ STATUS HYPERSCORE_WriteToFile ()
 
     myfile << ',' << std::to_string(hyperscores[0]);
 
-	for (UINT i = 1; i < 10; i++)
-	{
-		myfile << "," << hyperscores[i];
-	}
+    for (UINT i = 1; i < 10; i++)
+    {
+        myfile << "," << hyperscores[i];
+    }
 
-	myfile << std::endl;
+    myfile << std::endl;
 
-	return SLM_SUCCESS;
+    return SLM_SUCCESS;
 }
 
 /*
@@ -111,9 +119,9 @@ STATUS HYPERSCORE_WriteToFile ()
  * OUTPUT:
  * @factorial : the factorial of the input number n
  */
-ULONGLONG HYPERSCORE_Factorial (ULONGLONG n)
+ULONGLONG HYPERSCORE_Factorial(ULONGLONG n)
 {
-	return (n == 1 || n == 0) ? 1 : HYPERSCORE_Factorial(n - 1) * n;
+    return (n == 1 || n == 0) ? 1 : HYPERSCORE_Factorial(n - 1) * n;
 }
 
 

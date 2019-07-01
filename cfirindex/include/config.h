@@ -27,7 +27,7 @@
 /* Contains MACROS that configure SLM Index build */
 
 /* Manually switch _OPENMP */
-#undef _OPENMP
+//#undef _OPENMP
 
 /* Enable to show SLMIndex Benchmark information  */
 #undef BENCHMARK

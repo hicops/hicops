@@ -221,6 +221,10 @@ STATUS MSQuery_ExtractQueryChunk(UINT start, UINT count, UINT *QA)
     UINT startspec = start;
     UINT endspec = start + count;
 
+#ifndef _OPENMP
+    LBE_UNUSED_PARAM(threads);
+#endif
+
     if (startspec >= QAcount)
     {
         status = ERR_INVLD_SIZE;
@@ -267,6 +271,10 @@ STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, UINT *QAPtr)
     STATUS status = SLM_SUCCESS;
     Spectrum Spectrum;
     UINT threads = params.threads;
+
+#ifndef _OPENMP
+    LBE_UNUSED_PARAM(threads);
+#endif
 
     /* TODO: FUTURE: There can be multiple spectra with different Z
      * in one MS/MS (MS2) file. How to deal/separate those
@@ -359,7 +367,6 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, ESpecSeqs &expSpecs)
     {
         if (endspec > QAcount)
         {
-            cout << "MSQuery_ExtractQueryChunk:Not enough spectra left in the file. Changing count parameter to " << QAcount - startspec << "." << endl;
             endspec = QAcount;
             count = endspec - startspec;
         }
@@ -432,6 +439,9 @@ STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, ESpecSeqs &expSpecs, UINT of
     Spectrum Spectrum;
     UINT threads = params.threads;
 
+#ifndef _OPENMP
+    LBE_UNUSED_PARAM(threads);
+#endif
     /* TODO: FUTURE: There can be multiple spectra with different Z
      * in one MS/MS (MS2) file. How to deal/separate those
      */

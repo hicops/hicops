@@ -32,7 +32,9 @@
 typedef enum _DistPolicy
 {
     _chunk,
-    _loop,
+    _cyclic,
+    _zigzag,
+
 } DistPolicy;
 
 typedef struct _SLM_varAA
@@ -116,6 +118,7 @@ typedef struct _modAA
 typedef struct _pepEntry
 {
     FLOAT  Mass; /* mass of peptide */
+    UINT  seqID;
 } pepEntry;
 
 typedef struct _varEntry
@@ -283,9 +286,14 @@ typedef struct _Index
     UINT pepCount         = 0;
     UINT modCount         = 0;
     UINT totalCount       = 0;
+
+    UINT lclpepCnt        = 0;
+    UINT lclmodCnt        = 0;
+    UINT lcltotCnt        = 0;
     UINT nChunks          = 0;
     UINT chunksize        = 0;
     UINT lastchunksize    = 0;
+
     PepSeqs          pepIndex;
     pepEntry      *pepEntries;
 #ifdef VMODS
@@ -304,7 +312,7 @@ typedef struct _globalParams
     UINT topmatches = 10;
     UINT scale      = 100;
     UINT min_shp    = 4;
-    UINT nodes      = 2;
+    UINT nodes      = 1;
     UINT myid       = 0;
 
     UINT min_mass = 500.0;
@@ -319,6 +327,8 @@ typedef struct _globalParams
     STRING dbpath;
     STRING datapath;
     STRING modconditions;
+
+    DistPolicy policy = _cyclic;
 
     SLM_vMods vModInfo;
 

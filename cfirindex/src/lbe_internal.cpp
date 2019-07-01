@@ -46,7 +46,7 @@ static STATUS LBE_AllocateMem(Index *index);
 static STATUS LBE_AllocateMem(Index *index)
 {
     STATUS status = SLM_SUCCESS;
-    UINT M = index->modCount;
+    UINT M = index->lclmodCnt;
 
 #ifdef VMODS
     index->modEntries = NULL;
@@ -77,6 +77,36 @@ static STATUS LBE_AllocateMem(Index *index)
     return status;
 }
 
+BOOL LBE_ApplyPolicy(Index *index,  BOOL pepmod, UINT key)
+{
+    BOOL value = false;
+
+    DistPolicy policy = params.policy;
+
+    UINT csize = index->lclmodCnt;
+
+    if (pepmod == false)
+    {
+        csize = index->lclpepCnt;
+    }
+
+    if (policy == _chunk)
+    {
+        value = (key / csize) == (params.myid);
+    }
+    else if (policy == _cyclic)
+    {
+        value = key % (params.nodes) == params.myid;
+    }
+    else
+    {
+        cout << "This policy is not implemented yet\n";
+        value = false;
+    }
+
+    return value;
+}
+
 /*
  * FUNCTION: LBE_Initialize
  *
@@ -91,7 +121,7 @@ static STATUS LBE_AllocateMem(Index *index)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_Initialize(UINT threads, DistPolicy policy, Index *index)
+STATUS LBE_Initialize(Index *index)
 {
     STATUS status = SLM_SUCCESS;
     UINT iCount = 1;
@@ -99,7 +129,7 @@ STATUS LBE_Initialize(UINT threads, DistPolicy policy, Index *index)
     STRING modconditions = params.modconditions;
 
     /* Check if ">" entries are > 0 */
-    if (index->pepCount > 0)
+    if (index->lclpepCnt > 0)
     {
         status = LBE_AllocateMem(index);
     }
@@ -160,10 +190,10 @@ STATUS LBE_Initialize(UINT threads, DistPolicy policy, Index *index)
 
 #ifdef VMODS
 
-    if (index->modCount > 0)
+    if (index->lclmodCnt > 0)
     {
         /* Fill in the mods entry */
-        status = MODS_GenerateMods(threads, index->modCount, modconditions, index->modEntries);
+        status = MODS_GenerateMods(index);
     }
 #endif /* VMODS */
 
@@ -209,10 +239,10 @@ STATUS LBE_Deinitialize(Index *index)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_Distribute(UINT threads, DistPolicy policy, Index *index)
+STATUS LBE_Distribute(Index *index)
 {
     STATUS status = 0;
-    UINT N = index->totalCount;
+    UINT N = index->lcltotCnt;
     UINT speclen = (index->pepIndex.peplen-1) * params.maxz * iSERIES;
     UINT maxchunksize = (MAX_IONS / speclen);
     UINT nchunks;
@@ -238,24 +268,6 @@ STATUS LBE_Distribute(UINT threads, DistPolicy policy, Index *index)
     lastchunksize = ((N % chunksize) == 0)?
                      chunksize            :
                      N - (chunksize * factor);
-
-
-    /* Apply the distribution policy */
-    switch (policy)
-    {
-
-        case _chunk:
-        {
-            status = SLM_SUCCESS;
-            break;
-        }
-
-        default:
-        {
-            status = ERR_INVLD_PARAM;
-            break;
-        }
-    }
 
     if (status == SLM_SUCCESS)
     {
@@ -301,11 +313,11 @@ STATUS LBE_CreatePartitions(Index *index)
 
         if (myid < (p - 1))
         {
-            index->pepCount = chunksize;
+            index->lclpepCnt = chunksize;
         }
         else if (myid == (p - 1))
         {
-            index->pepCount = lastchunksize;
+            index->lclpepCnt = lastchunksize;
         }
         else
         {
@@ -323,18 +335,24 @@ STATUS LBE_CreatePartitions(Index *index)
 
         if (myid < (p - 1))
         {
-            index->modCount = chunksize;
+            index->lclmodCnt = chunksize;
         }
         else if (myid == (p - 1))
         {
-            index->modCount = lastchunksize;
+            index->lclmodCnt = lastchunksize;
         }
         else
         {
             status = ERR_INVLD_NODE_RANK;
         }
 
-        index->totalCount = index->pepCount + index->modCount;
+        index->lcltotCnt = index->lclpepCnt + index->lclmodCnt;
+    }
+    else
+    {
+        index->lcltotCnt = index->totalCount;
+        index->lclpepCnt = index->pepCount;
+        index->lclmodCnt = index->modCount;
     }
 
     return status;
@@ -354,7 +372,7 @@ STATUS LBE_CreatePartitions(Index *index)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_CountPeps(UINT threads, CHAR *filename, Index *index)
+STATUS LBE_CountPeps(CHAR *filename, Index *index)
 {
     STATUS status = SLM_SUCCESS;
     STRING line;
@@ -416,7 +434,7 @@ STATUS LBE_CountPeps(UINT threads, CHAR *filename, Index *index)
     {
         status = UTILS_InitializeModInfo(&params.vModInfo);
 
-        index->modCount = MODS_ModCounter(threads, modconditions);
+        index->modCount = MODS_ModCounter();
     }
 
 #endif /* VMODS */

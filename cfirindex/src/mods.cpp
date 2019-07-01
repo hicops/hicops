@@ -18,18 +18,22 @@
  *
  */
 #include "mods.h"
+#include "lbe.h"
 
 using namespace std;
 
 /* Global Variables */
 map<AA, INT> condLookup;
 UINT lclcntr;
+UINT partcntr;
 STRING *mods;
+Index *lclindex;
 vector<STRING> tokens;
 UINT limit = 0;
 ULONGLONG Comb[MAX_COMBS][MAX_COMBS];
 
 /* External Variables */
+extern gParams params;
 #ifdef VMODS
 extern vector<STRING>     Seqs; /* Peptide Sequences */
 varEntry    *modEntries; /* SLM Mods Index    */
@@ -276,8 +280,13 @@ static VOID MODS_ModList(STRING peptide, vector<INT> conditions,
 {
     if (novel && letter != 0)
     {
-            modEntries[lclcntr] = container;
-            lclcntr++;
+        if (LBE_ApplyPolicy(lclindex, true, lclcntr) == true)
+        {
+            modEntries[partcntr] = container;
+            partcntr++;
+        }
+
+        lclcntr++;
 
 #ifdef DEBUG
         mods[lclcntr] = peptide;
@@ -333,9 +342,12 @@ static VOID MODS_ModList(STRING peptide, vector<INT> conditions,
  * OUTPUT:
  * @cumulative: Number of mods
  */
-LONGLONG MODS_ModCounter(UINT threads, STRING conditions)
+LONGLONG MODS_ModCounter()
 {
     LONGLONG cumulative = 0;
+
+    UINT threads = 1;//params.threads;
+    STRING conditions = params.modconditions;
 
 #ifdef VMODS
     STRING token;
@@ -397,11 +409,11 @@ LONGLONG MODS_ModCounter(UINT threads, STRING conditions)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS MODS_GenerateMods(UINT threads, UINT modCount, STRING conditions, varEntry* idx)
+STATUS MODS_GenerateMods(Index *index)
 {
     STATUS status = SLM_SUCCESS;
-
-    LBE_UNUSED_PARAM(threads);
+    varEntry* idx = index->modEntries;
+    STRING conditions = params.modconditions;
 
     modEntries = idx;
 
@@ -410,8 +422,11 @@ STATUS MODS_GenerateMods(UINT threads, UINT modCount, STRING conditions, varEntr
     varEntry container;
     vector<INT> condList;
 
-    /* Reset the local counter */
+    /* Reset the local counters */
     lclcntr = 0;
+    partcntr = 0;
+
+    lclindex = index;
 
     /* Reset conditions for all letters */
     for (INT i = 0; i < 26; i++)
@@ -445,14 +460,19 @@ STATUS MODS_GenerateMods(UINT threads, UINT modCount, STRING conditions, varEntr
         cout << Seqs.at(i).length() << '\t' << lclcntr << '\t' << Seqs.at(i) << '\t' << modCount << endl;
 #endif /* DEBUG */
 
-        UINT stt = lclcntr;
+        UINT stt = partcntr;
         MODS_ModList(Seqs[i], condList, limit, container, 0, false, 0, i);
-        UINT ssz = lclcntr - stt;
+        UINT ssz = partcntr - stt;
 
-        std::qsort((void *)(modEntries+stt), ssz, sizeof(varEntry),cmpvarEntries);
+        std::qsort((void *)(modEntries+stt), ssz, sizeof(varEntry), cmpvarEntries);
     }
 
-    if (lclcntr != modCount)
+    if (lclcntr != index->modCount)
+    {
+        status = ERR_INVLD_SIZE;
+    }
+
+    if (partcntr != index->lclmodCnt)
     {
         status = ERR_INVLD_SIZE;
     }
@@ -473,6 +493,7 @@ STATUS MODS_GenerateMods(UINT threads, UINT modCount, STRING conditions, varEntr
 #endif /* VMODS */
 
     lclcntr = 0;
+    partcntr = 0;
     tokens.clear();
     limit = 0;
 

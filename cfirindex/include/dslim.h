@@ -43,8 +43,9 @@
  * OUTPUT:
  * @status: status of execution
  */
-STATUS DSLIM_Construct(UINT threads, Index *index);
+STATUS DSLIM_Construct(Index *index);
 
+INT DSLIM_GenerateIndex(Index *index, UINT key);
 /*
  * FUNCTION: DSLIM_AllocateMemory
  *

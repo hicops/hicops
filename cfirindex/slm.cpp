@@ -115,14 +115,9 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         status = ERR_FILE_NOT_FOUND;
     }
 
-#ifndef _OPENMP
-    params.threads = 1;
-#endif /* _OPENMP */
-
     /* Create local variables to avoid trouble */
     UINT minlen = params.min_len;
     UINT maxlen = params.max_len;
-    UINT threads = params.threads;
 
     slm_index = new Index[maxlen - minlen + 1];
 
@@ -141,7 +136,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         /* Count the number of ">" entries in FASTA */
         if (status == SLM_SUCCESS)
         {
-            status = LBE_CountPeps(1 /* threads */, (CHAR *) dbfile.c_str(), (slm_index + peplen-minlen));
+            status = LBE_CountPeps((CHAR *) dbfile.c_str(), (slm_index + peplen-minlen));
         }
 
         if (status == SLM_SUCCESS)
@@ -155,7 +150,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
             start = chrono::system_clock::now();
 
             /* Initialize the LBE */
-            status = LBE_Initialize(threads, _loop, (slm_index + peplen-minlen));
+            status = LBE_Initialize((slm_index + peplen - minlen));
 
             end = chrono::system_clock::now();
 
@@ -171,8 +166,9 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
             start = chrono::system_clock::now();
 
             /* Distribute peptides among cores */
-            status = LBE_Distribute(threads, _chunk, slm_index + peplen - minlen);
+            status = LBE_Distribute((slm_index + peplen - minlen));
 
+            end = chrono::system_clock::now();
         }
 
         /* DSLIM-Transform */
@@ -181,13 +177,13 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
             start = chrono::system_clock::now();
 
             /* Construct DSLIM by SLM Transformation */
-            status = DSLIM_Construct(threads, (slm_index + peplen - minlen));
+            status = DSLIM_Construct((slm_index + peplen - minlen));
 
             end = chrono::system_clock::now();
 
             /* Compute Duration */
             elapsed_seconds = end - start;
-            cout << "CFIR Index with status:\t" << status << endl;
+            cout << "CFIR Index with status:\t\t" << status << endl;
             cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
         }
     }
@@ -338,7 +334,11 @@ static STATUS ParseParams(CHAR* paramfile)
 
         /* Get the max threads to use */
         getline(pfile, line);
+#ifdef _OPENMP
         params.threads = std::atoi(line.c_str());
+#else
+        params.threads = 1;
+#endif /* _OPENMP */
 
         /* Get the min peptide length */
         getline(pfile, line);

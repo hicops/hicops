@@ -25,7 +25,6 @@ using namespace std;
 UINT          *SpecArr = NULL; /* Spectra Array     */
 UINT reduce = 0;
 
-
 extern gParams params;
 
 #ifdef GENFEATS
@@ -45,23 +44,19 @@ BOOL          *features;
  * OUTPUT:
  * @status: status of execution
  */
-STATUS DSLIM_Construct(UINT threads, Index *index)
+STATUS DSLIM_Construct(Index *index)
 {
     STATUS status = SLM_SUCCESS;
+    UINT threads = params.threads;
     UINT maxz = params.maxz;
     UINT peplen_1 = index->pepIndex.peplen - 1;
 
     DOUBLE maxmass = params.max_mass;
     UINT scale = params.scale;
 
-#ifdef VMODS
-#else
+#ifndef VMODS
     LBE_UNUSED_PARAM(modInfo);
 #endif /* VMODS */
-
-#ifndef _OPENMP
-    threads = 1;
-#endif /* _OPENMP */
 
     if (status == SLM_SUCCESS && SpecArr == NULL)
     {
@@ -77,7 +72,7 @@ STATUS DSLIM_Construct(UINT threads, Index *index)
 
     if (status == SLM_SUCCESS)
     {
-        /* Allocate memory for SLMChunks and SPI*/
+        /* Allocate memory for all chunks */
         status = DSLIM_AllocateMemory(index);
 
         /* Construct DSLIM.iA */
@@ -203,7 +198,7 @@ STATUS DSLIM_AllocateMemory(Index *index)
     {
 
         /* Counter for Chunk size construction */
-        INT totalpeps = (INT) index->totalCount;
+        INT totalpeps = (INT) index->lcltotCnt;
 
         /* At every loop, check for remaining peps and status */
         for (UINT i = 0; i < Chunks && totalpeps > 0 && status == SLM_SUCCESS; i++)
@@ -239,7 +234,7 @@ STATUS DSLIM_AllocateMemory(Index *index)
     /* Allocate memory for SPI and Spectra Array */
     if (status == SLM_SUCCESS)
     {
-        index->pepEntries = new pepEntry[index->pepCount];
+        index->pepEntries = new pepEntry[index->lclpepCnt];
 
         if (index->pepEntries == NULL)
         {
@@ -324,7 +319,7 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
         }
 
 #ifdef _OPENMP
-#pragma omp parallel for num_threads(threads) schedule(static, 1) /* schedule(dynamic, 1) */
+#pragma omp parallel for num_threads(threads) schedule(dynamic, 1) /* schedule(dynamic, 1) */
 #endif /* _OPENMP */
         for (UINT k = start_idx; k < (start_idx + interval); k++)
         {
@@ -346,10 +341,11 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
 
 #ifdef VMODS
             /* Check if pepID belongs to peps or mods */
-            if (pepID >= index->pepCount)
+            if (pepID >= index->lclpepCnt)
             {
                 /* Extract from Mods */
-                varEntry *entry = index->modEntries + (pepID - index->pepCount);
+                varEntry *entry = index->modEntries +  pepID - index->lclpepCnt;
+
                 seq = &index->pepIndex.seqs[entry->seqID * peplen];
 
                 /* Generate the Mod. Theoretical Spectrum */
@@ -363,13 +359,15 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
             {
                 /* Extract from Peps */
                 pepEntry *entry = index->pepEntries + pepID;
-                seq = &index->pepIndex.seqs[peplen * pepID];
+
+                seq = &index->pepIndex.seqs[peplen * DSLIM_GenerateIndex(index, pepID)];
 
                 /* Generate the Theoretical Spectrum */
                 pepMass = UTILS_GenerateSpectrum(seq, peplen, Spec);
 
                 /* Fill in the pepMass */
                 entry->Mass = pepMass;
+                entry->seqID = DSLIM_GenerateIndex(index, pepID);
             }
 
             /* If a legal peptide */
@@ -744,7 +742,7 @@ STATUS DSLIM_Deinitialize(Index *index)
     return status;
 }
 
-STATUS DSLIM_DeallocateSpecArr(VOID)
+STATUS DSLIM_DeallocateSpecArr()
 {
     if (SpecArr != NULL)
     {
@@ -753,4 +751,39 @@ STATUS DSLIM_DeallocateSpecArr(VOID)
     }
 
     return SLM_SUCCESS;
+}
+
+INT DSLIM_GenerateIndex(Index *index, UINT key)
+{
+    INT value = -1;
+
+    DistPolicy policy = params.policy;
+
+    UINT csize = index->lclpepCnt;
+
+    if (key >= index->lclpepCnt)
+    {
+        value = index->modEntries[key].seqID;
+    }
+    else
+    {
+
+        if (policy == _chunk)
+        {
+            value = (params.myid * csize) + key;
+        }
+
+        if (policy == _cyclic)
+        {
+            value = (key * params.nodes) + params.myid;
+        }
+
+        if (policy == _zigzag)
+        {
+            cout << "This policy is not implemented yet\n";
+            value = false;
+        }
+    }
+
+    return value;
 }

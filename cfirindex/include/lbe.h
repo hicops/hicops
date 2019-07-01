@@ -46,7 +46,7 @@
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_Initialize(UINT threads, DistPolicy policy, Index *index);
+STATUS LBE_Initialize(Index *index);
 
 /*
  * FUNCTION: LBE_Deinitialize
@@ -74,7 +74,7 @@ STATUS LBE_Deinitialize(Index *index);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_Distribute(UINT threads, DistPolicy policy, Index *index);
+STATUS LBE_Distribute(Index *index);
 
 /*
  * FUNCTION: LBE_RevDist
@@ -103,9 +103,11 @@ STATUS LBE_Distribute(UINT threads, DistPolicy policy, Index *index);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_CountPeps(UINT threads, CHAR *filename, Index *index);
+STATUS LBE_CountPeps(CHAR *filename, Index *index);
 
 STATUS LBE_CreatePartitions(Index *index);
+
+BOOL LBE_ApplyPolicy(Index *index,  BOOL pepmod, UINT key);
 
 /*
  * FUNCTION: LBE_PrintHeader
