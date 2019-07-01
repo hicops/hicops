@@ -89,16 +89,19 @@ if __name__ == '__main__':
 		sample.write('# Digestion Enzyme\n')
 		sample.write('enzyme=Trypsin\n\n')
 
+		sample.write('# Index Distribution Policy: chunk, cyclic, zigzag\n')
+		sample.write('policy=cyclic\n\n')
+
 		sample.write('# Max fragment charge\n')
 		sample.write('maxz=3\n\n')
-		
+
 		sample.write('# Min shared peak\n')
 		sample.write('shp=4\n\n')
 		
 		sample.write('# Resolution (Da)\n')
 		sample.write('res=0.01\n\n')
 		
-		sample.write('# Precursor Mass Tolerance (+-Da)\n')
+		sample.write('# Precursor Mass Tolerance (+-Da): -1 means infinity \n')
 		sample.write('dM=500\n\n')
 
 		sample.write('# Fragment Mass Tolerance (+-Da)\n')
@@ -147,8 +150,9 @@ if __name__ == '__main__':
 	top_matches = 10
 	shp_cnt = 4
 	workspace = './workspace'
-	
-	
+	policy = 'cyclic'
+
+
 	print ('\n************************************\n')
 	print   ('*  DDA MS/MS Proteomics Pipeline   *\n')
 	print   ('*  Copyrights PCDS Lab, SCIS, FIU  *\n')
@@ -205,7 +209,16 @@ if __name__ == '__main__':
 					val = val[:-1]
 				enzyme = val
 				print ('Using enzyme  =', enzyme)
-				
+
+			# Set the distribution policy
+			elif (param == 'policy'):
+				if (val[-1] == '\n'):
+					val = val[:-1]
+				if (val[-1] == '\r'):
+					val = val[:-1]
+				policy = val
+				print ('Using policy =', policy)
+
 			# Set max mods
 			elif (param == 'nmods'):
 				nmods = int (val)
@@ -355,7 +368,7 @@ if __name__ == '__main__':
 	print ('\nRunning: '+ digestcommand + '\n')
 
 	# Run the Digester.exe
-#	digestor = call(digestcommand, shell=True)
+	digestor = call(digestcommand, shell=True)
 	
 	print ("\nSUCCESS\n")
 	
@@ -370,7 +383,7 @@ if __name__ == '__main__':
 	print ('Running: ' + clustercommand)
 
 	# Run the cluster command and pass arguments
-#	cluster = subprocess.run(['./bash/sep_by_len.sh ', digesteddb, str(min_length), str(max_length)], stdout=subprocess.PIPE, shell=True)
+	cluster = subprocess.run(['./bash/sep_by_len.sh ', digesteddb, str(min_length), str(max_length)], stdout=subprocess.PIPE, shell=True)
 
 	print ("\nSUCCESS\n")
 
@@ -391,6 +404,7 @@ if __name__ == '__main__':
 	modfile.write(str(max_prec_mass) + '\n')
 	modfile.write(str(top_matches) + '\n')
 	modfile.write(str(shp_cnt) + '\n')
+	modfile.write(str(policy) + '\n')
 
 	modfile.write(str(len(mods)) + '\n')
 	modfile.write(str(nmods) + '\n')
@@ -412,9 +426,9 @@ if __name__ == '__main__':
 
 	# Construct CFIR index and compute shared peak count
 	uparams = './workspace/uparams.txt\n'
-#	cleancfir = call("make -C cfir clean", shell=True)
-#	makecfir = call("make -C cfir", shell=True)
+	cleancfir = call("make -C cfirindex clean", shell=True)
+	makecfir = call("make -C cfirindex", shell=True)
 
-#	cfir = subprocess.run(['./cfir/cfir.exe ', uparams], stdout=subprocess.PIPE, shell=True)
+#	cfir = subprocess.run(['./cfirindex/cfir.exe ', uparams], stdout=subprocess.PIPE, shell=True)
 	
 #	print (cfir.stdout.decode('utf-8'))
