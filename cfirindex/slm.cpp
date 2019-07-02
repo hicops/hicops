@@ -20,6 +20,10 @@
 
 #include "lbe.h"
 
+#ifdef DISTMEM
+#include <mpi.h>
+#endif /* DISTMEM */
+
 #ifdef _PROFILE
  #include <gperftools/profiler.h>
 #endif /* _PROFILE */
@@ -34,6 +38,7 @@ vector<STRING> queryfiles;
 STRING dbfile;
 
 gParams params;
+
 
 static STATUS ParseParams(CHAR* paramfile);
 
@@ -76,6 +81,9 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         exit (status);
     }
 
+#ifdef MPI_INCLUDED
+    status = MPI_Init(&argc, &argv);
+#endif /* MPI_INCLUDED */
 
     /* Parse the parameters */
     status = ParseParams(argv[1]);
@@ -276,6 +284,10 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         status = LBE_Deinitialize(slm_index + peplen - minlen);
     }
 
+#ifdef MPI_INCLUDED
+    status = MPI_Finalize();
+#endif /* MPI_INCLUDED */
+
     /* Print final program status */
     cout << "\n\nEnded with status: \t\t" << status << endl;
 
@@ -384,6 +396,22 @@ static STATUS ParseParams(CHAR* paramfile)
         getline(pfile, line);
         params.min_shp = std::atoi(line.c_str());
 
+        /* Get the distribution policy */
+        getline(pfile, line);
+
+        if (!line.compare("cyclic"))
+        {
+            params.policy = _cyclic;
+        }
+        else if (!line.compare("chunk"))
+        {
+            params.policy = _chunk;
+        }
+        else if (!line.compare("zigzag"))
+        {
+            params.policy = _zigzag;
+        }
+
         /* Get number of mods */
         getline(pfile, line);
         params.vModInfo.num_vars = std::atoi((const CHAR *) line.c_str());
@@ -430,6 +458,14 @@ static STATUS ParseParams(CHAR* paramfile)
             params.perf[nn] = 1.0;
         }
 
+#ifdef MPI_INCLUDED
+        status = MPI_Comm_rank(MPI_COMM_WORLD, (INT *)&params.myid);
+        status = MPI_Comm_size(MPI_COMM_WORLD, (INT *)&params.nodes);
+#else
+        params.myid = 0;
+        params.nodes = 1;
+#endif /* MPI_INCLUDED */
+
         pfile.close();
     }
     else
@@ -439,6 +475,3 @@ static STATUS ParseParams(CHAR* paramfile)
 
     return status;
 }
-
-
-

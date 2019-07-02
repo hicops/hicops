@@ -29,6 +29,9 @@
 /* Manually switch _OPENMP */
 //#undef _OPENMP
 
+/* Manually switch MPI */
+#undef DISTMEM
+
 /* Enable to show SLMIndex Benchmark information  */
 #undef BENCHMARK
 

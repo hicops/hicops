@@ -346,7 +346,7 @@ LONGLONG MODS_ModCounter()
 {
     LONGLONG cumulative = 0;
 
-    UINT threads = 1;//params.threads;
+    UINT threads = params.threads;
     STRING conditions = params.modconditions;
 
 #ifdef VMODS
