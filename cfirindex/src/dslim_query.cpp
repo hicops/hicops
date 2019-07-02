@@ -23,6 +23,13 @@
 
 extern gParams params;
 
+#ifdef BENCHMARK
+static DOUBLE duration = 0;
+extern DOUBLE compute;
+extern DOUBLE fileio;
+extern DOUBLE memory;
+#endif /* BENCHMARK */
+
 
 #ifdef FUTURE
 extern pepEntry    *pepEntries; /* SLM Peptide Index */
@@ -102,6 +109,10 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                         continue;
                     }
 
+#ifdef BENCHMARK
+                    duration = omp_get_wtime();
+#endif
+
                     /* Locate iAPtr start and end */
                     UINT start = bAPtr[QAPtr[k] - dF];
                     UINT end = bAPtr[QAPtr[k] + 1 + dF];
@@ -128,11 +139,17 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                     }
                 }
 
+#ifdef BENCHMARK
+                memory += omp_get_wtime() - duration;
+#endif
                 index[ixx].ionIndex[chno].sc.especid = queries;
 
                 INT idaa = -1;
                 FLOAT maxhv = 0.0;
 
+#ifdef BENCHMARK
+                duration = omp_get_wtime();
+#endif
                 for (UINT i = 0; i < ss.numSpecs; i++)
                 {
                     if (bcPtr[i] + ycPtr[i] > params.min_shp)
@@ -155,12 +172,21 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                     iycPtr[i] = 0;
                 }
 
+#ifdef BENCHMARK
+                compute += omp_get_wtime() - duration;
+
+                duration = omp_get_wtime();
+#endif
                 /* Print the highest hyperscore per chunk */
 #pragma omp critical
                 {
                     /* Printing the hyperscore in OpenMP mode */
                     status = HYPERSCORE_Calculate(queries, idaa, maxhv);
                 }
+
+#ifdef BENCHMARK
+                fileio += omp_get_wtime() - duration;
+#endif
             }
         }
     }

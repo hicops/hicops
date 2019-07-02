@@ -30,6 +30,7 @@
 STATUS HYPERSCORE_Calculate(UINT specid, INT psid, FLOAT maxhv);
 STATUS HYPERSCORE_WriteHeaders ();
 STATUS HS_InitFile();
+STATUS HS_DeinitFile();
 STATUS HYPERSCORE_WriteToFile();
 ULONGLONG HYPERSCORE_Factorial(ULONGLONG n);
 std::string HYPERSCORE_Datetime();

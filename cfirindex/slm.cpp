@@ -39,6 +39,12 @@ STRING dbfile;
 
 gParams params;
 
+#ifdef BENCHMARK
+static DOUBLE duration = 0;
+DOUBLE compute = 0;
+DOUBLE fileio = 0;
+DOUBLE memory = 0;
+#endif /* BENCHMARK */
 
 static STATUS ParseParams(CHAR* paramfile);
 
@@ -144,12 +150,30 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         /* Count the number of ">" entries in FASTA */
         if (status == SLM_SUCCESS)
         {
+            start = chrono::system_clock::now();
+
             status = LBE_CountPeps((CHAR *) dbfile.c_str(), (slm_index + peplen-minlen));
+
+            end = chrono::system_clock::now();
+
+            /* Compute Duration */
+            elapsed_seconds = end - start;
+            cout << "Counting with status:\t" << status << endl;
+            cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
         }
 
         if (status == SLM_SUCCESS)
         {
+            start = chrono::system_clock::now();
+
             status  = LBE_CreatePartitions((slm_index + peplen-minlen));
+
+            end = chrono::system_clock::now();
+
+            /* Compute Duration */
+            elapsed_seconds = end - start;
+            cout << "Partitioned with status:\t" << status << endl;
+            cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
         }
 
         /* Initialize internal structures */
@@ -177,6 +201,11 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
             status = LBE_Distribute((slm_index + peplen - minlen));
 
             end = chrono::system_clock::now();
+
+            /* Compute Duration */
+            elapsed_seconds = end - start;
+            cout << "Internal Partitions with status:\t" << status << endl;
+            cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
         }
 
         /* DSLIM-Transform */
@@ -208,8 +237,15 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         /* Initialize and process Query Spectra */
         for (UINT qf = 0; qf < queryfiles.size(); qf++)
         {
+#ifdef BENCHMARK
+            duration = omp_get_wtime();
+#endif
             /* Initialize Query MS/MS file */
             status = MSQuery_InitializeQueryFile((CHAR *) queryfiles[qf].c_str());
+
+#ifdef BENCHMARK
+            fileio += omp_get_wtime() - duration;
+#endif
             cout << "Query File: " << queryfiles[qf] << endl;
             ESpecSeqs ss;
 
@@ -218,10 +254,15 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
             /* DSLIM Query Algorithm */
             if (status == SLM_SUCCESS)
             {
-
+#ifdef BENCHMARK
+                duration = omp_get_wtime();
+#endif
                 /* Extract a chunk and return the chunksize */
                 status = MSQuery_ExtractQueryChunk(QCHUNK, ss);
 
+#ifdef BENCHMARK
+                fileio += omp_get_wtime() - duration;
+#endif
                 UINT ms2specs = ss.numSpecs;
 
                 /* If the chunksize is zero, all done */
@@ -289,7 +330,19 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 #endif /* MPI_INCLUDED */
 
     /* Print final program status */
-    cout << "\n\nEnded with status: \t\t" << status << endl;
+    cout << "\n\nEnded with status: \t\t" << status << endl << endl;
+
+#ifdef BENCHMARK
+    cout << "File I/O Time: \t\t\t" << fileio << 's' << endl;
+    cout << "Compute Time: \t\t\t" << compute << 's' << endl;
+    cout << "Memory Time: \t\t\t" << memory << 's' << endl << endl;
+
+    DOUBLE total_time = (fileio + compute + memory) / 100;
+
+    cout << "% File I/O Time: \t\t" << fileio/total_time << '%' << endl;
+    cout << "% Compute  Time: \t\t" << compute/total_time << '%' << endl;
+    cout << "% Memory   Time: \t\t" << memory/total_time << '%' << endl;
+#endif /* BENCHMARK */
 
 #ifdef _PROFILE
     ProfilerFlush();

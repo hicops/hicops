@@ -31,7 +31,12 @@ extern gParams params;
 BOOL          *features;
 #endif
 
-
+#ifdef BENCHMARK
+static DOUBLE duration = 0;
+extern DOUBLE compute;
+extern DOUBLE fileio;
+extern DOUBLE memory;
+#endif /* BENCHMARK */
 
 /* FUNCTION: DSLIM_Construct
  *
@@ -58,6 +63,9 @@ STATUS DSLIM_Construct(Index *index)
     LBE_UNUSED_PARAM(modInfo);
 #endif /* VMODS */
 
+#ifdef BENCHMARK
+    duration = omp_get_wtime();
+#endif
     if (status == SLM_SUCCESS && SpecArr == NULL)
     {
         /* Spectra Array (SA) */
@@ -70,24 +78,46 @@ STATUS DSLIM_Construct(Index *index)
         }
     }
 
+#ifdef BENCHMARK
+    memory += omp_get_wtime() - duration;
+#endif
+
     if (status == SLM_SUCCESS)
     {
+#ifdef BENCHMARK
+        duration = omp_get_wtime();
+#endif
         /* Allocate memory for all chunks */
         status = DSLIM_AllocateMemory(index);
 
+#ifdef BENCHMARK
+        memory += omp_get_wtime() - duration;
+#endif
         /* Construct DSLIM.iA */
         if (status == SLM_SUCCESS)
         {
             /* Distributed SLM Ions Array construction */
             for (UINT chno = 0; chno < index->nChunks && status == SLM_SUCCESS; chno++)
             {
+#ifdef BENCHMARK
+                duration = omp_get_wtime();
+#endif
                 /* Construct each DSLIM chunk in Parallel */
                 status = DSLIM_ConstructChunk(threads, index, chno);
 
+#ifdef BENCHMARK
+                memory += omp_get_wtime() - duration;
+#endif
                 /* Apply SLM-Transform on the chunk */
                 if (status == SLM_SUCCESS)
                 {
+#ifdef BENCHMARK
+                    duration = omp_get_wtime();
+#endif
                     status = DSLIM_SLMTransform(threads, index, chno);
+#ifdef BENCHMARK
+                    compute += omp_get_wtime() - duration;
+#endif
                 }
             }
         }
@@ -95,6 +125,9 @@ STATUS DSLIM_Construct(Index *index)
 
     if (status == SLM_SUCCESS)
     {
+#ifdef BENCHMARK
+        duration = omp_get_wtime();
+#endif
         UINT speclen = peplen_1 * maxz * iSERIES;
 
         /* Construct DSLIM.bA */
@@ -138,10 +171,18 @@ STATUS DSLIM_Construct(Index *index)
                 status = ERR_INVLD_SIZE;
             }
         }
+#ifdef BENCHMARK
+        compute += omp_get_wtime() - duration;
+#endif
     }
 
     if (status == SLM_SUCCESS)
     {
+
+#ifdef BENCHMARK
+        duration = omp_get_wtime();
+#endif
+
         for (UINT chunk_number = 0; chunk_number < index->nChunks; chunk_number++)
         {
             /* Get size of the chunk */
@@ -159,10 +200,11 @@ STATUS DSLIM_Construct(Index *index)
             memset(index->ionIndex->sc.iyc, 0x0, sizeof(FLOAT) * csize);
             index->ionIndex->sc.size = csize;
         }
+
+#ifdef BENCHMARK
+        memory += omp_get_wtime() - duration;
+#endif
     }
-    /* Remove the temporary SpecArray (SA) */
-//    delete[] SpecArr;
-//    SpecArr = NULL;
 
     return status;
 }
@@ -744,12 +786,19 @@ STATUS DSLIM_Deinitialize(Index *index)
 
 STATUS DSLIM_DeallocateSpecArr()
 {
+
+#ifdef BENCHMARK
+    duration = omp_get_wtime();
+#endif
     if (SpecArr != NULL)
     {
         delete[] SpecArr;
         SpecArr= NULL;
     }
 
+#ifdef BENCHMARK
+    memory += omp_get_wtime() - duration;
+#endif
     return SLM_SUCCESS;
 }
 
@@ -773,12 +822,12 @@ INT DSLIM_GenerateIndex(Index *index, UINT key)
             value = (params.myid * csize) + key;
         }
 
-        if (policy == _cyclic)
+        else if (policy == _cyclic)
         {
             value = (key * params.nodes) + params.myid;
         }
 
-        if (policy == _zigzag)
+        else if (policy == _zigzag)
         {
             cout << "This policy is not implemented yet\n";
             value = false;

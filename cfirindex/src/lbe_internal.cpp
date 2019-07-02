@@ -28,6 +28,13 @@ ifstream file;
 
 extern gParams params;
 
+#ifdef BENCHMARK
+static DOUBLE duration = 0;
+extern DOUBLE compute;
+extern DOUBLE fileio;
+extern DOUBLE memory;
+#endif /* BENCHMARK */
+
 /* Static function Prototypes */
 static STATUS LBE_AllocateMem(Index *index);
 
@@ -131,7 +138,14 @@ STATUS LBE_Initialize(Index *index)
     /* Check if ">" entries are > 0 */
     if (index->lclpepCnt > 0)
     {
+#ifdef BENCHMARK
+        duration = omp_get_wtime();
+#endif
         status = LBE_AllocateMem(index);
+
+#ifdef BENCHMARK
+        memory += omp_get_wtime() - duration;
+#endif
     }
     else
     {
@@ -141,7 +155,9 @@ STATUS LBE_Initialize(Index *index)
     /* If Seqs was successfully filled */
     if (Seqs.size() != 0 && status == SLM_SUCCESS)
     {
-
+#ifdef BENCHMARK
+        duration = omp_get_wtime();
+#endif
         UINT idx = 0;
 
         /* Extract First Sequence manually */
@@ -175,6 +191,10 @@ STATUS LBE_Initialize(Index *index)
 
         /* Get the peptide count */
         iCount /= 2;
+
+#ifdef BENCHMARK
+        memory += omp_get_wtime() - duration;
+#endif
     }
     else
     {
@@ -192,8 +212,14 @@ STATUS LBE_Initialize(Index *index)
 
     if (index->lclmodCnt > 0)
     {
+#ifdef BENCHMARK
+        duration = omp_get_wtime();
+#endif
         /* Fill in the mods entry */
         status = MODS_GenerateMods(index);
+#ifdef BENCHMARK
+        compute += omp_get_wtime() - duration;
+#endif
     }
 #endif /* VMODS */
 
@@ -390,7 +416,11 @@ STATUS LBE_CountPeps(CHAR *filename, Index *index)
     LBE_UNUSED_PARAM(modconditions);
 #endif /* VMODS */
     
-	/* Open file */
+#ifdef BENCHMARK
+    duration = omp_get_wtime();
+#endif
+
+    /* Open file */
     file.open(filename);
 
     if (file.is_open())
@@ -427,6 +457,10 @@ STATUS LBE_CountPeps(CHAR *filename, Index *index)
         status = ERR_INVLD_PARAM;
     }
 
+#ifdef BENCHMARK
+    fileio += omp_get_wtime() - duration;
+#endif
+
 #ifdef VMODS
     /* Count the number of variable mods given
      * modification information */
@@ -434,7 +468,14 @@ STATUS LBE_CountPeps(CHAR *filename, Index *index)
     {
         status = UTILS_InitializeModInfo(&params.vModInfo);
 
+#ifdef BENCHMARK
+        duration = omp_get_wtime();
+#endif
         index->modCount = MODS_ModCounter();
+
+#ifdef BENCHMARK
+        compute += omp_get_wtime() - duration;
+#endif
     }
 
 #endif /* VMODS */
@@ -470,7 +511,7 @@ VOID LBE_PrintHeader(VOID)
 {
     cout << "\n"
             "*********************************"
-            "\n    SLM-Transform Indexing    \n"
+            "\n          CFIR Search         \n"
             "Florida International University\n"
             "        Miami, FL, USA\n"
             "*********************************"

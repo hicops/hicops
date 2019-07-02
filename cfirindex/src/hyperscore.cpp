@@ -55,6 +55,17 @@ STATUS HS_InitFile()
     return SLM_SUCCESS;
 }
 
+STATUS HS_DeinitFile()
+{
+    if (FileInitiated)
+    {
+        myfile.close();
+        FileInitiated = false;
+    }
+
+    return SLM_SUCCESS;
+}
+
 STATUS HYPERSCORE_Calculate(UINT specid, INT psid, FLOAT maxhv)
 {
     if (FileInitiated)

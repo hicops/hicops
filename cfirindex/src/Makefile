@@ -4,7 +4,7 @@ CXXFLAGS += -D_GLIBCXX_PARALLEL -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DHAV
 
 INCPATHS = -I../include -I../mstoolkit/include
 
-OBJS = dslim_query.o dslim.o lbe_internal.o utils.o mods.o msquery.o hyperscore.o
+OBJS = dslim_query.o dslim.o lbe_internal.o utils.o mods.o msquery.o
 LIB = libdslim.a
 OBJDIR = objs
 

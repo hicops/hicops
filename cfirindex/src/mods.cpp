@@ -31,12 +31,12 @@ Index *lclindex;
 vector<STRING> tokens;
 UINT limit = 0;
 ULONGLONG Comb[MAX_COMBS][MAX_COMBS];
+varEntry    *modEntries; /* SLM Mods Index    */
 
 /* External Variables */
 extern gParams params;
 #ifdef VMODS
 extern vector<STRING>     Seqs; /* Peptide Sequences */
-varEntry    *modEntries; /* SLM Mods Index    */
 
 /* Static Functions */
 static LONGLONG count(STRING s, STRING conditions);
