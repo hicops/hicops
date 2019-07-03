@@ -79,8 +79,9 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
     for (UINT queries = 0; queries < len; queries++)
     {
         /* Pointer to each query spectrum */
-        QAPtr = ss.moz + (queries * QALEN);
-        iPtr = ss.intensity + (queries * QALEN);
+        QAPtr = ss.moz + ss.idx[queries];
+        iPtr = ss.intensity + ss.idx[queries];
+        UINT qspeclen = ss.idx[queries + 1] - ss.idx[queries];
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic, 1) num_threads(threads)
@@ -100,7 +101,7 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                 FLOAT *iycPtr = index[ixx].ionIndex[chno].sc.iyc;
 
                 /* Query all fragments in each spectrum */
-                for (UINT k = 0; k < QALEN; k++)
+                for (UINT k = 0; k < qspeclen; k++)
                 {
                     /* Check for any zeros
                      * Zero = Trivial query */
