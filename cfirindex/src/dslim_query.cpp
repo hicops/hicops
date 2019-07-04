@@ -75,6 +75,10 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
 
     status = HS_InitFile();
 
+#ifdef BENCHMARK
+    duration = omp_get_wtime();
+#endif
+
     /* Process all the queries in the chunk */
     for (UINT queries = 0; queries < len; queries++)
     {
@@ -82,6 +86,8 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
         QAPtr = ss.moz + ss.idx[queries];
         iPtr = ss.intensity + ss.idx[queries];
         UINT qspeclen = ss.idx[queries + 1] - ss.idx[queries];
+
+        std::cout << '\r' << "DONE: " << queries+1 << "/" << len << std::flush;
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic, 1) num_threads(threads)
@@ -110,10 +116,6 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                         continue;
                     }
 
-#ifdef BENCHMARK
-                    duration = omp_get_wtime();
-#endif
-
                     /* Locate iAPtr start and end */
                     UINT start = bAPtr[QAPtr[k] - dF];
                     UINT end = bAPtr[QAPtr[k] + 1 + dF];
@@ -140,17 +142,11 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                     }
                 }
 
-#ifdef BENCHMARK
-                memory += omp_get_wtime() - duration;
-#endif
                 index[ixx].ionIndex[chno].sc.especid = queries;
 
                 INT idaa = -1;
                 FLOAT maxhv = 0.0;
 
-#ifdef BENCHMARK
-                duration = omp_get_wtime();
-#endif
                 for (UINT i = 0; i < ss.numSpecs; i++)
                 {
                     if (bcPtr[i] + ycPtr[i] > params.min_shp)
@@ -174,9 +170,9 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                 }
 
 #ifdef BENCHMARK
-                compute += omp_get_wtime() - duration;
 
-                duration = omp_get_wtime();
+
+
 #endif
                 /* Print the highest hyperscore per chunk */
 #pragma omp critical
@@ -184,13 +180,15 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                     /* Printing the hyperscore in OpenMP mode */
                     status = HYPERSCORE_Calculate(queries, idaa, maxhv);
                 }
-
-#ifdef BENCHMARK
-                fileio += omp_get_wtime() - duration;
-#endif
             }
         }
     }
+
+#ifdef BENCHMARK
+    compute += omp_get_wtime() - duration;                
+#endif
+
+    std::cout << '\n';
 
     return status;
 }

@@ -119,11 +119,14 @@ if __name__ == '__main__':
 	# Max threads and cpus
 	max_threads = subprocess.run("grep -c ^processor /proc/cpuinfo", 
 									stdout=subprocess.PIPE, shell=True)
-	max_threads = int(max_threads.stdout.decode('utf-8'))
+	max_threads = int(max_threads.stdout.decode('utf-8'))/2
+	
+	max_threads = int(max_threads)
 
 	max_cpus = subprocess.run("grep ^cpu\\scores /proc/cpuinfo | uniq | awk '{print $4}'", 
 								stdout=subprocess.PIPE, shell=True)
-	max_cpus = int(max_cpus.stdout.decode('utf-8'))
+#	print(max_cpus.stdout.decode('utf-8'))
+#	max_cpus = int(max_cpus.stdout.decode('utf-8'))
 
 	# Print stuff
 #	print(max_cpus)
@@ -180,7 +183,7 @@ if __name__ == '__main__':
 				print ('Proteome DB   =', database)
 				if (os.path.isfile(database) == False):
 					print ("ERROR: Enter valid path to database.fasta")
-					sys.exit(-2)
+	#				sys.exit(-2)
 			
 			elif (param == 'ms2data'):
 				if (val[-1] == '\n'):
@@ -192,7 +195,7 @@ if __name__ == '__main__':
 				print ('MS/MS dataset =', ms2data)
 				if (os.path.exists(ms2data) == False):
 					print ("ERROR: Enter valid path to MS2 dataset")
-					sys.exit(-3)
+	#				sys.exit(-3)
 				
 			# Set max threads to use
 			elif (param == 'threads'):
@@ -368,7 +371,7 @@ if __name__ == '__main__':
 	print ('\nRunning: '+ digestcommand + '\n')
 
 	# Run the Digester.exe
-	digestor = call(digestcommand, shell=True)
+#	digestor = call(digestcommand, shell=True)
 	
 	print ("\nSUCCESS\n")
 	
@@ -383,14 +386,14 @@ if __name__ == '__main__':
 	print ('Running: ' + clustercommand)
 
 	# Run the cluster command and pass arguments
-	cluster = subprocess.run(['./bash/sep_by_len.sh ', digesteddb, str(min_length), str(max_length)], stdout=subprocess.PIPE, shell=True)
+#	cluster = subprocess.run(['./bash/sep_by_len.sh ', digesteddb, str(min_length), str(max_length)], stdout=subprocess.PIPE, shell=True)
 
 	print ("\nSUCCESS\n")
 
 	# Prepare the uparams.txt file for seq generator
 	modfile = open(workspace + '/uparams.txt', "w+")
 
-	modfile.write(workspace + '/parts\n')
+	modfile.write('/lclhome/mhase003/Data/Database/Digested/parts' + '\n')
 	modfile.write(ms2data + '\n')
 	modfile.write(str(max_threads) + '\n')
 	modfile.write(str(min_length) + '\n')
@@ -429,6 +432,6 @@ if __name__ == '__main__':
 	cleancfir = call("make -C cfirindex clean", shell=True)
 	makecfir = call("make -C cfirindex", shell=True)
 
-#	cfir = subprocess.run(['./cfirindex/cfir.exe ', uparams], stdout=subprocess.PIPE, shell=True)
+	cfir = subprocess.run(['./cfirindex/cfir.exe ', uparams], stdout=subprocess.PIPE, shell=True)
 	
 #	print (cfir.stdout.decode('utf-8'))
