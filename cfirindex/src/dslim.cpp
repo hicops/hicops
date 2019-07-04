@@ -812,7 +812,7 @@ INT DSLIM_GenerateIndex(Index *index, UINT key)
 
     if (key >= index->lclpepCnt)
     {
-        value = index->modEntries[key].seqID;
+        value = index->modEntries[key - index->lclpepCnt].seqID;
     }
     else
     {

@@ -91,7 +91,7 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic, 1) num_threads(threads)
-#endif
+#endif /* _OPENMP */
         for (UINT ixx = 0; ixx < idxchunk; ixx++)
         {
             UINT speclen = (index[ixx].pepIndex.peplen - 1) * maxz * iSERIES;
@@ -99,8 +99,8 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
             for (UINT chno = 0; chno < index[ixx].nChunks; chno++)
             {
                 /* Query each chunk in parallel */
-                UINT *bAPtr = index[ixx].ionIndex[chno].bA;
-                UINT *iAPtr = index[ixx].ionIndex[chno].iA;
+                UINT *bAPtr  = index[ixx].ionIndex[chno].bA;
+                UINT *iAPtr  = index[ixx].ionIndex[chno].iA;
                 UCHAR *bcPtr = index[ixx].ionIndex[chno].sc.bc;
                 UCHAR *ycPtr = index[ixx].ionIndex[chno].sc.yc;
                 FLOAT *ibcPtr = index[ixx].ionIndex[chno].sc.ibc;
@@ -147,33 +147,28 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                 INT idaa = -1;
                 FLOAT maxhv = 0.0;
 
-                for (UINT i = 0; i < ss.numSpecs; i++)
+                for (UINT it = 0; it < index[ixx].ionIndex[chno].sc.size; it++)
                 {
-                    if (bcPtr[i] + ycPtr[i] > params.min_shp)
+                    if (bcPtr[it] + ycPtr[it] > params.min_shp)
                     {
-                        FLOAT hyperscore = log(HYPERSCORE_Factorial(ULONGLONG(bcPtr[i])) *
-                                HYPERSCORE_Factorial(ULONGLONG(ycPtr[i])) *
-                                ibcPtr[i] *
-                                iycPtr[i]);
+                        FLOAT hyperscore = log(HYPERSCORE_Factorial(ULONGLONG(bcPtr[it])) *
+                                               HYPERSCORE_Factorial(ULONGLONG(ycPtr[it])) *
+                                               ibcPtr[it] *
+                                               iycPtr[it]);
 
                         if (hyperscore > maxhv)
                         {
-                            idaa = DSLIM_GenerateIndex(&index[ixx], i);
+                            idaa = DSLIM_GenerateIndex(&index[ixx], it);
                             maxhv = hyperscore;
                         }
                     }
 
-                    bcPtr[i] = 0;
-                    ycPtr[i] = 0;
-                    ibcPtr[i] = 0;
-                    iycPtr[i] = 0;
+                    bcPtr[it] = 0;
+                    ycPtr[it] = 0;
+                    ibcPtr[it] = 0;
+                    iycPtr[it] = 0;
                 }
 
-#ifdef BENCHMARK
-
-
-
-#endif
                 /* Print the highest hyperscore per chunk */
 #pragma omp critical
                 {
@@ -185,7 +180,7 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
     }
 
 #ifdef BENCHMARK
-    compute += omp_get_wtime() - duration;                
+    compute += omp_get_wtime() - duration;
 #endif
 
     std::cout << '\n';
