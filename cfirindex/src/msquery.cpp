@@ -126,6 +126,7 @@ STATUS MSQuery_InitializeQueryFile(UINT& start, UINT& count, CHAR *filename)
         QAcount = count;
         MS2file = filename;
         curr_chunk = 0;
+        running_count = 0;
         nqchunks = std::ceil(((double) count / QCHUNK));
     }
 

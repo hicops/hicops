@@ -12,6 +12,7 @@ parts
 *.fasta
 mods.txt
 sampleparams.txt
+*.tsv
 
 # Precompiled Headers
 *.gch

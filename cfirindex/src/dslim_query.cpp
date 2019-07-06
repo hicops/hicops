@@ -67,6 +67,10 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
     UINT threads = params.threads;
     UINT scale = params.scale;
 
+#ifdef BENCHMARK
+    DOUBLE tcons[threads] = {0};
+#endif
+
     DOUBLE maxmass = params.max_mass;
 
 #ifndef _OPENMP
@@ -87,13 +91,16 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
         iPtr = ss.intensity + ss.idx[queries];
         UINT qspeclen = ss.idx[queries + 1] - ss.idx[queries];
 
-        std::cout << '\r' << "DONE: " << queries+1 << "/" << len << std::flush;
+        std::cout << '\r' << "DONE: " << queries+1 << "/" << len;
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic, 1) num_threads(threads)
 #endif /* _OPENMP */
         for (UINT ixx = 0; ixx < idxchunk; ixx++)
         {
+#ifdef BENCHMARK
+            DOUBLE stime = omp_get_wtime();
+#endif
             UINT speclen = (index[ixx].pepIndex.peplen - 1) * maxz * iSERIES;
 
             for (UINT chno = 0; chno < index[ixx].nChunks; chno++)
@@ -111,33 +118,31 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                 {
                     /* Check for any zeros
                      * Zero = Trivial query */
-                    if (QAPtr[k] < dF || QAPtr[k] > ((maxmass * scale) - 1 - dF))
+                    if (QAPtr[k] > dF && QAPtr[k] < ((maxmass * scale) - 1 - dF))
                     {
-                        continue;
-                    }
+                        /* Locate iAPtr start and end */
+                        UINT start = bAPtr[QAPtr[k] - dF];
+                        UINT end = bAPtr[QAPtr[k] + 1 + dF];
 
-                    /* Locate iAPtr start and end */
-                    UINT start = bAPtr[QAPtr[k] - dF];
-                    UINT end = bAPtr[QAPtr[k] + 1 + dF];
-
-                    /* Loop through located iAions */
-                    for (UINT ion = start; ion < end; ion++)
-                    {
-                        UINT raw = iAPtr[ion];
-
-                        /* Calculate parent peptide ID */
-                        UINT ppid = (raw / speclen);
-
-                        /* Update corresponding scorecard entries */
-                        if ((raw % speclen) < speclen / 2)
+                        /* Loop through located iAions */
+                        for (UINT ion = start; ion < end; ion++)
                         {
-                            bcPtr[ppid] += 1;
-                            ibcPtr[ppid] += iPtr[k];
-                        }
-                        else
-                        {
-                            ycPtr[ppid] += 1;
-                            iycPtr[ppid] += iPtr[k];
+                            UINT raw = iAPtr[ion];
+
+                            /* Calculate parent peptide ID */
+                            UINT ppid = (raw / speclen);
+
+                            /* Update corresponding scorecard entries */
+                            if ((raw % speclen) < speclen / 2)
+                            {
+                                bcPtr[ppid] += 1;
+                                ibcPtr[ppid] += iPtr[k];
+                            }
+                            else
+                            {
+                                ycPtr[ppid] += 1;
+                                iycPtr[ppid] += iPtr[k];
+                            }
                         }
                     }
                 }
@@ -176,14 +181,22 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                     status = HYPERSCORE_Calculate(queries, idaa, maxhv);
                 }
             }
+#ifdef BENCHMARK
+            tcons[omp_get_thread_num()] += omp_get_wtime() - stime;
+#endif
         }
     }
 
+    std::cout << '\n';
+
 #ifdef BENCHMARK
     compute += omp_get_wtime() - duration;
-#endif
 
-    std::cout << '\n';
+    for (unsigned int thd = 0; thd < params.threads; thd++)
+    {
+        std:: cout << "Thread #: " << thd << "\t" << tcons[thd] << std::endl;
+    }
+#endif
 
     return status;
 }
