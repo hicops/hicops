@@ -184,7 +184,7 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
 
                             if (hyperscore > maxhv)
                             {
-                                idaa = DSLIM_GenerateIndex(&index[ixx], it);
+                                idaa = DSLIM_GenerateIndex(&index[ixx], (csize * chno) + it);
                                 maxhv = hyperscore;
                             }
                         }
