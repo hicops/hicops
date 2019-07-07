@@ -248,6 +248,7 @@ STATUS LBE_Initialize(Index *index)
 STATUS LBE_Deinitialize(Index *index)
 {
     (VOID) DSLIM_Deinitialize(index);
+    (VOID) DSLIM_DeallocateSC();
 
     return SLM_SUCCESS;
 }
@@ -271,12 +272,14 @@ STATUS LBE_Distribute(Index *index)
     UINT N = index->lcltotCnt;
     UINT speclen = (index->pepIndex.peplen-1) * params.maxz * iSERIES;
     UINT maxchunksize = (MAX_IONS / speclen);
+    UINT maxchunksize2 = params.spadmem / ((2 * sizeof (UCHAR) + 2 * sizeof(FLOAT)) * params.threads);
     UINT nchunks;
     UINT chunksize;
     UINT lastchunksize;
 
     /* Calculate the chunksize */
     chunksize = std::min(N, maxchunksize);
+    chunksize = std::min(chunksize, maxchunksize2);
 
 //            ((N % p) == 0) ? (N / p) : ((N + p) / p);
 

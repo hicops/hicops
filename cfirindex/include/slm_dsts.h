@@ -267,14 +267,14 @@ typedef struct _BYICount
     UCHAR   *yc;        /* y ion count */
     FLOAT   *iyc;       /* Sum of y ion intensities */
     UINT     size;      /* Length of score card (above declared arrays) */
-    UINT     especid;   /* Experimental spectrum id */
+    INT     especid;   /* Experimental spectrum id */
 } BYICount;
 
 typedef struct _SLMchunk
 {
     UINT    *iA = NULL; /* Ions Array (iA)   */
     UINT    *bA = NULL; /* Bucket Array (bA) */
-    BYICount sc;
+//    BYICount sc;
 #ifdef FUTURE
     UCHAR *bits = NULL; /* Scorecard bits    */
 #endif /* FUTURE */
@@ -314,6 +314,7 @@ typedef struct _globalParams
     UINT min_shp    = 4;
     UINT nodes      = 1;
     UINT myid       = 0;
+    UINT spadmem    = 2048;
 
     UINT min_mass = 500.0;
     UINT max_mass = 5000.0;

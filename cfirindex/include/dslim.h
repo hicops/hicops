@@ -46,6 +46,8 @@
 STATUS DSLIM_Construct(Index *index);
 
 INT DSLIM_GenerateIndex(Index *index, UINT key);
+
+STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs);
 /*
  * FUNCTION: DSLIM_AllocateMemory
  *

@@ -231,6 +231,11 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         status = DSLIM_DeallocateSpecArr();
     }
 
+    if (status == SLM_SUCCESS)
+    {
+        status = DSLIM_InitializeScorecard(slm_index, (maxlen - minlen + 1));
+    }
+
     /* Query the index */
     if (status == SLM_SUCCESS)
     {
@@ -271,11 +276,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
                     break;
                 }
 
-                cout << "Extracted " << ms2specs << " query spectra with status: \t" << status << endl << endl;
-
                 spectra += ms2specs;
-
-                cout << "Scoring Now..." << endl;
 
                 start = chrono::system_clock::now();
 
@@ -283,8 +284,6 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
                 status = DSLIM_QuerySpectrum(ss, ms2specs, slm_index, (maxlen - minlen + 1));
 
                 end = chrono::system_clock::now();
-
-                cout << "DONE." << endl;
 
                 /* Compute Duration */
                 qtime += end - start;
@@ -454,6 +453,8 @@ static STATUS ParseParams(CHAR* paramfile)
         /* Get the shp threshold */
         getline(pfile, line);
         params.min_shp = std::atoi(line.c_str());
+
+        params.spadmem *= 1024 * 1024; // Mega bytes (scratch space for score card)
 
         /* Get the distribution policy */
         getline(pfile, line);

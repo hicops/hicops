@@ -23,6 +23,7 @@ using namespace std;
 
 /* Global Variables */
 UINT          *SpecArr = NULL; /* Spectra Array     */
+BYICount      *Score   = NULL;
 UINT reduce = 0;
 
 extern gParams params;
@@ -173,36 +174,6 @@ STATUS DSLIM_Construct(Index *index)
         }
 #ifdef BENCHMARK
         compute += omp_get_wtime() - duration;
-#endif
-    }
-
-    if (status == SLM_SUCCESS)
-    {
-
-#ifdef BENCHMARK
-        duration = omp_get_wtime();
-#endif
-
-        for (UINT chunk_number = 0; chunk_number < index->nChunks; chunk_number++)
-        {
-            /* Get size of the chunk */
-            UINT csize = ((chunk_number == index->nChunks - 1) && (index->nChunks > 1)) ?
-                           index->lastchunksize                                 :
-                           index->chunksize;
-
-            index->ionIndex->sc.bc = new UCHAR[csize];
-            memset(index->ionIndex->sc.bc, 0x0, sizeof(UCHAR) * csize);
-            index->ionIndex->sc.yc = new UCHAR[csize];
-            memset(index->ionIndex->sc.yc, 0x0, sizeof(UCHAR) * csize);
-            index->ionIndex->sc.ibc = new FLOAT[csize];
-            memset(index->ionIndex->sc.ibc, 0x0, sizeof(FLOAT) * csize);
-            index->ionIndex->sc.iyc = new FLOAT[csize];
-            memset(index->ionIndex->sc.iyc, 0x0, sizeof(FLOAT) * csize);
-            index->ionIndex->sc.size = csize;
-        }
-
-#ifdef BENCHMARK
-        memory += omp_get_wtime() - duration;
 #endif
     }
 
@@ -540,6 +511,58 @@ STATUS DSLIM_SLMTransform(UINT threads, Index *index, UINT chunk_number)
     return status;
 }
 
+STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs)
+{
+    STATUS status = SLM_SUCCESS;
+
+    /* Get size of the chunk */
+    UINT sAize = params.spadmem / ((2 * sizeof(UCHAR) + 2 * sizeof(FLOAT)) * params.threads);
+    UINT sz2 = 0;
+
+    for (UINT ii = 0; ii < idxs; ii++)
+    {
+        if (index[ii].chunksize > sz2)
+        {
+            sz2 = index[ii].chunksize;
+        }
+    }
+
+    sAize = std::min(sz2, sAize);
+
+#ifdef BENCHMARK
+    duration = omp_get_wtime();
+#endif
+
+    Score = new BYICount[params.threads];
+
+    if (Score != NULL)
+    {
+        for (UINT thd = 0; thd < params.threads; thd++)
+        {
+            Score[thd].bc = new UCHAR[sAize];
+            memset(Score[thd].bc, 0x0, sizeof(UCHAR) * sAize);
+            Score[thd].yc = new UCHAR[sAize];
+            memset(Score[thd].yc, 0x0, sizeof(UCHAR) * sAize);
+            Score[thd].ibc = new FLOAT[sAize];
+            memset(Score[thd].ibc, 0x0, sizeof(FLOAT) * sAize);
+            Score[thd].iyc = new FLOAT[sAize];
+            memset(Score[thd].iyc, 0x0, sizeof(FLOAT) * sAize);
+
+            Score[thd].size = sAize;
+        }
+    }
+    else
+    {
+        status = ERR_INVLD_MEMORY;
+    }
+
+#ifdef BENCHMARK
+    memory += omp_get_wtime() - duration;
+#endif
+
+    return status;
+}
+
 /*
  * FUNCTION: DSLIM_Analyze
  *
@@ -727,19 +750,6 @@ STATUS DSLIM_Deinitialize(Index *index)
         {
             delete[] curr_chunk.iA;
             curr_chunk.iA = NULL;
-        }
-
-        if (curr_chunk.sc.bc != NULL)
-        {
-            delete[] curr_chunk.sc.bc;
-            delete[] curr_chunk.sc.yc;
-            delete[] curr_chunk.sc.ibc;
-            delete[] curr_chunk.sc.iyc;
-
-            curr_chunk.sc.bc = NULL;
-            curr_chunk.sc.yc = NULL;
-            curr_chunk.sc.ibc = NULL;
-            curr_chunk.sc.iyc = NULL;
         }
 
     }
