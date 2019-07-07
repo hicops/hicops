@@ -105,7 +105,6 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
 #ifdef BENCHMARK
             DOUBLE stime = omp_get_wtime();
 #endif
-
              /* Pointer to each query spectrum */
              UINT *QAPtr = ss.moz + ss.idx[queries];
              FLOAT *iPtr = ss.intensity + ss.idx[queries];
@@ -117,21 +116,24 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
              FLOAT *ibcPtr = Score[thno].ibc;
              FLOAT *iycPtr = Score[thno].iyc;
 
-//             std::cout << '\r' << "DONE: " << queries+1 << "/" << len;
+            if (thno == 0 && !(queries % 50))
+            {
+                std::cout << '\r' << "DONE: " << (queries * 100) /len << "%";
+            }
 
-             for (UINT ixx = 0; ixx < idxchunk; ixx++)
-             {
-                 UINT speclen = (index[ixx].pepIndex.peplen - 1) * maxz * iSERIES;
+            for (UINT ixx = 0; ixx < idxchunk; ixx++)
+            {
+                UINT speclen = (index[ixx].pepIndex.peplen - 1) * maxz * iSERIES;
 
-                 for (UINT chno = 0; chno < index[ixx].nChunks; chno++)
-                 {
-                     /* Query each chunk in parallel */
-                     UINT *bAPtr  = index[ixx].ionIndex[chno].bA;
-                     UINT *iAPtr  = index[ixx].ionIndex[chno].iA;
+                for (UINT chno = 0; chno < index[ixx].nChunks; chno++)
+                {
+                    /* Query each chunk in parallel */
+                    UINT *bAPtr = index[ixx].ionIndex[chno].bA;
+                    UINT *iAPtr = index[ixx].ionIndex[chno].iA;
 
-                     /* Query all fragments in each spectrum */
-                     for (UINT k = 0; k < qspeclen; k++)
-                     {
+                    /* Query all fragments in each spectrum */
+                    for (UINT k = 0; k < qspeclen; k++)
+                    {
                         /* Check for any zeros
                          * Zero = Trivial query */
                         if (QAPtr[k] > dF && QAPtr[k] < ((maxmass * scale) - 1 - dF))
