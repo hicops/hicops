@@ -189,11 +189,6 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                             }
                         }
 
-                        /* Clear the scorecard as you read */
-                        bcPtr[it] = 0;
-                        ycPtr[it] = 0;
-                        ibcPtr[it] = 0;
-                        iycPtr[it] = 0;
                     }
 
                     /* Print the highest hyperscore per chunk */
@@ -202,6 +197,12 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                         /* Printing the hyperscore in OpenMP mode */
                         status = HYPERSCORE_Calculate(queries, idaa, maxhv);
                     }
+
+                    /* Clear the scorecard */
+                    std::memset(bcPtr, 0x0, sizeof(UCHAR) * csize);
+                    std::memset(ycPtr, 0x0, sizeof(UCHAR) * csize);
+                    std::memset(ibcPtr, 0x0, sizeof(FLOAT) * csize);
+                    std::memset(iycPtr, 0x0, sizeof(FLOAT) * csize);
                 }
             }
 
