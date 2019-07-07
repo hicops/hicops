@@ -116,9 +116,9 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
              FLOAT *ibcPtr = Score[thno].ibc;
              FLOAT *iycPtr = Score[thno].iyc;
 
-            if (thno == 0 && !(queries % 50))
+            if (thno == 0)
             {
-                std::cout << '\r' << "DONE: " << (queries * 100) /len << "%";
+                std::cout << "\rDONE: " << (queries * 100) /len << "%";
             }
 
             for (UINT ixx = 0; ixx < idxchunk; ixx++)
