@@ -101,7 +101,7 @@ STATUS DSLIM_SLMTransform(UINT threads, Index *index, UINT chunk_number);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_Optimize(UINT threads, Index *index, UINT chunk_number);
+STATUS DSLIM_Optimize(Index *index, UINT chunk_number);
 
 /*
  * FUNCTION: DSLIM_InitializeSC
