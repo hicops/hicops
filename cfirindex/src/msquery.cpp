@@ -284,20 +284,20 @@ STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, UINT *QAPtr)
     if (gReader.readFile(filename, Spectrum, currScan) && status == SLM_SUCCESS)
     {
         UINT SpectrumSize = Spectrum.size();
-        FLOAT dIntArr[SpectrumSize];
+        UINT dIntArr[SpectrumSize];
         UINT  mzArray[SpectrumSize];
 
         for (UINT j = 0; j < SpectrumSize; j++)
         {
             mzArray[j] = (UINT)(Spectrum.at(j).mz * params.scale);
-            dIntArr[j] = Spectrum.at(j).intensity;
+            dIntArr[j] = (UINT)(Spectrum.at(j).intensity * 1000);
         }
 
 #ifdef _OPENMP
         /* Sort m/z based on Intensities */
-        KeyVal_Parallel<FLOAT, UINT>(dIntArr, mzArray, SpectrumSize, threads);
+        KeyVal_Parallel<UINT, UINT>(dIntArr, mzArray, SpectrumSize, threads);
 #else
-        KeyVal_Serial<FLOAT, UINT>(dIntArr, mzArray, SpectrumSize);
+        KeyVal_Serial<UINT, UINT>(dIntArr, mzArray, SpectrumSize);
 #endif /* _OPENMP */
 
         /* Check the size of spectrum */
@@ -319,7 +319,7 @@ STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, UINT *QAPtr)
         for (UINT test = 0; test < QALEN; test++)
         {
             /* Test for integrity of QA */
-            while (QAPtr[test] > MAX_MASS * SCALE);
+            while (QAPtr[test] > params.max_mass * params.scale);
         }
 #endif /* DEBUG */
 
@@ -385,6 +385,7 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, ESpecSeqs &expSpecs)
     tempReader.setFilter(MS1);
     tempReader.addFilter(MS2);
     tempReader.addFilter(MSX);
+
     if (tempReader.readFile(MS2file.c_str(), spectrum, currScan))
     {
         UINT l_count = 0;
@@ -405,7 +406,7 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, ESpecSeqs &expSpecs)
     {
         expSpecs.numPeaks = l_peaks;
         expSpecs.moz = new UINT[expSpecs.numPeaks];
-        expSpecs.intensity = new FLOAT[expSpecs.numPeaks];
+        expSpecs.intensity = new UINT[expSpecs.numPeaks];
 
         for (UINT spec = startspec; spec < endspec; spec++)
         {
@@ -450,20 +451,20 @@ STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, ESpecSeqs &expSpecs, UINT of
     if (gReader.readFile(filename, Spectrum, currScan) && status == SLM_SUCCESS)
     {
         UINT SpectrumSize = Spectrum.size();
-        FLOAT dIntArr[SpectrumSize];
+        UINT dIntArr[SpectrumSize];
         UINT mzArray[SpectrumSize];
 
         for (UINT j = 0; j < SpectrumSize; j++)
         {
             mzArray[j] = (UINT)(Spectrum.at(j).mz * params.scale);
-            dIntArr[j] = Spectrum.at(j).intensity;
+            dIntArr[j] = (UINT)(Spectrum.at(j).intensity * 1000);
         }
 
 #ifdef _OPENMP
         /* Sort m/z based on Intensities */
-        KeyVal_Parallel<FLOAT, UINT>(dIntArr, mzArray, SpectrumSize, threads);
+        KeyVal_Parallel<UINT, UINT>(dIntArr, mzArray, SpectrumSize, threads);
 #else
-        KeyVal_Serial<FLOAT, UINT>(dIntArr, mzArray, SpectrumSize);
+        KeyVal_Serial<UINT, UINT>(dIntArr, mzArray, SpectrumSize);
 #endif /* _OPENMP */
 
         /* Check the size of spectrum */

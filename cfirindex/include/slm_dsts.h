@@ -263,9 +263,9 @@ typedef struct _varEntry
 typedef struct _BYICount
 {
     UCHAR   *bc;        /* b ion count */
-    FLOAT   *ibc;       /* Sum of b ion intensities */
+    UINT    *ibc;       /* Sum of b ion intensities */
     UCHAR   *yc;        /* y ion count */
-    FLOAT   *iyc;       /* Sum of y ion intensities */
+    UINT    *iyc;       /* Sum of y ion intensities */
     UINT     size;      /* Length of score card (above declared arrays) */
     INT     especid;   /* Experimental spectrum id */
 } BYICount;
@@ -340,7 +340,7 @@ typedef struct _globalParams
 typedef struct _eSpecSeqs
 {
     UINT                *moz;       /* Stores the m/z values of the spectra */
-    FLOAT                *intensity; /* Stores the intensity values of the experimental spectra */
+    UINT                *intensity; /* Stores the intensity values of the experimental spectra */
     //BOOL              *iType;     /* Stores the ion type of the coresponding peak in miz */
     UINT                *idx;       /* Row ptr. Starting index of each row */
     UINT                *precurse;  /* Stores the precursor mass of each spectrum. */

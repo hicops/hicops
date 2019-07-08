@@ -556,10 +556,10 @@ STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs)
             memset(Score[thd].bc, 0x0, sizeof(UCHAR) * sAize);
             Score[thd].yc = new UCHAR[sAize];
             memset(Score[thd].yc, 0x0, sizeof(UCHAR) * sAize);
-            Score[thd].ibc = new FLOAT[sAize];
-            memset(Score[thd].ibc, 0x0, sizeof(FLOAT) * sAize);
-            Score[thd].iyc = new FLOAT[sAize];
-            memset(Score[thd].iyc, 0x0, sizeof(FLOAT) * sAize);
+            Score[thd].ibc = new UINT[sAize];
+            memset(Score[thd].ibc, 0x0, sizeof(UINT) * sAize);
+            Score[thd].iyc = new UINT[sAize];
+            memset(Score[thd].iyc, 0x0, sizeof(UINT) * sAize);
 
             Score[thd].size = sAize;
         }

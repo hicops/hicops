@@ -107,14 +107,14 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
 #endif
              /* Pointer to each query spectrum */
              UINT *QAPtr = ss.moz + ss.idx[queries];
-             FLOAT *iPtr = ss.intensity + ss.idx[queries];
+             UINT *iPtr = ss.intensity + ss.idx[queries];
              UINT qspeclen = ss.idx[queries + 1] - ss.idx[queries];
              UINT thno = omp_get_thread_num();
 
-             UCHAR *bcPtr =  Score[thno].bc;
-             UCHAR *ycPtr =  Score[thno].yc;
-             FLOAT *ibcPtr = Score[thno].ibc;
-             FLOAT *iycPtr = Score[thno].iyc;
+             UCHAR *bcPtr  = Score[thno].bc;
+             UCHAR *ycPtr  = Score[thno].yc;
+             UINT  *ibcPtr = Score[thno].ibc;
+             UINT  *iycPtr = Score[thno].iyc;
 
             if (thno == 0)
             {
@@ -161,6 +161,7 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                                     ycPtr[ppid] += 1;
                                     iycPtr[ppid] += iPtr[k];
                                 }
+
                             }
                         }
                     }
@@ -177,10 +178,10 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                     {
                         if (bcPtr[it] + ycPtr[it] > params.min_shp)
                         {
-                            FLOAT hyperscore = log(HYPERSCORE_Factorial(ULONGLONG(bcPtr[it])) *
+                            FLOAT hyperscore = log(0.001 + HYPERSCORE_Factorial(ULONGLONG(bcPtr[it])) *
                                                    HYPERSCORE_Factorial(ULONGLONG(ycPtr[it])) *
                                                    ibcPtr[it] *
-                                                   iycPtr[it]);
+                                                   iycPtr[it]) - 6;
 
                             if (hyperscore > maxhv)
                             {
@@ -201,8 +202,9 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                     /* Clear the scorecard */
                     std::memset(bcPtr, 0x0, sizeof(UCHAR) * csize);
                     std::memset(ycPtr, 0x0, sizeof(UCHAR) * csize);
-                    std::memset(ibcPtr, 0x0, sizeof(FLOAT) * csize);
-                    std::memset(iycPtr, 0x0, sizeof(FLOAT) * csize);
+                    std::memset(ibcPtr, 0x0, sizeof(UINT) * csize);
+                    std::memset(iycPtr, 0x0, sizeof(UINT) * csize);
+
                 }
             }
 
