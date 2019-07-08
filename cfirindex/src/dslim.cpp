@@ -133,7 +133,7 @@ STATUS DSLIM_Construct(Index *index)
 
         /* Construct DSLIM.bA */
 #ifdef _OPENMP
-#pragma omp parallel for num_threads(threads) schedule(static, 1)
+#pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
 #endif /* _OPENMP */
         for (UINT chunk_number = 0; chunk_number < index->nChunks; chunk_number++)
         {
@@ -175,6 +175,19 @@ STATUS DSLIM_Construct(Index *index)
 #ifdef BENCHMARK
         compute += omp_get_wtime() - duration;
 #endif
+    }
+
+
+    /* Optimize the CFIR index chunks */
+    if (status == SLM_SUCCESS)
+    {
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
+#endif /* _OPENMP */
+        for (UINT chunk_number = 0; chunk_number < index->nChunks; chunk_number++)
+        {
+            status = DSLIM_Optimize(index, chunk_number);
+        }
     }
 
     return status;
@@ -559,6 +572,43 @@ STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs)
 #ifdef BENCHMARK
     memory += omp_get_wtime() - duration;
 #endif
+
+    return status;
+}
+
+/*
+ * FUNCTION: DSLIM_Optimize
+ *
+ * DESCRIPTION: Optimization of the index
+ *
+ * INPUT:
+ * @threads     : Number of parallel threads
+ * @index       : The SLM Index
+ * @chunk_number: Chunk Index
+ *
+ * OUTPUT:
+ * @status: Status of execution
+ */
+STATUS DSLIM_Optimize(Index *index, UINT chunk_number)
+{
+    STATUS status = SLM_SUCCESS;
+
+    UINT *iAPtr = index->ionIndex[chunk_number].iA;
+    UINT *bAPtr = index->ionIndex[chunk_number].bA;
+
+    /* Stablize the entries in iAPtr */
+    for (UINT kk = 0; kk < (params.max_mass * params.scale); kk++)
+    {
+        UINT offset = bAPtr[kk];
+        UINT size = bAPtr[kk + 1] - offset;
+
+        if (size > 1)
+        {
+            /* Stablize the KeyVal Sort */
+            UTILS_Sort<UINT>((iAPtr + offset), size, false);
+        }
+
+    }
 
     return status;
 }
