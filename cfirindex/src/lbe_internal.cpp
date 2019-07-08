@@ -37,7 +37,7 @@ extern DOUBLE memory;
 
 /* Static function Prototypes */
 static STATUS LBE_AllocateMem(Index *index);
-
+static BOOL CmpPepEntries(pepEntry e1, pepEntry e2);
 /*
  * FUNCTION: LBE_AllocateMem
  *
@@ -225,6 +225,12 @@ STATUS LBE_Initialize(Index *index)
 
     /* Make sure Seqs is clear anyway */
     Seqs.clear();
+
+    /* Sort the peptide index based on peptide precursor mass */
+    if (status == SLM_SUCCESS)
+    {
+        std::sort(index->pepEntries, index->pepEntries + index->lcltotCnt, CmpPepEntries);
+    }
 
     if (status != SLM_SUCCESS)
     {
@@ -544,4 +550,9 @@ VOID LBE_PrintHeader(VOID)
           << endl << endl;
 
     return;
+}
+
+static BOOL CmpPepEntries(pepEntry e1, pepEntry e2)
+{
+    return e1 < e2;
 }

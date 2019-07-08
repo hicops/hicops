@@ -855,6 +855,5 @@ INT DSLIM_GenerateIndex(Index *index, UINT key)
         value = false;
     }
 
-
     return value;
 }

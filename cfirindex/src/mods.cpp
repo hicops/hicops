@@ -283,6 +283,9 @@ static VOID MODS_ModList(STRING peptide, vector<INT> conditions,
         if (LBE_ApplyPolicy(lclindex, true, lclcntr) == true)
         {
             modEntries[partcntr] = container;
+            modEntries[partcntr].Mass = UTILS_CalculateModMass((AA *)Seqs.at(modEntries[partcntr].seqID).c_str(),
+                                                                Seqs.at(0).length(),
+                                                                modEntries[partcntr].sites.modNum);
             partcntr++;
         }
 

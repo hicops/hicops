@@ -342,7 +342,7 @@ FLOAT UTILS_CalculateModMass(AA *seq, UINT len, UINT vModInfo)
 
     while (modNum != 0)
     {
-        mass += (gModInfo.vmods[modNum - 1].modMass/params.scale);
+        mass += ((FLOAT)(gModInfo.vmods[modNum - 1].modMass)/params.scale);
         start = (start << 4);
         modNum = ((vModInfo & start) >> start);
     }
