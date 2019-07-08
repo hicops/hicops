@@ -61,6 +61,7 @@ STATUS LBE_Initialize(Index *index);
  */
 STATUS LBE_Deinitialize(Index *index);
 
+STATUS LBE_GeneratePeps(Index *index);
 /*
  * FUNCTION: LBE_Distribute
  *

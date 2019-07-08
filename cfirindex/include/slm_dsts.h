@@ -117,18 +117,12 @@ typedef struct _modAA
 
 typedef struct _pepEntry
 {
-    FLOAT  Mass; /* mass of peptide */
-    UINT  seqID;
-} pepEntry;
-
-typedef struct _varEntry
-{
     FLOAT  Mass; /* Mass of Peptide            */
     IDX   seqID; /* Normal Peptide Sequence ID */
     modAA sites; /* Modified AA information    */
 
     /* Overload = operator */
-    _varEntry& operator=(const _varEntry& rhs)
+    _pepEntry& operator=(const _pepEntry& rhs)
     {
         /* Check for self assignment */
         if (this != &rhs)
@@ -141,7 +135,32 @@ typedef struct _varEntry
         return *this;
     }
 
-    BOOL operator>(const _varEntry& rhs)
+    BOOL operator >(const _pepEntry& rhs)
+    {
+        return this->Mass > rhs.Mass;
+    }
+
+    BOOL operator >=(const _pepEntry& rhs)
+    {
+        return this->Mass >= rhs.Mass;
+    }
+
+    BOOL operator <(const _pepEntry& rhs)
+    {
+        return this->Mass < rhs.Mass;
+    }
+
+    BOOL operator <=(const _pepEntry& rhs)
+    {
+        return this->Mass <= rhs.Mass;
+    }
+
+    BOOL operator ==(const _pepEntry& rhs)
+    {
+        return this->Mass == rhs.Mass;
+    }
+
+    BOOL operator>>(const _pepEntry& rhs)
     {
         INT s1 = 0;
         INT s2 = 0;
@@ -162,7 +181,7 @@ typedef struct _varEntry
 
     }
 
-    BOOL operator>=(const _varEntry& rhs)
+    BOOL operator>>=(const _pepEntry& rhs)
     {
         INT s1 = 0;
         INT s2 = 0;
@@ -183,7 +202,7 @@ typedef struct _varEntry
 
     }
 
-    BOOL operator<(const _varEntry& rhs)
+    BOOL operator<<(const _pepEntry& rhs)
     {
         INT s1 = 0;
         INT s2 = 0;
@@ -203,7 +222,7 @@ typedef struct _varEntry
         return (s1 + MAX_SEQ_LEN - s3) < (s2 + MAX_SEQ_LEN - s4);
     }
 
-    BOOL operator<=(const _varEntry& rhs)
+    BOOL operator<<=(const _pepEntry& rhs)
     {
         INT s1 = 0;
         INT s2 = 0;
@@ -223,28 +242,8 @@ typedef struct _varEntry
         return (s1 + MAX_SEQ_LEN - s3) <= (s2 + MAX_SEQ_LEN - s4);
     }
 
-    BOOL operator==(const _varEntry& rhs)
-    {
-        INT s1 = 0;
-        INT s2 = 0;
-
-        INT s3= MAX_SEQ_LEN;
-        INT s4= MAX_SEQ_LEN;
-
-        /* compute distance from n-term */
-        while ((this->sites.sites >> s1 & 0x1) != 0x1 && s1++ < MAX_SEQ_LEN);
-        while ((rhs.sites.sites   >> s2 & 0x1) != 0x1 && s2++ < MAX_SEQ_LEN);
-
-        /* compute distance from c-term */
-        while ((this->sites.sites >> s3 & 0x1) != 0x1 && s3-- > s1);
-        while ((rhs.sites.sites   >> s4 & 0x1) != 0x1 && s4-- > s2);
-
-       /* return which has larger distance */
-        return (s1 + MAX_SEQ_LEN - s3) == (s2 + MAX_SEQ_LEN - s4);
-    }
-
     /* Default constructor */
-    _varEntry()
+    _pepEntry()
     {
         Mass = 0;
         seqID = 0;
@@ -252,7 +251,7 @@ typedef struct _varEntry
         sites.sites = 0;
     }
 
-} varEntry;
+} pepEntry;
 
 /************************* SLM Index DSTs ************************/
 /*
@@ -296,9 +295,6 @@ typedef struct _Index
 
     PepSeqs          pepIndex;
     pepEntry      *pepEntries;
-#ifdef VMODS
-    varEntry      *modEntries; /* SLM Mods Index    */
-#endif /* VMODS */
     SLMchunk        *ionIndex;
 } Index;
 

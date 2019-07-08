@@ -381,6 +381,7 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, ESpecSeqs &expSpecs)
     MSReader tempReader;
     Spectrum spectrum;
     UINT l_peaks = 0;
+
     /* Add same filters for tempReader */
     tempReader.setFilter(MS1);
     tempReader.addFilter(MS2);

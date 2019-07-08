@@ -53,11 +53,9 @@ static STATUS LBE_AllocateMem(Index *index);
 static STATUS LBE_AllocateMem(Index *index)
 {
     STATUS status = SLM_SUCCESS;
-    UINT M = index->lclmodCnt;
+    UINT M = index->lcltotCnt;
 
-#ifdef VMODS
-    index->modEntries = NULL;
-#endif /* VMODS */
+    index->pepEntries = NULL;
 
     /* Allocate Memory for seqPep */
     index->pepIndex.seqs = new AA[index->pepIndex.AAs];
@@ -71,9 +69,9 @@ static STATUS LBE_AllocateMem(Index *index)
     /* Allocate the seqMod */
     if (status == SLM_SUCCESS)
     {
-        index->modEntries = new varEntry[M];
+        index->pepEntries = new pepEntry[M];
 
-        if (index->modEntries == NULL)
+        if (index->pepEntries == NULL)
         {
             status = ERR_BAD_MEM_ALLOC;
         }
@@ -133,6 +131,7 @@ STATUS LBE_Initialize(Index *index)
     STATUS status = SLM_SUCCESS;
     UINT iCount = 1;
     STRING seq;
+    UINT threads = params.threads;
     STRING modconditions = params.modconditions;
 
     /* Check if ">" entries are > 0 */
@@ -155,34 +154,29 @@ STATUS LBE_Initialize(Index *index)
     /* If Seqs was successfully filled */
     if (Seqs.size() != 0 && status == SLM_SUCCESS)
     {
+        UINT seqlen = Seqs.at(0).length();
+
 #ifdef BENCHMARK
         duration = omp_get_wtime();
 #endif
-        UINT idx = 0;
-
-        /* Extract First Sequence manually */
-        seq = Seqs.at(0);
-
-        /* Increment counter */
-        iCount += 2;
-
-        memcpy((void *)&index->pepIndex.seqs[idx], (const void *)seq.c_str(), seq.length());
-        idx+=seq.length();
 
 #ifdef DEBUG
         cout << seq << endl;
 #endif /* DEBUG */
 
-        for (UINT i = 1; i < Seqs.size(); i++)
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(threads) schedule (static) reduction(+: iCount)
+#endif
+        for (UINT i = 0; i < Seqs.size(); i++)
         {
             /* Extract Sequences */
             STRING seq = Seqs.at(i);
+
             /* Copy into the seqPep.seqs array */
-            memcpy((void *) &index->pepIndex.seqs[idx], (const void *) seq.c_str(), seq.length());
+            memcpy((void *) &index->pepIndex.seqs[i * (seqlen)], (const void *) seq.c_str(), seqlen);
 
             /* Increment the counters */
             iCount += 2;
-            idx += seq.length();
 
 #ifdef DEBUG
             cout << seq << endl;
@@ -207,6 +201,12 @@ STATUS LBE_Initialize(Index *index)
         cout << endl << "pepCount != iCount - Please check the FASTA file";
         status = ERR_INVLD_SIZE;
     } */
+
+    /* Fill in the peps entry */
+    if (status == SLM_SUCCESS)
+    {
+        status = LBE_GeneratePeps(index);
+    }
 
 #ifdef VMODS
 
@@ -234,6 +234,29 @@ STATUS LBE_Initialize(Index *index)
     return status;
 }
 
+STATUS LBE_GeneratePeps(Index *index)
+{
+    STATUS status = SLM_SUCCESS;
+    UINT interval = index->lclpepCnt;
+    pepEntry *entries = index->pepEntries;
+    UINT seqlen = Seqs.at(0).length();
+    UINT threads = params.threads;
+
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(threads) schedule(static)
+#endif /* _OPENMP */
+    for (UINT fill = 0; fill < interval; fill++)
+    {
+        UINT idd = DSLIM_GenerateIndex(index, fill);
+
+        entries[fill].Mass = UTILS_CalculatePepMass((AA *)Seqs.at(idd).c_str(), seqlen);
+        entries[fill].seqID = idd;
+        entries[fill].sites.sites = 0x0;
+        entries[fill].sites.modNum = 0x0;
+    }
+
+    return status;
+}
 /*
  * FUNCTION: LBE_Deinitialize
  *

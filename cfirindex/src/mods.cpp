@@ -31,7 +31,7 @@ Index *lclindex;
 vector<STRING> tokens;
 UINT limit = 0;
 ULONGLONG Comb[MAX_COMBS][MAX_COMBS];
-varEntry    *modEntries; /* SLM Mods Index    */
+pepEntry    *modEntries; /* SLM Mods Index    */
 
 /* External Variables */
 extern gParams params;
@@ -41,7 +41,7 @@ extern vector<STRING>     Seqs; /* Peptide Sequences */
 /* Static Functions */
 static LONGLONG count(STRING s, STRING conditions);
 static VOID MODS_ModList(STRING peptide, vector<INT> conditions,
-                         INT total, varEntry container, INT letter,
+                         INT total, pepEntry container, INT letter,
                          bool novel, INT modsSeen, UINT refid);
 static VOID MODS_GenCombinations(VOID);
 #endif /* VMODS */
@@ -49,20 +49,20 @@ static VOID MODS_GenCombinations(VOID);
 
 INT cmpvarEntries(const VOID* lhs, const void *rhs)
 {
-    varEntry *a = (varEntry *) lhs;
-    varEntry *b = (varEntry *) rhs;
+    pepEntry *a = (pepEntry *) lhs;
+    pepEntry *b = (pepEntry *) rhs;
 
     /* The signs are reversed on purpose
      * since larger 1st bit number means
      * smaller the modEntry item.
      */
-    if (*a < *b)
+    if (*a << *b)
     {
         return 1;
     }
 
     /* b is larger */
-    if (*a > *b)
+    if (*a >> *b)
     {
         return -1;
     }
@@ -275,7 +275,7 @@ static LONGLONG count(STRING s, STRING conditions)
  * OUTPUT: none
  */
 static VOID MODS_ModList(STRING peptide, vector<INT> conditions,
-                         INT total, varEntry container, INT letter,
+                         INT total, pepEntry container, INT letter,
                          bool novel, INT modsSeen, UINT refid)
 {
     if (novel && letter != 0)
@@ -301,7 +301,7 @@ static VOID MODS_ModList(STRING peptide, vector<INT> conditions,
 
     if (condLookup[peptide[letter]] != -1 and conditions[condLookup[peptide[letter]]] > 0)
     {
-        varEntry dupContainer = container;
+        pepEntry dupContainer = container;
         vector<INT> dupConditions;
 
         dupContainer.sites.sites |= ((ULONGLONG)1 << (letter));
@@ -412,14 +412,14 @@ LONGLONG MODS_ModCounter()
 STATUS MODS_GenerateMods(Index *index)
 {
     STATUS status = SLM_SUCCESS;
-    varEntry* idx = index->modEntries;
+    pepEntry* idx = index->pepEntries + index->lclpepCnt;
     STRING conditions = params.modconditions;
 
     modEntries = idx;
 
 #ifdef VMODS
     STRING allLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    varEntry container;
+    pepEntry container;
     vector<INT> condList;
 
     /* Reset the local counters */
@@ -464,7 +464,7 @@ STATUS MODS_GenerateMods(Index *index)
         MODS_ModList(Seqs[i], condList, limit, container, 0, false, 0, i);
         UINT ssz = partcntr - stt;
 
-        std::qsort((void *)(modEntries+stt), ssz, sizeof(varEntry), cmpvarEntries);
+        std::qsort((void *)(modEntries+stt), ssz, sizeof(pepEntry), cmpvarEntries);
     }
 
     if (lclcntr != index->modCount)
