@@ -259,21 +259,31 @@ typedef struct _pepEntry
  * their summed intensities for a given experimental spectrum
  * against all the candidate peptides.
  */
+typedef struct _BYC
+{
+    UCHAR   bc  = 0;        /* b ion count */
+    UCHAR   yc  = 0;        /* y ion count */
+} BYC;
+
+typedef struct _iBYC
+{
+    UINT ibc   = 0;
+    UINT iyc   = 0;
+} iBYC;
+
 typedef struct _BYICount
 {
-    UCHAR   *bc;        /* b ion count */
-    UINT    *ibc;       /* Sum of b ion intensities */
-    UCHAR   *yc;        /* y ion count */
-    UINT    *iyc;       /* Sum of y ion intensities */
-    UINT     size;      /* Length of score card (above declared arrays) */
-    INT     especid;   /* Experimental spectrum id */
+    BYC     *byc = NULL;       /* Both counts */
+    iBYC   *ibyc = NULL;       /* Sum of b/y ion intensities */
 } BYICount;
+
+#define BYISIZE                 (sizeof(UCHAR) * 2 + sizeof(UINT) * 2)
 
 typedef struct _SLMchunk
 {
     UINT    *iA = NULL; /* Ions Array (iA)   */
     UINT    *bA = NULL; /* Bucket Array (bA) */
-//    BYICount sc;
+
 #ifdef FUTURE
     UCHAR *bits = NULL; /* Scorecard bits    */
 #endif /* FUTURE */

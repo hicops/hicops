@@ -301,7 +301,7 @@ STATUS LBE_Distribute(Index *index)
     UINT N = index->lcltotCnt;
     UINT speclen = (index->pepIndex.peplen-1) * params.maxz * iSERIES;
     UINT maxchunksize = (MAX_IONS / speclen);
-    UINT maxchunksize2 = params.spadmem / ((2 * sizeof (UCHAR) + 2 * sizeof(FLOAT)) * params.threads);
+    UINT maxchunksize2 = params.spadmem / (BYISIZE * params.threads);
     UINT nchunks;
     UINT chunksize;
     UINT lastchunksize;

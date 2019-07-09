@@ -115,10 +115,8 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
              UINT qspeclen = ss.idx[queries + 1] - ss.idx[queries];
              UINT thno = omp_get_thread_num();
 
-             UCHAR *bcPtr  = Score[thno].bc;
-             UCHAR *ycPtr  = Score[thno].yc;
-             UINT  *ibcPtr = Score[thno].ibc;
-             UINT  *iycPtr = Score[thno].iyc;
+             BYC   *bycPtr = Score[thno].byc;
+             iBYC *ibycPtr = Score[thno].ibyc;
 
             if (thno == 0)
             {
@@ -170,21 +168,19 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                                     /* Update corresponding scorecard entries */
                                     if ((raw % speclen) < speclen / 2)
                                     {
-                                        bcPtr[ppid] += 1;
-                                        ibcPtr[ppid] += iPtr[k];
+                                        bycPtr[ppid].bc += 1;
+                                        ibycPtr[ppid].ibc += iPtr[k];
                                     }
                                     else
                                     {
-                                        ycPtr[ppid] += 1;
-                                        iycPtr[ppid] += iPtr[k];
+                                        bycPtr[ppid].yc += 1;
+                                        ibycPtr[ppid].iyc += iPtr[k];
                                     }
                                 }
 
                             }
                         }
                     }
-
-                    Score[thno].especid = queries;
 
                     INT idaa = -1;
                     FLOAT maxhv = 0.0;
@@ -196,12 +192,12 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
 
                     for (INT it = minlimit; it < maxlimit; it++)
                     {
-                        if (bcPtr[it] + ycPtr[it] > params.min_shp)
+                        if (bycPtr[it].bc + bycPtr[it].yc > params.min_shp)
                         {
-                            FLOAT hyperscore = log(0.001 + HYPERSCORE_Factorial(ULONGLONG(bcPtr[it])) *
-                                                   HYPERSCORE_Factorial(ULONGLONG(ycPtr[it])) *
-                                                   ibcPtr[it] *
-                                                   iycPtr[it]) - 6;
+                            FLOAT hyperscore = log(0.001 + HYPERSCORE_Factorial(ULONGLONG(bycPtr[it].bc)) *
+                                                   HYPERSCORE_Factorial(ULONGLONG(bycPtr[it].yc)) *
+                                                   ibycPtr[it].ibc *
+                                                   ibycPtr[it].iyc) - 6;
 
                             if (hyperscore > maxhv)
                             {
@@ -220,11 +216,8 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                     }
 
                     /* Clear the scorecard */
-                    std::memset(bcPtr+ minlimit, 0x0, sizeof(UCHAR) * csize);
-                    std::memset(ycPtr+ minlimit, 0x0, sizeof(UCHAR) * csize);
-                    std::memset(ibcPtr+ minlimit, 0x0, sizeof(UINT) * csize);
-                    std::memset(iycPtr+ minlimit, 0x0, sizeof(UINT) * csize);
-
+                    std::memset(bycPtr+ minlimit, 0x0, sizeof(BYC) * csize);
+                    std::memset(ibycPtr+ minlimit, 0x0, sizeof(iBYC) * csize);
                 }
             }
 
@@ -255,18 +248,11 @@ STATUS DSLIM_DeallocateSC(VOID)
     {
         for (UINT thd = 0; thd < params.threads; thd++)
         {
-            delete[] Score[thd].bc;
-            delete[] Score[thd].ibc;
-            delete[] Score[thd].yc;
-            delete[] Score[thd].iyc;
+            delete[] Score[thd].byc;
+            delete[] Score[thd].ibyc;
 
-            Score[thd].bc = NULL;
-            Score[thd].ibc = NULL;
-            Score[thd].yc = NULL;
-            Score[thd].iyc = NULL;
-
-            Score[thd].especid = 0;
-            Score[thd].size = 0;
+            Score[thd].byc = NULL;
+            Score[thd].ibyc = NULL;
         }
 
         delete[] Score;
