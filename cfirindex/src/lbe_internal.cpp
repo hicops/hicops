@@ -357,52 +357,32 @@ STATUS LBE_CreatePartitions(Index *index)
     UINT p = params.nodes;
     UINT myid = params.myid;
 
-    UINT chunksize;
-    UINT lastchunksize;
+    UINT chunksize = 0;
 
+    /* More than one nodes in the system ? */
     if (p > 1)
     {
-        chunksize = ((N % p) == 0) ? (N / p) : ((N + p) / p);
+        /* Partition the pepCount */
+        chunksize = N / p;
 
-        /* Calculate the size of last chunk */
-        UINT factor = N / chunksize;
-
-        lastchunksize = ((N % chunksize) == 0) ? chunksize : N - (chunksize * factor);
-
-        if (myid < (p - 1))
+        if (((N % p) > 0) && ((N % p) > myid))
         {
-            index->lclpepCnt = chunksize;
-        }
-        else if (myid == (p - 1))
-        {
-            index->lclpepCnt = lastchunksize;
-        }
-        else
-        {
-            status = ERR_INVLD_NODE_RANK;
+            chunksize += 1;
         }
 
+        index->lclpepCnt = chunksize;
+
+        /* Partition the modCount */
         N = index->modCount;
 
-        chunksize = ((N % p) == 0) ? (N / p) : ((N + p) / p);
+        chunksize = N / p;
 
-        /* Calculate the size of last chunk */
-        factor = N / chunksize;
+        if (((N % p) > 0) && ((N % p) > myid))
+        {
+            chunksize += 1;
+        }
 
-        lastchunksize = ((N % chunksize) == 0) ? chunksize : N - (chunksize * factor);
-
-        if (myid < (p - 1))
-        {
-            index->lclmodCnt = chunksize;
-        }
-        else if (myid == (p - 1))
-        {
-            index->lclmodCnt = lastchunksize;
-        }
-        else
-        {
-            status = ERR_INVLD_NODE_RANK;
-        }
+        index->lclmodCnt = chunksize;
 
         index->lcltotCnt = index->lclpepCnt + index->lclmodCnt;
     }
