@@ -30,7 +30,7 @@
 //#undef _OPENMP
 
 /* Manually switch MPI */
-#define DISTMEM
+//#undef DISTMEM
 
 /* Switch the benchmarking */
 #define BENCHMARK
