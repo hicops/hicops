@@ -454,7 +454,10 @@ static STATUS ParseParams(CHAR* paramfile)
         getline(pfile, line);
         params.min_shp = std::atoi(line.c_str());
 
-        params.spadmem *= 1024 * 1024; // Mega bytes (scratch space for score card)
+        getline(pfile, line);
+        params.spadmem = std::atoi(line.c_str());
+
+        params.spadmem *= 1024 * 1024; // Convert to MBs (max scratch space for score card)
 
         /* Get the distribution policy */
         getline(pfile, line);

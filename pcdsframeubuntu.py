@@ -98,6 +98,9 @@ if __name__ == '__main__':
 		sample.write('# Min shared peak\n')
 		sample.write('shp=4\n\n')
 		
+		sample.write('# Scratch pad memory for scorecard in MBs (min: 2048MB)\n')
+		sample.write('spadmem=2048\n\n')
+
 		sample.write('# Resolution (Da)\n')
 		sample.write('res=0.01\n\n')
 		
@@ -154,6 +157,7 @@ if __name__ == '__main__':
 	shp_cnt = 4
 	workspace = './workspace'
 	policy = 'cyclic'
+	spadmem = 2048
 
 
 	print ('\n************************************\n')
@@ -251,7 +255,8 @@ if __name__ == '__main__':
 					min_length = 4 
 				if (min_length > 60):
 					min_length = 60 
-				print ('Min pep len  =', min_length)					
+				print ('Min pep len  =', min_length)
+				
 			# Set the max digestion length
 			elif (param == 'max_length'):
 				max_length = int(val)
@@ -331,6 +336,13 @@ if __name__ == '__main__':
 					shp_cnt = 20
 				print ('Min Shared Peaks =', shp_cnt)
 
+			# Scorecard memory
+			elif (param == 'spadmem'):
+				spadmem = int(val)
+				if (shp_cnt < 2048):
+					shp_cnt = 2048
+				print ('Scorecard Memory =', shp_cnt)
+
 			# Workspace Path
 			elif (param == 'workspace'):
 				if (val[-1] == '\n'):
@@ -363,7 +375,7 @@ if __name__ == '__main__':
 	
 	if (os.path.exists(workspace) == False):	
 		os.mkdir(workspace)
-	
+
 	# Run the digestor now
 	digesteddb = workspace + '/digested_db.fasta'
 	digestcommand = "Digestor.exe -in " + database + " -out " + digesteddb + " -out_type fasta -threads " + str(threads) + " -missed_cleavages " + str(mcleavages) + " -enzyme " + enzyme +  " -min_length " + str(min_length) + " -max_length " + str(max_length) + " -FASTA:ID number -FASTA:description remove"
@@ -407,6 +419,7 @@ if __name__ == '__main__':
 	modfile.write(str(max_prec_mass) + '\n')
 	modfile.write(str(top_matches) + '\n')
 	modfile.write(str(shp_cnt) + '\n')
+	modfile.write(str(spadmem) + '\n')
 	modfile.write(str(policy) + '\n')
 
 	modfile.write(str(len(mods)) + '\n')
