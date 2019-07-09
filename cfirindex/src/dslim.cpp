@@ -501,7 +501,7 @@ STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs)
     STATUS status = SLM_SUCCESS;
 
     /* Get size of the chunk */
-    UINT sAize = params.spadmem / ((2 * sizeof(UCHAR) + 2 * sizeof(FLOAT)) * params.threads);
+    UINT sAize = params.spadmem / (BYISIZE * params.threads);
     UINT sz2 = 0;
 
     for (UINT ii = 0; ii < idxs; ii++)
@@ -524,16 +524,10 @@ STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs)
     {
         for (UINT thd = 0; thd < params.threads; thd++)
         {
-            Score[thd].bc = new UCHAR[sAize];
-            memset(Score[thd].bc, 0x0, sizeof(UCHAR) * sAize);
-            Score[thd].yc = new UCHAR[sAize];
-            memset(Score[thd].yc, 0x0, sizeof(UCHAR) * sAize);
-            Score[thd].ibc = new UINT[sAize];
-            memset(Score[thd].ibc, 0x0, sizeof(UINT) * sAize);
-            Score[thd].iyc = new UINT[sAize];
-            memset(Score[thd].iyc, 0x0, sizeof(UINT) * sAize);
-
-            Score[thd].size = sAize;
+            Score[thd].byc = new BYC[sAize];
+            memset(Score[thd].byc, 0x0, 2 * sizeof(UCHAR) * sAize);
+            Score[thd].ibyc = new iBYC[sAize];
+            memset(Score[thd].ibyc, 0x0, 2 * sizeof(UINT) * sAize);
         }
     }
     else
