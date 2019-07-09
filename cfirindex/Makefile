@@ -1,8 +1,17 @@
 BUILD_MODE = RELEASE
 OPENMP = YES
+MPI = YES
 JOBS=1
 CXXFLAGS = -Wall -fmessage-length=0 -std=c++11
 LNKFLAGS = 
+
+# Change CXX to MPIC++ when MPI enabled
+ifeq ($(MPI),YES)
+	ifneq ($(OS),Windows_NT)
+		CXX:= mpic++
+		CXXFLAGS += -DDISTMEM
+	endif
+endif
 
 # Needs gperftools to be installed and configured before use
 PROFILE = NO
@@ -23,7 +32,7 @@ ifeq ($(PROFILE),YES)
 endif
 
 ifeq ($(OPENMP),YES)
-	CXXFLAGS += -fopenmp
+	CXXFLAGS += -fopenmp -D_GLIBCXX_PARALLEL
 	LNKFLAGS += -fopenmp
 endif
 
@@ -48,6 +57,7 @@ export BUILD_MODE
 export OPENMP
 export JOBS
 export CXXFLAGS
+export CXX
 
 all: mstoolkit lbe
 	$(CXX) $(LNKFLAGS) $(LIBPATHS) -Wl,--start-group  $(LIBS) ./slm.o -Wl,--end-group -o $(EXECUTEABLE) -Wl,-Map=$(EXECUTEABLE).map
@@ -57,7 +67,7 @@ mstoolkit:
 
 lbe: $(DEPS)
 	$(MAKE) -j$(JOBS) -C $(SRC)
-	$(CXX) -c -I./include -I./mstoolkit/include $(CXXFLAGS) -D_GLIBCXX_PARALLEL -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DHAVE_EXPAT_CONFIG_H -DGCC -D_NOTHERMORAW -D_NOSQLITE ./slm.cpp -o slm.o
+	$(CXX) -c -I./include -I./mstoolkit/include $(CXXFLAGS) -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DHAVE_EXPAT_CONFIG_H -DGCC -D_NOTHERMORAW -D_NOSQLITE ./slm.cpp -o slm.o
 
 clean:
 	$(MAKE) -C $(SRC) clean

@@ -26,8 +26,8 @@
 #include "lbe.h"
 
 /* Macros for SLM bitmask operations */
-#define BYTE                               8
-#define BITNUM(z)                          ((z) % BYTE)
+#define BYTE1                              8
+#define BITNUM(z)                          ((z) % BYTE1)
 #define IS_INIT(x,y)                       (((x)>>BITNUM(y)) & 0x1)
 #define INIT(x,y)                          (x | (1 << BITNUM(y)))
 
