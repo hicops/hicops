@@ -375,7 +375,7 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, ESpecSeqs &expSpecs)
 
     expSpecs.numSpecs = count;
     expSpecs.idx = new UINT[expSpecs.numSpecs + 1];
-    expSpecs.precurse = new UINT[expSpecs.numSpecs];
+    expSpecs.precurse = new FLOAT[expSpecs.numSpecs];
     expSpecs.idx[0] = 0; //Set starting point to zero.
 
     MSReader tempReader;

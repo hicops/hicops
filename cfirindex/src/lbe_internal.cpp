@@ -227,7 +227,7 @@ STATUS LBE_Initialize(Index *index)
     Seqs.clear();
 
     /* Sort the peptide index based on peptide precursor mass */
-    if (status == SLM_SUCCESS)
+    if (status == SLM_SUCCESS && params.dM > 0.0)
     {
         std::sort(index->pepEntries, index->pepEntries + index->lcltotCnt, CmpPepEntries);
     }

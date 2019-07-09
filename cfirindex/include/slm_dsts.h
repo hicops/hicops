@@ -339,7 +339,7 @@ typedef struct _eSpecSeqs
     UINT                *intensity; /* Stores the intensity values of the experimental spectra */
     //BOOL              *iType;     /* Stores the ion type of the coresponding peak in miz */
     UINT                *idx;       /* Row ptr. Starting index of each row */
-    UINT                *precurse;  /* Stores the precursor mass of each spectrum. */
+    FLOAT               *precurse;  /* Stores the precursor mass of each spectrum. */
     UINT                 numPeaks;  /* Total length of moz array i.e. total number of peaks */
     UINT                 numSpecs;  /* Number of theoretical spectra */
 } ESpecSeqs;

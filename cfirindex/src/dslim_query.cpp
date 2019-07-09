@@ -48,6 +48,10 @@ extern varEntry    *modEntries;
 FLOAT *hyperscores = NULL;
 UCHAR *sCArr = NULL;
 
+static VOID DSLIM_BinarySearch(Index *, FLOAT, INT&, INT&);
+static INT DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max);
+static INT DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max);
+
 /* FUNCTION: DSLIM_QuerySpectrum
  *
  * DESCRIPTION: Query the DSLIM for all query peaks
@@ -131,6 +135,17 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                     UINT *bAPtr = index[ixx].ionIndex[chno].bA;
                     UINT *iAPtr = index[ixx].ionIndex[chno].iA;
 
+                    INT minlimit = 0;
+                    INT maxlimit = 0;
+
+                    DSLIM_BinarySearch(index + ixx, ss.precurse[queries], minlimit, maxlimit);
+
+                    /* Spectrum violates limits */
+                    if (!(maxlimit - minlimit))
+                    {
+                        continue;
+                    }
+
                     /* Query all fragments in each spectrum */
                     for (UINT k = 0; k < qspeclen; k++)
                     {
@@ -148,18 +163,21 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                                 UINT raw = iAPtr[ion];
 
                                 /* Calculate parent peptide ID */
-                                UINT ppid = (raw / speclen);
+                                INT ppid = (raw / speclen);
 
-                                /* Update corresponding scorecard entries */
-                                if ((raw % speclen) < speclen / 2)
+                                if (ppid >= minlimit && ppid < maxlimit)
                                 {
-                                    bcPtr[ppid] += 1;
-                                    ibcPtr[ppid] += iPtr[k];
-                                }
-                                else
-                                {
-                                    ycPtr[ppid] += 1;
-                                    iycPtr[ppid] += iPtr[k];
+                                    /* Update corresponding scorecard entries */
+                                    if ((raw % speclen) < speclen / 2)
+                                    {
+                                        bcPtr[ppid] += 1;
+                                        ibcPtr[ppid] += iPtr[k];
+                                    }
+                                    else
+                                    {
+                                        ycPtr[ppid] += 1;
+                                        iycPtr[ppid] += iPtr[k];
+                                    }
                                 }
 
                             }
@@ -171,10 +189,12 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                     INT idaa = -1;
                     FLOAT maxhv = 0.0;
 
-                    UINT csize = ((chno == index[ixx].nChunks - 1) && (index[ixx].nChunks > 1)) ?
+/*                    UINT csize = ((chno == index[ixx].nChunks - 1) && (index[ixx].nChunks > 1)) ?
                                     index[ixx].lastchunksize : index[ixx].chunksize;
+*/
+                    UINT csize = maxlimit - minlimit;
 
-                    for (UINT it = 0; it < csize; it++)
+                    for (INT it = minlimit; it < maxlimit; it++)
                     {
                         if (bcPtr[it] + ycPtr[it] > params.min_shp)
                         {
@@ -200,10 +220,10 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                     }
 
                     /* Clear the scorecard */
-                    std::memset(bcPtr, 0x0, sizeof(UCHAR) * csize);
-                    std::memset(ycPtr, 0x0, sizeof(UCHAR) * csize);
-                    std::memset(ibcPtr, 0x0, sizeof(UINT) * csize);
-                    std::memset(iycPtr, 0x0, sizeof(UINT) * csize);
+                    std::memset(bcPtr+ minlimit, 0x0, sizeof(UCHAR) * csize);
+                    std::memset(ycPtr+ minlimit, 0x0, sizeof(UCHAR) * csize);
+                    std::memset(ibcPtr+ minlimit, 0x0, sizeof(UINT) * csize);
+                    std::memset(iycPtr+ minlimit, 0x0, sizeof(UINT) * csize);
 
                 }
             }
@@ -255,4 +275,123 @@ STATUS DSLIM_DeallocateSC(VOID)
     }
 
     return SLM_SUCCESS;
+}
+
+/*
+ * The Binary Search Algorithm
+ */
+static VOID DSLIM_BinarySearch(Index *index, FLOAT precmass, INT &minlimit, INT &maxlimit)
+{
+    /* Get the FLOAT precursor mass */
+    FLOAT pmass1 = precmass - params.dM;
+    FLOAT pmass2 = precmass + params.dM;
+    pepEntry *entries = index->pepEntries;
+
+    UINT min = 0;
+    UINT max = index->lcltotCnt - 1;
+
+    if (params.dM < 0.0)
+    {
+        minlimit = min;
+        maxlimit = max;
+
+        return;
+    }
+
+    /* Check for base case */
+    if (pmass1 < entries[min].Mass)
+    {
+        minlimit = min;
+    }
+    else if (pmass1 > entries[max].Mass)
+    {
+        minlimit = max;
+        maxlimit = max;
+        return;
+    }
+    else
+    {
+        /* Find the minlimit here */
+        minlimit = DSLIM_BinFindMin(entries, pmass1, min, max);
+    }
+
+    min = 0;
+    max = index->lcltotCnt - 1;
+
+
+    /* Check for base case */
+    if (pmass2 > entries[max].Mass)
+    {
+        maxlimit = max;
+    }
+    else if (pmass2 < entries[min].Mass)
+    {
+        minlimit = min;
+        maxlimit = min;
+        return;
+    }
+    else
+    {
+        /* Find the maxlimit here */
+        maxlimit = DSLIM_BinFindMax(entries, pmass2, min, max);
+    }
+
+}
+
+static INT DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max)
+{
+    INT half = (min + max)/2;
+
+    if (max - min < 500)
+    {
+        INT current = min;
+
+        while (entries[current++].Mass < pmass1);
+        return current;
+    }
+
+    if (pmass1 > entries[half].Mass)
+    {
+        min = half;
+        return DSLIM_BinFindMin(entries, pmass1, min, max);
+    }
+    else if (pmass1 < entries[half].Mass)
+    {
+        max = half;
+        return DSLIM_BinFindMin(entries, pmass1, min, max);
+    }
+
+    while (pmass1 >= entries[half--].Mass);
+
+    return (half + 1);
+
+}
+
+static INT DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max)
+{
+    INT half = (min + max)/2;
+
+    if (max - min < 500)
+    {
+        INT current = max;
+
+        while (entries[current--].Mass > pmass2);
+        return current + 1;
+    }
+
+    if (pmass2 > entries[half].Mass)
+    {
+        min = half;
+        return DSLIM_BinFindMax(entries, pmass2, min, max);
+    }
+    else if (pmass2 < entries[half].Mass)
+    {
+        max = half;
+        return DSLIM_BinFindMax(entries, pmass2, min, max);
+    }
+
+    while (pmass2 <= entries[half++].Mass);
+
+    return (half - 1);
+
 }
