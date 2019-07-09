@@ -141,7 +141,7 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                     DSLIM_BinarySearch(index + ixx, ss.precurse[queries], minlimit, maxlimit);
 
                     /* Spectrum violates limits */
-                    if (!(maxlimit - minlimit))
+                    if ((maxlimit - minlimit) < 1)
                     {
                         continue;
                     }
@@ -192,7 +192,7 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
 /*                    UINT csize = ((chno == index[ixx].nChunks - 1) && (index[ixx].nChunks > 1)) ?
                                     index[ixx].lastchunksize : index[ixx].chunksize;
 */
-                    UINT csize = maxlimit - minlimit;
+                    INT csize = maxlimit - minlimit;
 
                     for (INT it = minlimit; it < maxlimit; it++)
                     {
@@ -346,7 +346,11 @@ static INT DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max)
     {
         INT current = min;
 
-        while (entries[current++].Mass < pmass1);
+        while (entries[current].Mass < pmass1)
+        {
+            current++;
+        }
+
         return current;
     }
 
@@ -361,9 +365,12 @@ static INT DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max)
         return DSLIM_BinFindMin(entries, pmass1, min, max);
     }
 
-    while (pmass1 >= entries[half--].Mass);
+    while (pmass1 == entries[half].Mass)
+    {
+        half--;
+    }
 
-    return (half + 1);
+    return half;
 
 }
 
@@ -375,8 +382,12 @@ static INT DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max)
     {
         INT current = max;
 
-        while (entries[current--].Mass > pmass2);
-        return current + 1;
+        while (entries[current].Mass > pmass2)
+        {
+            current--;
+        }
+
+        return current;
     }
 
     if (pmass2 > entries[half].Mass)
@@ -390,8 +401,11 @@ static INT DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max)
         return DSLIM_BinFindMax(entries, pmass2, min, max);
     }
 
-    while (pmass2 <= entries[half++].Mass);
+    while (pmass2 == entries[half].Mass)
+    {
+        half++;
+    }
 
-    return (half - 1);
+    return half;
 
 }
