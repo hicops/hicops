@@ -97,7 +97,7 @@ void   UTILS_ParallelSort(Num *data, UINT size, bool descending = false)
  * OUTPUT:
  * @procs: Number of processors
  */
-UINT   UTILS_GetNumProcs(VOID);
+UINT   UTILS_GetNumProcs();
 
 /*
  * FUNCTION: UTILS_Shuffle

@@ -241,7 +241,7 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
     return status;
 }
 
-STATUS DSLIM_DeallocateSC(VOID)
+STATUS DSLIM_DeallocateSC()
 {
     /* Free the Scorecard memory */
     if (Score != NULL)

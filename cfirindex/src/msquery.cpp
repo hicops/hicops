@@ -217,14 +217,8 @@ STATUS MSQuery_ExtractQueryChunk(UINT start, UINT count, UINT *QA)
 {
     STATUS status = SLM_SUCCESS;
     UINT *QAPtr = NULL;
-    UINT threads = params.threads;
-
     UINT startspec = start;
     UINT endspec = start + count;
-
-#ifndef _OPENMP
-    LBE_UNUSED_PARAM(threads);
-#endif
 
     if (startspec >= QAcount)
     {
@@ -239,7 +233,7 @@ STATUS MSQuery_ExtractQueryChunk(UINT start, UINT count, UINT *QA)
         }
 
 #ifdef _OPENMP
-#pragma omp parallel for num_threads(threads) schedule(static)
+#pragma omp parallel for num_threads(params.threads) schedule(static)
 #endif /* _OPENMP */
         for (UINT spec = startspec; spec < endspec; spec++)
         {

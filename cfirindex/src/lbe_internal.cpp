@@ -131,9 +131,8 @@ STATUS LBE_Initialize(Index *index)
     STATUS status = SLM_SUCCESS;
     UINT iCount = 1;
     STRING seq;
-    UINT threads = params.threads;
     STRING modconditions = params.modconditions;
-
+	
     /* Check if ">" entries are > 0 */
     if (index->lclpepCnt > 0)
     {
@@ -165,7 +164,7 @@ STATUS LBE_Initialize(Index *index)
 #endif /* DEBUG */
 
 #ifdef _OPENMP
-#pragma omp parallel for num_threads(threads) schedule (static) reduction(+: iCount)
+#pragma omp parallel for num_threads(params.threads) schedule (static) reduction(+: iCount)
 #endif
         for (UINT i = 0; i < Seqs.size(); i++)
         {
@@ -239,10 +238,9 @@ STATUS LBE_GeneratePeps(Index *index)
     UINT interval = index->lclpepCnt;
     pepEntry *entries = index->pepEntries;
     UINT seqlen = Seqs.at(0).length();
-    UINT threads = params.threads;
 
 #ifdef _OPENMP
-#pragma omp parallel for num_threads(threads) schedule(static)
+#pragma omp parallel for num_threads(params.threads) schedule(static)
 #endif /* _OPENMP */
     for (UINT fill = 0; fill < interval; fill++)
     {
@@ -510,7 +508,7 @@ STATUS LBE_CountPeps(CHAR *filename, Index *index)
  * INPUT : none
  * OUTPUT: none
  */
-VOID LBE_PrintHeader(VOID)
+VOID LBE_PrintHeader()
 {
     cout << "\n"
             "*********************************"

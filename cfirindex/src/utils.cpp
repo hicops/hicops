@@ -115,7 +115,7 @@ FLOAT StatMods[26] = {
  * OUTPUT:
  * @procs: Number of processors
  */
-UINT UTILS_GetNumProcs(VOID)
+UINT UTILS_GetNumProcs()
 {
     UINT procs = 1;
 
@@ -492,3 +492,14 @@ FLOAT UTILS_GenerateModSpectrum(CHAR *seq, UINT len, UINT *Spectrum, modAA modIn
     return mass;
 }
 #endif /* VMODS */
+
+extern "C"
+{
+/* some systems do not have newest memcpy@@GLIBC_2.14 - stay with old good one */
+asm (".symver memcpy, memcpy@GLIBC_2.2.5");
+
+void *__wrap_memcpy(void *dest, const void *src, size_t n)
+{
+    return memcpy(dest, src, n);
+}
+}

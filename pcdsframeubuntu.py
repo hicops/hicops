@@ -405,7 +405,7 @@ if __name__ == '__main__':
 	# Prepare the uparams.txt file for seq generator
 	modfile = open(workspace + '/uparams.txt', "w+")
 
-	modfile.write('/lclhome/mhase003/Data/Database/Digested/parts' + '\n')
+	modfile.write('/home/mhaseeb/database/parts' + '\n')
 	modfile.write(ms2data + '\n')
 	modfile.write(str(max_threads) + '\n')
 	modfile.write(str(min_length) + '\n')
@@ -445,6 +445,6 @@ if __name__ == '__main__':
 	cleancfir = call("make -C cfirindex clean", shell=True)
 	makecfir = call("make -C cfirindex", shell=True)
 
-	cfir = subprocess.run(['./cfirindex/cfir.exe ', uparams], stdout=subprocess.PIPE, shell=True)
+#	cfir = subprocess.run(['./cfirindex/cfir.exe ', uparams], stdout=subprocess.PIPE, shell=True)
 	
 #	print (cfir.stdout.decode('utf-8'))

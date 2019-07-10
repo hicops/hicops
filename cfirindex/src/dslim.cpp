@@ -283,12 +283,12 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
 
 #ifdef _OPENMP
     /* SA ptr for each thread */
-    UINT *SAPtrs[threads] = {NULL};
+    UINT *SAPtrs[threads];
 
     /* Temporary Array needed for Theoretical Spectra */
     UINT *Spectra = new UINT[threads * speclen];
 
-    UINT *BAPtrs[threads] = {NULL};
+    UINT *BAPtrs[threads];
     UINT *bA = new UINT[(INT)(threads * scale * maxmass)];
 
     /* Initialize SAPtrs for each thread */
@@ -561,11 +561,9 @@ STATUS DSLIM_Optimize(Index *index, UINT chunk_number)
 
     UINT *iAPtr = index->ionIndex[chunk_number].iA;
     UINT *bAPtr = index->ionIndex[chunk_number].bA;
-    UINT interval = 50 *params.scale;
-    UINT threads = params.threads;
 
 #ifdef _OPENMP
-#pragma omp parallel for num_threads(threads) schedule(dynamic, interval)
+#pragma omp parallel for num_threads(params.threads) schedule(dynamic, (50 * params.scale))
 #endif /* _OPENMP */
     /* Stablize the entries in iAPtr */
     for (UINT kk = 0; kk < (params.max_mass * params.scale); kk++)
