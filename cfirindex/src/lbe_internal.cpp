@@ -195,13 +195,6 @@ STATUS LBE_Initialize(Index *index)
         status = ERR_FILE_NOT_FOUND;
     }
 
-    /* Make sure that the '>' == PEPTIDES
-    if (iCount != index->pepCount && status == SLM_SUCCESS)
-    {
-        cout << endl << "pepCount != iCount - Please check the FASTA file";
-        status = ERR_INVLD_SIZE;
-    } */
-
     /* Fill in the peps entry */
     if (status == SLM_SUCCESS)
     {
@@ -302,20 +295,18 @@ STATUS LBE_Distribute(Index *index)
     UINT speclen = (index->pepIndex.peplen-1) * params.maxz * iSERIES;
     UINT maxchunksize = (MAX_IONS / speclen);
     UINT maxchunksize2 = params.spadmem / (BYISIZE * params.threads);
-    UINT nchunks;
-    UINT chunksize;
-    UINT lastchunksize;
+    UINT nchunks = 0;
+    UINT chunksize = 0;
+    UINT lastchunksize = 0;
 
     /* Calculate the chunksize */
     chunksize = std::min(N, maxchunksize);
     chunksize = std::min(chunksize, maxchunksize2);
 
-//            ((N % p) == 0) ? (N / p) : ((N + p) / p);
-
     /* Set the number of chunks to p */
-    nchunks = (N/chunksize);
+    nchunks = (N / chunksize);
 
-    if (chunksize == maxchunksize)
+    if ((N % chunksize) != 0)
     {
         nchunks += 1;
     }
