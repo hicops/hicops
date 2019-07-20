@@ -1,0 +1,12 @@
+#!/bin/bash
+
+#SBATCH --job-name="dangar"
+#SBATCH --output="output/dangar.%j.%N.out"
+#SBATCH --partition=compute
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=24
+#SBATCH -t 00:15:00
+
+export OMP_NUM_THREADS   12
+
+ibrun --npernode 2 -bl socket -bp scatter /home/mhaseeb/pcdsframe/cfirindex/cfir.exe  /home/mhaseeb/pcdsframe/workspace/uparams.txt

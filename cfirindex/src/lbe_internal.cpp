@@ -488,10 +488,13 @@ STATUS LBE_CountPeps(CHAR *filename, Index *index)
         index->totalCount = index->pepCount + index->modCount;
         cumusize += index->totalCount;
 
-        cout << "Number of Peptides    =\t\t" << index->pepCount << endl;
-        cout << "Number of Variants    =\t\t" << index->modCount << endl;
-        cout << "Total Index Size      =\t\t" << index->totalCount << endl;
-        cout << "Cumulative Index Size =\t\t" << cumusize << endl << endl;
+        if (params.myid == 0)
+        {
+            cout << "Number of Peptides    =\t\t" << index->pepCount << endl;
+            cout << "Number of Variants    =\t\t" << index->modCount << endl;
+            cout << "Total Index Size      =\t\t" << index->totalCount << endl;
+            cout << "Cumulative Index Size =\t\t" << cumusize << endl << endl;
+        }
 
         /* Close the file once done */
         file.close();

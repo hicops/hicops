@@ -8,7 +8,7 @@ LNKFLAGS = -Wl,--wrap,memcpy
 # Change CXX to MPIC++ when MPI enabled
 ifeq ($(MPI),YES)
 	ifneq ($(OS),Windows_NT)
-		CXX:= mpic++
+		CXX:= mpicxx
 		CXXFLAGS += -DDISTMEM
 	endif
 endif

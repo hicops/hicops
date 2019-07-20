@@ -33,7 +33,7 @@
 //#undef DISTMEM
 
 /* Switch the benchmarking */
-#define BENCHMARK
+//#define BENCHMARK
 
 #define MAX_SEQ_LEN              60
 
