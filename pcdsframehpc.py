@@ -5,9 +5,9 @@ import sys
 import glob
 import os.path
 import datetime
-import numpy as np
-import scipy as scp
-import pandas as pd
+#import numpy as np
+#import scipy as scp
+#import pandas as pd
 import subprocess
 from subprocess import call
 
@@ -144,9 +144,9 @@ if __name__ == '__main__':
 	cores = 24
 	sockets = 2
 	nodes = 2
-	mpi_per_node = int(cores/sockets)
+	mpi_per_node = sockets
 	autotune = 0
-	threads = int(cores/numa)
+	threads = int(cores/sockets)
 	database = ''
 	ms2data = ''
 	nmods = 0
@@ -443,7 +443,7 @@ if __name__ == '__main__':
 #	print ('\nRunning: '+ 'Custom Lexicographical Sort\n')
 
 	# Print the clustering command
-#	clustercommand = './bash/sep_by_len.sh ' + digesteddb + ' ' + str(min_length) + ' ' + str(max_length)
+	clustercommand = './bash/sep_by_len.sh ' + digesteddb + ' ' + str(min_length) + ' ' + str(max_length)
 
 	print ('Running: ' + clustercommand)
 
@@ -487,13 +487,10 @@ if __name__ == '__main__':
 #	makeseqs = call("make -C seqgen", shell=True)
 #	genseqs = subprocess.run(['./seqgen/seqgen.exe ', './parts', './mods.txt', str(min_length), str(max_length), str(maxz)], stdout=subprocess.PIPE, shell=True)
 
-	# Install deps for MS2PIP, set up the config.txt and run for all PEPREC files.
-	# TODO:
-
 	# Construct CFIR index and compute shared peak count
 	uparams = './workspace/uparams.txt\n'
-	cleancfir = call("make -C cfirindex clean", shell=True)
-	makecfir = call("make -C cfirindex", shell=True)
+#	cleancfir = call("make -C cfirindex clean", shell=True)
+#	makecfir = call("make -C cfirindex", shell=True)
 
 #	cfir = subprocess.run(['./cfirindex/cfir.exe ', uparams], stdout=subprocess.PIPE, shell=True)
 	
