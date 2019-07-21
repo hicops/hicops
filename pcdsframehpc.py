@@ -448,6 +448,8 @@ if __name__ == '__main__':
 		while (os.path.isfile('./lscpu.out') == False):
 			pass
 		
+		print ('Extracted Machine Settings\n')
+
 		# Parse the machine info file
 		with open('./lscpu.out') as minfo:
 			for line in minfo:
@@ -459,25 +461,27 @@ if __name__ == '__main__':
 				# Split line into param and value
 				param, val = line.split(':', 1)		
 		
-			# Set the sockets per node
-			if (param == 'Socket(s)'):
-				sockets = int(val)
-				print ('Available sockets/machine  =', sockets)
+				# Set the sockets per node
+				if (param == 'Socket(s)'):
+					sockets = int(val)
+					print ('Available sockets/machine  =', sockets)
 
-			elif (param == 'CPU(s)'):
-				cores = int(val)
-				print ('Available cores/machine  =', cores)
+				elif (param == 'CPU(s)'):
+					cores = int(val)
+					print ('Available cores/machine  =', cores)
 
-			elif (param == 'Core(s)persocket'):
-				cores_per_socket = int(val)
-				print ('Available cores/socket  =', threads)
+				elif (param == 'Core(s)persocket'):
+					cores_per_socket = int(val)
+					print ('Available cores/socket  =', threads)
 
-			elif (param == 'NUMAnode(s)'):
-				numa = int(val)
-				print ('Available NUMA nodes/machine =', numa)
+				elif (param == 'NUMAnode(s)'):
+					numa = int(val)
+					print ('Available NUMA nodes/machine =', numa)
 
 		cores_per_numa = int(cores/numa)
 		minfo.close()
+
+		print ('\n')
 
 		# Case 1: Sockets >= NUMA nodes (one or multiple sockets/NUMA)
 		if (sockets >= numa):
@@ -494,11 +498,17 @@ if __name__ == '__main__':
 			bl = 'numanode'
 			bp = 'scatter'
 
+		print('Tuning OpenMP and MPI settings...\n')
 		print('Setting threads/MPI =', threads)
 		print('Setting MPI/machine =', mpi_per_node)
 		print('Setting MPI Policy  =', bp)
 		print('Setting MPI Binding =', bl)
-		
+
+		# Remove the temporary file
+		os.remove('./lscpu.out')
+
+		print('\nSUCCESS\n')
+
 	# Run the digestor now
 	digesteddb = workspace + '/digested_db.fasta'
 	digestcommand = "Digestor.exe -in " + database + " -out " + digesteddb + " -out_type fasta -threads " + str(threads) + " -missed_cleavages " + str(mcleavages) + " -enzyme " + enzyme +  " -min_length " + str(min_length) + " -max_length " + str(max_length) + " -FASTA:ID number -FASTA:description remove"
