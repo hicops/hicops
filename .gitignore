@@ -41,7 +41,7 @@ sampleparams.txt
 *.pyc
 
 # Custom MS2PIP stuff
-workspace/
+workspace*/
 data/
 *_pyx.c
 *_pyx_*.c
