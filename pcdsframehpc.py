@@ -30,18 +30,18 @@ if __name__ == '__main__':
 		sample.write('# \n')
 		sample.write('# HPC MS/MS Proteomics Pipeline\n')
 		sample.write('# Copyrights(C) 2019 PCDS Laboratory\n')
-		sample.write('# Muhammad Haseeb, Fahad Saeed')
+		sample.write('# Muhammad Haseeb, and Fahad Saeed')
 		sample.write('# School of Computing and Information Sciences\n')
-		sample.write('# Florida International University, Miami, FL\n')
+		sample.write('# Florida International University (FIU), Miami, FL\n')
 		sample.write('# Email: {mhaseeb, fsaeed}@fiu.edu\n')
 		sample.write('# \n')
 		sample.write('# Auto generated sampleparams.txt\n')
 		sample.write('# Sample parameters generated for XSEDE Comet cluster\n')
 		sample.write('# For more information: https://portal.xsede.org/sdsc-comet\n')
 		sample.write('# \n')
-		sample.write('# Generated on: ' + (datetime.datetime.now()).strftime("%Y-%m-%d %H:%M %Z")+'\n')
+		sample.write('# Generated on: ' + (datetime.datetime.now()).strftime("%Y-%m-%d %H:%M %Z") + '\n')
 		sample.write('# \n')
-		sample.write('# NOTE: DO NOT put any spaces between variable=value\n')
+		sample.write('# IMPORTANT: DO NOT put any spaces between variable=value\n')
 		sample.write('# \n\n')
 
 		sample.write('# Workspace directory \n')
@@ -50,24 +50,27 @@ if __name__ == '__main__':
 		sample.write('# Nodes available\n')
 		sample.write('nodes=2\n\n')
 
-		sample.write('# Cores per node\n')
+		sample.write('# Cores per machine\n')
 		sample.write('cores=24\n\n')
 
-		sample.write('# NUMA sockets per node\n')
-		sample.write('sockets=2\n\n')
-		
-		sample.write('# OpenMP threads per MPI process\n')
-		sample.write('threads_per_mpi=12\n\n')
-		
-		sample.write('# MPI processes per node\n')
-		sample.write('mpi_per_node=2\n\n')
-		
-		sample.write('# Recommended: Auto tune MPI/OpenMP for the system? 1/0? \n')
-		sample.write('# This will auto tune above parameters except \'nodes\' parameter \n')
+		sample.write('# OpenMP cores per MPI process\n')
+		sample.write('cores_per_mpi=12\n\n')
+
+		sample.write('# MPI binding policy: scatter, compact \n')
+		sample.write('bp=scatter\n\n')
+
+		sample.write('# MPI binding level: core, socket, numanode\n')
+		sample.write('bl=socket\n\n')
+
+		sample.write('# Recommended: Auto tune MPI/OpenMP settings based on \n')
+		sample.write('# Index size, Sockets and NUMA nodes in the system? 1/0? \n')
 		sample.write('autotune=1\n\n')
 
 		sample.write('# Path to proteome database\n')
 		sample.write('database=/path/to/database.fasta\n\n')
+
+		sample.write('# Path to MS/MS dataset\n')
+		sample.write('ms2data=/path/to/msms/dataset\n\n')
 
 		sample.write('# Mods to include per peptide sequence\n')
 		sample.write('nmods=3\n\n')
@@ -89,9 +92,6 @@ if __name__ == '__main__':
 		sample.write('mod14=X 0 0\n')
 		sample.write('mod15=X 0 0\n\n')
 		
-		sample.write('# Path to MS/MS dataset\n')
-		sample.write('ms2data=/path/to/msms/dataset\n\n')
-
 		sample.write('# Missed cleavages\n')
 		sample.write('missed_cleavages=1\n\n')
 		
@@ -143,10 +143,15 @@ if __name__ == '__main__':
 	# Initialize the parameters
 	cores = 24
 	sockets = 2
+	numa = 2
 	nodes = 2
 	mpi_per_node = sockets
-	autotune = 0
-	threads = int(cores/sockets)
+	cores_per_socket = int(cores/sockets)
+	cores_per_numa = int (cores/numa)
+	threads = cores_per_socket
+	bp = 'scatter'
+	bl = 'socket'
+	autotune = 1
 	database = ''
 	ms2data = ''
 	nmods = 0
@@ -181,7 +186,7 @@ if __name__ == '__main__':
 		for line in params:
 
 			# Ignore the empty or comment lines
-			if (line[0] == 'r' or line[0] == '#' or line == '\n'):
+			if (line[0] == '\r' or line[0] == '#' or line == '\n'):
 				continue
 
 			# Split line into param and value
@@ -220,7 +225,14 @@ if __name__ == '__main__':
 				if (nodes > 72):
 					nodes = 72
 				print ('Using nodes = ' + str(nodes))
-				
+
+			# Cores per node
+			elif (param == 'cores'):
+				cores = int(val)
+				if (cores <= 0 or cores > 24):
+					cores = 24
+				print ('Using cores/node  =', cores)
+
 			# Autotune number of threads and MPI processes to run?
 			elif (param == 'autotune'):
 				autotune = int(val)
@@ -230,28 +242,33 @@ if __name__ == '__main__':
 					autotune = 1
 				print ('Autotune = ' + str(nodes))
 				
-			# Cores per node
-			elif (param == 'cores'):
-				cores = int(val)
-				if (cores <= 0 or cores > 24):
-					cores = 24
-				print ('Using cores/node  =', cores)
+			# Set the MPI binding level
+			elif (param == 'bl'):
+				if (val[-1] == '\n'):
+					val = val[:-1]
+				if (val[-1] == '\r'):
+					val = val[:-1]
 
-			# Number of NUMA sockets
-			elif (param == 'sockets'):
-				sockets = int(val)
-				if (sockets <= 0 or sockets > 2):
-					sockets = 2
-				print ('Using sockets/node  =', sockets)
+				if (bl == 'socket' or bl == 'numanode' or bl == 'core'):
+					bl = val
+				print ('Using MPI bl =', bl)
 
-			# Number of MPI processes per machine
-			elif (param == 'mpi_per_node'):
-				mpi_per_node = int(val)
-				if (mpi_per_node <= 0):
-					mpi_per_node = 2
-				while (mpi_per_node % sockets != 0):
-					mpi_per_node += 1
-				print ('Using MPI/node  =', mpi_per_node)
+				# Set the MPI binding policy
+			elif (param == 'bp'):
+				if (val[-1] == '\n'):
+					val = val[:-1]
+				if (val[-1] == '\r'):
+					val = val[:-1]
+
+				if (bp == 'scatter' or bp == 'compact'):
+					bp = val
+				print ('Using MPI bp =', bp)
+
+			# Set OMP cores per MPI
+			elif (param == 'cores_per_mpi'):
+				threads = int(val)
+				if (threads <= 0 or threads > cores):
+					threads = int(cores)
 
 			# Set the enzyme for digestion
 			elif (param == 'enzyme'):
@@ -421,11 +438,67 @@ if __name__ == '__main__':
 	if (os.path.exists(workspace) == False):	
 		os.mkdir(workspace)
 
+
+	# If Autotuner is Enabled
 	if (autotune == 1):
 		print ("Autotuning parameters...\n")
 		autotune = call("sbatch ./sbatch/nodeinfo", shell=True)
+		
+		# Wait for the process to complete 
+		while (os.path.isfile('./lscpu.out') == False):
+			pass
+		
+		# Parse the machine info file
+		with open('./lscpu.out') as minfo:
+			for line in minfo:
+			
+				# Ignore the empty or comment lines
+				if (line[0] == '\r' or line[0] == '#' or line == '\n'):
+					continue
 
+				# Split line into param and value
+				param, val = line.split(':', 1)		
+		
+			# Set the sockets per node
+			if (param == 'Socket(s)'):
+				sockets = int(val)
+				print ('Available sockets/machine  =', sockets)
 
+			elif (param == 'CPU(s)'):
+				cores = int(val)
+				print ('Available cores/machine  =', cores)
+
+			elif (param == 'Core(s)persocket'):
+				cores_per_socket = int(val)
+				print ('Available cores/socket  =', threads)
+
+			elif (param == 'NUMAnode(s)'):
+				numa = int(val)
+				print ('Available NUMA nodes/machine =', numa)
+
+		cores_per_numa = int(cores/numa)
+		minfo.close()
+
+		# Case 1: Sockets >= NUMA nodes (one or multiple sockets/NUMA)
+		if (sockets >= numa):
+			# Set the BL to socket, BP to scatter, mpi_per_node to sockets, and threads_per_mpi to cores_per_socket
+			threads = cores_per_socket
+			mpi_per_node = sockets
+			bl = 'socket'
+			bp = 'scatter'
+	
+		# Case 2: Socket mapped to multiple NUMA nodes
+		elif (sockets < numa):
+			threads = int(cores_per_socket/numa)
+			mpi_per_node = int(sockets * numa)
+			bl = 'numanode'
+			bp = 'scatter'
+
+		print('Setting threads/MPI =', threads)
+		print('Setting MPI/machine =', mpi_per_node)
+		print('Setting MPI Policy  =', bp)
+		print('Setting MPI Binding =', bl)
+		
 	# Run the digestor now
 	digesteddb = workspace + '/digested_db.fasta'
 	digestcommand = "Digestor.exe -in " + database + " -out " + digesteddb + " -out_type fasta -threads " + str(threads) + " -missed_cleavages " + str(mcleavages) + " -enzyme " + enzyme +  " -min_length " + str(min_length) + " -max_length " + str(max_length) + " -FASTA:ID number -FASTA:description remove"
