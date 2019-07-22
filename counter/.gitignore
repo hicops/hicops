@@ -1,0 +1,44 @@
+# Prerequisites
+*.d
+
+# Eclipse Stuff
+.cproject
+.project
+.settings/
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.exe
+*.map
+*.obj
+
+# Output folders
+Debug/
+output/
+objs/
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
