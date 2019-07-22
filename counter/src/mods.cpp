@@ -38,7 +38,7 @@ extern vector<STRING>     Seqs;
 
 /* Static Functions */
 static LONGLONG count(STRING s, STRING conditions);
-static VOID MODS_GenCombinations(VOID);
+static VOID MODS_GenCombinations();
 
 /*
  * FUNCTION: MODS_GenCombinations
@@ -49,7 +49,7 @@ static VOID MODS_GenCombinations(VOID);
  *
  * OUTPUT: none
  */
-static VOID MODS_GenCombinations(VOID)
+static VOID MODS_GenCombinations()
 {
     //run this at start of main to fill Comb with the proper values
     Comb[0][0] = 1;

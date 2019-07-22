@@ -50,18 +50,18 @@ export CXXFLAGS
 export CXX
 
 all: lbe
-	$(CXX) $(LNKFLAGS) $(LIBPATHS) -Wl,--start-group  $(LIBS) ./slm.o -Wl,--end-group -o $(EXECUTEABLE) -Wl,-Map=$(EXECUTEABLE).map
+	$(CXX) $(LNKFLAGS) $(LIBPATHS) -Wl,--start-group  $(LIBS) ./counter.o -Wl,--end-group -o $(EXECUTEABLE) -Wl,-Map=$(EXECUTEABLE).map
 
 lbe: $(DEPS)
 	$(MAKE) -j$(JOBS) -C $(SRC)
-	$(CXX) -c -I./include -I./mstoolkit/include $(CXXFLAGS) -DGCC ./slm.cpp -o slm.o
+	$(CXX) -c -I./include $(CXXFLAGS) -DGCC ./counter.cpp -o counter.o
 
 clean:
 	$(MAKE) -C $(SRC) clean
-	rm -rf $(EXECUTEABLE) $(EXECUTEABLE).map slm.o
+	rm -rf $(EXECUTEABLE) $(EXECUTEABLE).map counter.o
 
 allclean:
 	$(MAKE) -C $(SRC) clean
-	rm -rf $(EXECUTEABLE) $(EXECUTEABLE).map slm.o
+	rm -rf $(EXECUTEABLE) $(EXECUTEABLE).map counter.o
 
 .PHONY: all lbe clean allclean

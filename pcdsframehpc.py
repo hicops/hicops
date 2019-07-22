@@ -45,8 +45,8 @@ if __name__ == '__main__':
 		sample.write('# IMPORTANT: DO NOT put any spaces between variable=value\n')
 		sample.write('# \n\n')
 
-		sample.write('# Workspace directory \n')
-		sample.write('workspace=./workspace\n\n')
+		sample.write('# Absolute path to Workspace directory \n')
+		sample.write('workspace=/path/to/workspace\n\n')
 
 		sample.write('# Nodes available\n')
 		sample.write('nodes=2\n\n')
@@ -67,10 +67,10 @@ if __name__ == '__main__':
 		sample.write('# Index size, Sockets and NUMA nodes in the system? 1/0? \n')
 		sample.write('autotune=1\n\n')
 
-		sample.write('# Path to proteome database\n')
+		sample.write('# Absolute path to proteome database\n')
 		sample.write('database=/path/to/database.fasta\n\n')
 
-		sample.write('# Path to MS/MS dataset\n')
+		sample.write('# Absolute path to MS/MS dataset\n')
 		sample.write('ms2data=/path/to/msms/dataset\n\n')
 
 		sample.write('# Mods to include per peptide sequence\n')

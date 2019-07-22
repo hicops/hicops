@@ -1,0 +1,11 @@
+#!/bin/bash
+
+#SBATCH --job-name="counter"
+#SBATCH --output="counter.out"
+#SBATCH --partition=compute
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=24
+#SBATCH -t 00:05:00
+
+export OMP_NUM_THREADS    24
+/home/mhaseeb/pcdsframe/counter/counter.exe /home/mhaseeb/pcdsframe/workspace/pparams.txt
