@@ -10,6 +10,7 @@ import datetime
 #import pandas as pd
 import subprocess
 from subprocess import call
+import math
 
 # The main function
 if __name__ == '__main__':
@@ -145,6 +146,7 @@ if __name__ == '__main__':
 	sockets = 2
 	numa = 2
 	nodes = 2
+	numamem = math.inf
 	mpi_per_node = sockets
 	cores_per_socket = int(cores/sockets)
 	cores_per_numa = int (cores/numa)
@@ -182,7 +184,6 @@ if __name__ == '__main__':
 
 	# Parse the params file
 	with open(paramfile) as params:
-
 		for line in params:
 
 			# Ignore the empty or comment lines
@@ -224,7 +225,7 @@ if __name__ == '__main__':
 					nodes = 1
 				if (nodes > 72):
 					nodes = 72
-				print ('Using nodes = ' + str(nodes))
+				print ('Using nodes =', nodes)
 
 			# Cores per node
 			elif (param == 'cores'):
@@ -240,7 +241,7 @@ if __name__ == '__main__':
 					autotune = 0
 				if (autotune > 0):
 					autotune = 1
-				print ('Autotune = ' + str(nodes))
+				print ('Autotune =', autotune)
 				
 			# Set the MPI binding level
 			elif (param == 'bl'):
@@ -403,7 +404,7 @@ if __name__ == '__main__':
 				spadmem = int(val)
 				if (shp_cnt < 2048):
 					shp_cnt = 2048
-				print ('Scorecard Memory =', shp_cnt)
+				print ('Scorecard Memory =', spadmem)
 
 			# Workspace Path
 			elif (param == 'workspace'):
@@ -438,12 +439,22 @@ if __name__ == '__main__':
 	if (os.path.exists(workspace) == False):	
 		os.mkdir(workspace)
 
+	# Create the output directory for results
+	if (os.path.exists(workspace + '/output') == False):
+		os.mkdir(workspace + '/output')
+
+	# Create directory where autogen stuff will be placed
+	if (os.path.exists(workspace + '/autogen') == False):
+		os.mkdir(workspace + '/autogen')
+
 
 	# If Autotuner is Enabled
 	if (autotune == 1):
 		print ("Autotuning parameters...\n")
+
 		autotune = call("sbatch ./sbatch/nodeinfo", shell=True)
-		
+		autotune2 = call("sbatch ./sbatch/numainfo", shell=True)
+
 		# Wait for the process to complete 
 		while (os.path.isfile('./lscpu.out') == False):
 			pass
@@ -481,6 +492,35 @@ if __name__ == '__main__':
 		cores_per_numa = int(cores/numa)
 		minfo.close()
 
+		# Wait for the process to complete 
+		while (os.path.isfile('./numainfo.out') == False):
+			pass
+
+		# Parse the machine info file
+		with open('./numainfo.out') as minfo:
+			for line in minfo:
+
+				# Ignore the empty or comment lines
+				if (line[0] == '\r' or line[0] == '#' or line == '\n'):
+					continue
+
+				# The distance table without the : splitter formatting this point onward
+				if (line == 'nodedistances:'):
+					break
+
+				# Split line into param and value
+				param, val = line.split(':', 1)
+				
+				# Get the available NUMA memory
+				if (param[:3] == 'node' and node[-4:0] == 'free'):
+					mem = int(val[:-2]) - 512
+					if (mem < numamem):
+						numamem = mem
+
+				print ('Available max NUMA memory (- 512 MB) =', numamem)
+				
+		minfo.close()
+		
 		print ('\n')
 
 		# Case 1: Sockets >= NUMA nodes (one or multiple sockets/NUMA)
@@ -522,8 +562,8 @@ if __name__ == '__main__':
 	
 	
 	# Print the next steps
-#	print ('\nRunning: '+ 'Separate by Peptide Length')
-#	print ('\nRunning: '+ 'Custom Lexicographical Sort\n')
+	print ('\nRunning: '+ 'Separate by Peptide Length')
+	print ('\nRunning: '+ 'Custom Lexicographical Sort\n')
 
 	# Print the clustering command
 	clustercommand = './bash/sep_by_len.sh ' + digesteddb + ' ' + str(min_length) + ' ' + str(max_length)
@@ -536,8 +576,9 @@ if __name__ == '__main__':
 	print ("\nSUCCESS\n")
 
 	# Prepare the uparams.txt file for seq generator
-	modfile = open(workspace + '/uparams.txt', "w+")
+	modfile = open(workspace + '/autogen/uparams.txt', "w+")
 
+	# Write params for the CFIR index
 	modfile.write(workspace + '/parts\n')
 	modfile.write(ms2data + '\n')
 	modfile.write(str(threads) + '\n')
@@ -565,16 +606,19 @@ if __name__ == '__main__':
 
 	modfile.close()
 
-	# Generate sequences (All set for future use with MS2PIP)
-#	makeseqs = call("make -C seqgen clean", shell=True)
-#	makeseqs = call("make -C seqgen", shell=True)
-#	genseqs = subprocess.run(['./seqgen/seqgen.exe ', './parts', './mods.txt', str(min_length), str(max_length), str(maxz)], stdout=subprocess.PIPE, shell=True)
 
-	# Construct CFIR index and compute shared peak count
-	uparams = './workspace/uparams.txt\n'
+	# Construct CFIR index and search spectra
+	uparams = workspace + '/autogen/uparams.txt\n'
+
+	# Clean and make a fresh copy of CFIR index
 #	cleancfir = call("make -C cfirindex clean", shell=True)
 #	makecfir = call("make -C cfirindex", shell=True)
 
+#	Run the PCDSFrame (CFIR)
 #	cfir = subprocess.run(['./cfirindex/cfir.exe ', uparams], stdout=subprocess.PIPE, shell=True)
 	
 #	print (cfir.stdout.decode('utf-8'))
+
+	print ('\nSUCCESS\n')
+	print ('Thanks for using PCDSFrame software')
+	print ('Please report bugs (if any) at {mhaseeb, fsaeed}@fiu.edu\n')
