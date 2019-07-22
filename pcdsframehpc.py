@@ -450,7 +450,7 @@ if __name__ == '__main__':
 
 	# If Autotuner is Enabled
 	if (autotune == 1):
-		print ("Autotuning parameters...\n")
+		print ("\n\n**** Autotuning parameters ****\n")
 
 		autotune = call("sbatch ./sbatch/nodeinfo", shell=True)
 		autotune2 = call("sbatch ./sbatch/numainfo", shell=True)
@@ -458,7 +458,7 @@ if __name__ == '__main__':
 		# Wait for the process to complete 
 		while (os.path.isfile('./lscpu.out') == False):
 			pass
-		
+
 		print ('Extracted Machine Settings\n')
 
 		# Parse the machine info file
@@ -510,14 +510,17 @@ if __name__ == '__main__':
 
 				# Split line into param and value
 				param, val = line.split(':', 1)
-				
+
+				if (param == 'nodedistances'):
+					break
+
 				# Get the available NUMA memory
-				if (param[:3] == 'node' and node[-4:0] == 'free'):
-					mem = int(val[:-2]) - 512
+				if (param[:4] == 'node' and param[-4:] == 'free'):
+					mem = int(val[:-3]) - 512
 					if (mem < numamem):
 						numamem = mem
 
-				print ('Available max NUMA memory (- 512 MB) =', numamem)
+		print ('Available max NUMA memory (- 512 MB) =', numamem)
 				
 		minfo.close()
 		
@@ -544,8 +547,10 @@ if __name__ == '__main__':
 		print('Setting MPI Policy  =', bp)
 		print('Setting MPI Binding =', bl)
 
-		# Remove the temporary file
+		# Remove the temporary files
 		os.remove('./lscpu.out')
+		os.remove('./numainfo.out')
+
 
 		print('\nSUCCESS\n')
 
