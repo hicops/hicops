@@ -211,7 +211,7 @@ if __name__ == '__main__':
 				if (os.path.isfile(database) == False):
 					print ("ERROR: Enter valid path to database.fasta")
 					sys.exit(-2)
-			
+
 			elif (param == 'ms2data'):
 				if (val[-1] == '\n'):
 					val = val[:-1]
@@ -240,7 +240,7 @@ if __name__ == '__main__':
 					cores = 24
 				print ('Using cores/node  =', cores)
 
-			# Autotune number of threads and MPI processes to run?
+			# Autotune number of cores and MPI processes to run?
 			elif (param == 'autotune'):
 				autotune = int(val)
 				if (autotune <= 0):
@@ -248,7 +248,7 @@ if __name__ == '__main__':
 				if (autotune > 0):
 					autotune = 1
 				print ('Autotune =', autotune)
-				
+
 			# Set the MPI binding level
 			elif (param == 'bl'):
 				if (val[-1] == '\n'):
@@ -303,14 +303,14 @@ if __name__ == '__main__':
 				if (nmods > 8):
 					nmods = 8 
 				print ('Max mods/pep  =', nmods)
-			
+
 			# There is a \n at the end of each string
 			elif (param[:-1] == 'mod'):
 				if (val[-1] == '\n'):
 					val = val[:-1]
 				if (val[-1] == '\r'):
 					val = val[:-1]
-				
+
 				if (val != 'X 0 0'):
 					mods.append(val)
 					print ('Adding mod   =', str(val))
@@ -325,7 +325,7 @@ if __name__ == '__main__':
 				if (min_length > 60):
 					min_length = 60 
 				print ('Min pep len  =', min_length)
-				
+
 			# Set the max digestion length
 			elif (param == 'max_length'):
 				max_length = int(val)
@@ -424,7 +424,7 @@ if __name__ == '__main__':
 
 				workspace = str(val)
 				print ('workspace   =', workspace)
-				
+
 			# Maximum precursor mass
 			elif (param == 'top_matches'):
 				top_matches = int(val)
@@ -462,28 +462,31 @@ if __name__ == '__main__':
 		print ("\n\n**** Autotuning parameters ****\n")
 
 		# Call the lsinfo and numactl --hardware to gather information
-		autotune = call("sbatch ./sbatch/nodeinfo", shell=True)
-		autotune2 = call("sbatch ./sbatch/numainfo", shell=True)
+		if (os.path.isfile(workspace + '/autogen/lscpu.out') == False):
+			autotune = call("sbatch ./sbatch/nodeinfo", shell=True)
+			print ('\nWaiting for job scheduler\n')
 
-		print ('\nWaiting for COMET job scheduler\n')
+		if (os.path.isfile(workspace + '/autogen/numainfo.out') == False):
+			autotune2 = call("sbatch ./sbatch/numainfo", shell=True)
+			print ('\nWaiting for job scheduler\n')
 
 		# Wait for the lscpu process to complete 
-		while (os.path.isfile('./lscpu.out') == False):
+		while (os.path.isfile(workspace + '/autogen/lscpu.out') == False):
 			pass
 
 		print ('\nExtracted System Settings\n')
 
 		# Parse the machine info file
-		with open('./lscpu.out') as minfo:
+		with open(workspace + '/autogen/lscpu.out') as minfo:
 			for line in minfo:
-			
+
 				# Ignore the empty or comment lines
 				if (line[0] == '\r' or line[0] == '#' or line[0] == '\n'):
 					continue
 
 				# Split line into param and value
 				param, val = line.split(':', 1)		
-		
+
 				# Set the sockets per node
 				if (param == 'Socket(s)'):
 					sockets = int(val)
@@ -502,7 +505,7 @@ if __name__ == '__main__':
 					print ('Available NUMA nodes/machine =', numa)
 
 		cores_per_numa = int(cores/numa)
-		
+
 		minfo.close()
 
 		# Prepare the pparams.txt file for seq generator
@@ -541,14 +544,12 @@ if __name__ == '__main__':
 		# Call the counter process
 		autotune3 = call("sbatch ./sbatch/counter", shell=True)
 
-		print ('\nWaiting for COMET job scheduler\n')
-
 		# Wait for the numainfo process to complete 
-		while (os.path.isfile('./numainfo.out') == False):
+		while (os.path.isfile(workspace + '/autogen/numainfo.out') == False):
 			pass
 
 		# Parse the machine info file
-		with open('./numainfo.out') as minfo:
+		with open(workspace + '/autogen/numainfo.out') as minfo:
 			for line in minfo:
 
 				# Ignore the empty or comment lines
@@ -572,17 +573,17 @@ if __name__ == '__main__':
 						numamem = mem
 
 		print ('Available max NUMA memory (- 512 MB) =', numamem)
-				
+
 		minfo.close()
 
 		print ('\nWaiting for COMET job scheduler\n')
 
 		# Wait for the counter process to complete
-		while (os.path.isfile('./counter.out') == False):
+		while (os.path.isfile(workspace + '/autogen/counter.out') == False):
 			pass
 
 		# Parse the index size file
-		with open('./counter.out') as minfo:
+		with open(workspace + '/autogen/counter.out') as minfo:
 			for line in minfo:
 
 				# Ignore the empty or comment lines
@@ -591,11 +592,11 @@ if __name__ == '__main__':
 
 				# Split line into param and value
 				param, val = line.split(':', 1)	
-				
+
 				if (param == 'spectra'):
 					indexsize = int(val)
 					print ('Estimated Index Size (Spectra) =', indexsize)
-				
+
 				elif (param == 'ions'):
 					nions = int(val)
 					size_mb = nions * 4 / (1024 * 1024)
@@ -617,7 +618,7 @@ if __name__ == '__main__':
 			mpi_per_node = sockets
 			bl = 'socket'
 			bp = 'scatter'
-	
+
 		# Case 2: Socket mapped to multiple NUMA nodes
 		elif (sockets < numa):
 			threads = int(cores_per_socket/numa)
@@ -648,10 +649,10 @@ if __name__ == '__main__':
 
 	# Run the Digester.exe
 #	digestor = call(digestcommand, shell=True)
-	
+
 	print ("\nSUCCESS\n")
-	
-	
+
+
 	# Print the next steps
 	print ('\nRunning: '+ 'Separate by Peptide Length')
 	print ('\nRunning: '+ 'Custom Lexicographical Sort\n')

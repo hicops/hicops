@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name="numainfo"
-#SBATCH --output="numainfo.out"
+#SBATCH --output="/home/mhaseeb/pcdsframe/workspace3/autogen/numainfo.out"
 #SBATCH --partition=compute
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1

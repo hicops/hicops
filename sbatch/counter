@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name="counter"
-#SBATCH --output="./counter.out"
+#SBATCH --output="/home/mhaseeb/pcdsframe/workspace3/autogen/counter.out"
 #SBATCH --partition=compute
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=24
