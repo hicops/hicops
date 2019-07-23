@@ -180,8 +180,6 @@ if __name__ == '__main__':
 	nions     = 0
 	size_mb   = 0
 	pcdsframepath = os.getcwd()
-	
-	print (os.path.abspath("./"))
 
 # ##################################################################################
 
