@@ -15,7 +15,7 @@ import math
 # The main function
 if __name__ == '__main__':
 
-	# Read the argument
+	# Read the arguments
 	if len(sys.argv) > 1:
 		paramfile = sys.argv[1]
 	else:
@@ -141,6 +141,8 @@ if __name__ == '__main__':
 		
 		sys.exit(0)
 
+# ##################################################################################
+
 	# Initialize the parameters
 	cores = 24
 	sockets = 2
@@ -175,7 +177,9 @@ if __name__ == '__main__':
 	workspace = './workspace'
 	policy = 'cyclic'
 	spadmem = 2048
+	indexsize = 0
 
+# ##################################################################################
 
 	print ('\n************************************\n')
 	print   ('*  HPC MS/MS Proteomics Pipeline   *\n')
@@ -433,6 +437,8 @@ if __name__ == '__main__':
 	# Close the params file
 	params.close()
 
+# ##################################################################################
+
 	# Create a workspace directory
 	print ('\nInitializing Workspace at: ', workspace)
 
@@ -447,19 +453,21 @@ if __name__ == '__main__':
 	if (os.path.exists(workspace + '/autogen') == False):
 		os.mkdir(workspace + '/autogen')
 
+# ##################################################################################
 
-	# If Autotuner is Enabled
+	# AUTOTUNER
 	if (autotune == 1):
 		print ("\n\n**** Autotuning parameters ****\n")
 
+		# Call the lsinfo and numactl --hardware to gather information
 		autotune = call("sbatch ./sbatch/nodeinfo", shell=True)
 		autotune2 = call("sbatch ./sbatch/numainfo", shell=True)
 
-		# Wait for the process to complete 
+		# Wait for the lscpu process to complete 
 		while (os.path.isfile('./lscpu.out') == False):
 			pass
 
-		print ('Extracted Machine Settings\n')
+		print ('Extracted System Settings\n')
 
 		# Parse the machine info file
 		with open('./lscpu.out') as minfo:
@@ -492,7 +500,41 @@ if __name__ == '__main__':
 		cores_per_numa = int(cores/numa)
 		minfo.close()
 
-		# Wait for the process to complete 
+		# Prepare the pparams.txt file for seq generator
+		modfile = open(workspace + '/autogen/pparams.txt', "w+")
+
+		# Write params for the CFIR index
+		modfile.write(workspace + '/parts\n')
+		modfile.write(ms2data + '\n')
+		modfile.write(str(cores) + '\n')
+		modfile.write(str(min_length) + '\n')
+		modfile.write(str(max_length) + '\n')
+		modfile.write(str(maxz) + '\n')
+		modfile.write(str(dF) + '\n')
+		modfile.write(str(dM) + '\n')
+		modfile.write(str(res) + '\n')
+		modfile.write(str(scale) + '\n')
+		modfile.write(str(min_prec_mass) + '\n')
+		modfile.write(str(max_prec_mass) + '\n')
+		modfile.write(str(top_matches) + '\n')
+		modfile.write(str(shp_cnt) + '\n')
+		modfile.write(str(spadmem) + '\n')
+		modfile.write(str(policy) + '\n')
+
+		modfile.write(str(len(mods)) + '\n')
+		modfile.write(str(nmods) + '\n')
+		for info in mods:
+			aa,ms,num = info.split(' ', 2)
+			modfile.write(aa + '\n')
+			modfile.write(str(ms) + '\n')
+			modfile.write(str(num) + '\n')
+
+		modfile.close()
+
+		# Call the counter process
+		autotune3 = call("sbatch ./sbatch/counter", shell=True)
+
+		# Wait for the numainfo process to complete 
 		while (os.path.isfile('./numainfo.out') == False):
 			pass
 
@@ -523,8 +565,30 @@ if __name__ == '__main__':
 		print ('Available max NUMA memory (- 512 MB) =', numamem)
 				
 		minfo.close()
-		
+
+		# Wait for the counter process to complete
+		while (os.path.isfile('./counter.out') == False):
+			pass
+
+		# Parse the index size file
+		with open('./counter.out') as minfo:
+			for line in minfo:
+
+				# Ignore the empty or comment lines
+				if (line[0] == '\r' or line[0] == '#' or line == '\n'):
+					continue
+
+				indexsize = int (line)
+				
+		print ('Estimated Index Size (Spectra) =', indexsize)
+
+		minfo.close()
+
 		print ('\n')
+
+# ##################################################################################
+
+		# Apply the optimizations 
 
 		# Case 1: Sockets >= NUMA nodes (one or multiple sockets/NUMA)
 		if (sockets >= numa):
@@ -546,10 +610,12 @@ if __name__ == '__main__':
 		print('Setting MPI/machine =', mpi_per_node)
 		print('Setting MPI Policy  =', bp)
 		print('Setting MPI Binding =', bl)
+		print('Setting Index / MPI =', int(indexsize/(mpi_per_node * nodes))
 
 		# Remove the temporary files
 		os.remove('./lscpu.out')
 		os.remove('./numainfo.out')
+		os.remove('./counter.out')
 
 
 		print('\nSUCCESS\n')
