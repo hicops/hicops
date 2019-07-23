@@ -36,6 +36,58 @@ from subprocess import call
 from shutil import copyfile
 
 
+# Generates a normal unicore job script
+def genNormalScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, command)
+	script = open(wkspc + '/autogen/' + jobname, 'w+')
+	script.write('#!/bin/bash\n')
+	script.write('\n')
+	script.write('#SBATCH --job-name="' + jobname +'"\n')
+	script.write('#SBATCH --output="' + wkspc + '/autogen/' + outname + '.out"\n')
+	script.write('#SBATCH --partition=' + partition + '\n')
+	script.write('#SBATCH --nodes=' + nds + '\n')
+	script.write('#SBATCH --ntasks-per-node=' + ntask_per_node + '\n')
+	script.write('#SBATCH -t ' + minust + '\n')
+	script.write('\n')
+	script.write(command + '\n')
+
+	return
+
+# Generates a multithreaded OpenMP job script
+def genOpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, args)
+	script = open(wkspc + '/autogen/' + jobname, 'w+')
+	script.write('#!/bin/bash\n')
+	script.write('\n')
+	script.write('#SBATCH --job-name="' + jobname +'"\n')
+	script.write('#SBATCH --output="' + wkspc + '/autogen/' + outname + '.out"\n')
+	script.write('#SBATCH --partition=' + partition + '\n')
+	script.write('#SBATCH --nodes=' + nds + '\n')
+	script.write('#SBATCH --ntasks-per-node=' + ntask_per_node + '\n')
+	script.write('#SBATCH -t ' + minust + '\n')
+	script.write('\n')
+	script.write ('export OMP_NUM_THREADS      ' + ompthrds + '\n')
+	script.write('\n')
+	script.write(command + ' ' + args)
+
+	return
+
+# Generates a Hybrid MPI/OpenMP job script
+def genMPI_OpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, npernode, blevel, bpolicy, args)
+	script = open(wkspc + '/autogen/' + jobname, 'w+')
+	script.write('#!/bin/bash\n')
+	script.write('\n')
+	script.write('#SBATCH --job-name="' + jobname +'"\n')
+	script.write('#SBATCH --output="' + wkspc + '/output/' + outname + '.%j.%N.out"\n')
+	script.write('#SBATCH --partition=' + partition + '\n')
+	script.write('#SBATCH --nodes=' + nds + '\n')
+	script.write('#SBATCH --ntasks-per-node=' + ntask_per_node + '\n')
+	script.write('#SBATCH -t ' + minust + '\n')
+	script.write('\n')
+	script.write ('export OMP_NUM_THREADS      ' + ompthrds + '\n')
+	script.write('\n')
+	script.write('ibrun --npernode ' + npernode + ' -bl ' + blevel + ' -bp ' + bpolicy + ' ' + command + ' ' + args)
+
+	return
+
 # The main function
 if __name__ == '__main__':
 
@@ -486,58 +538,6 @@ if __name__ == '__main__':
 		copyfile(paramfile, workspace + '/autogen/settings.txt')
 
 # ##################################################################################
-
-# Generates a normal unicore job script
-def genNormalScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, command)
-	script = open(wkspc + '/autogen/' + jobname, 'w+')
-	script.write('#!/bin/bash\n')
-	script.write('\n')
-	script.write('#SBATCH --job-name="' + jobname +'"\n')
-	script.write('#SBATCH --output="' + wkspc + '/autogen/' + outname + '.out"\n')
-	script.write('#SBATCH --partition=' + partition + '\n')
-	script.write('#SBATCH --nodes=' + nds + '\n')
-	script.write('#SBATCH --ntasks-per-node=' + ntask_per_node + '\n')
-	script.write('#SBATCH -t ' + minust + '\n')
-	script.write('\n')
-	script.write(command + '\n')
-
-	return
-
-# Generates a multithreaded OpenMP job script
-def genOpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, args)
-	script = open(wkspc + '/autogen/' + jobname, 'w+')
-	script.write('#!/bin/bash\n')
-	script.write('\n')
-	script.write('#SBATCH --job-name="' + jobname +'"\n')
-	script.write('#SBATCH --output="' + wkspc + '/autogen/' + outname + '.out"\n')
-	script.write('#SBATCH --partition=' + partition + '\n')
-	script.write('#SBATCH --nodes=' + nds + '\n')
-	script.write('#SBATCH --ntasks-per-node=' + ntask_per_node + '\n')
-	script.write('#SBATCH -t ' + minust + '\n')
-	script.write('\n')
-	script.write ('export OMP_NUM_THREADS      ' + ompthrds + '\n')
-	script.write('\n')
-	script.write(command + ' ' + args)
-
-	return
-
-# Generates a Hybrid MPI/OpenMP job script
-def genMPI_OpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, npernode, blevel, bpolicy, args)
-	script = open(wkspc + '/autogen/' + jobname, 'w+')
-	script.write('#!/bin/bash\n')
-	script.write('\n')
-	script.write('#SBATCH --job-name="' + jobname +'"\n')
-	script.write('#SBATCH --output="' + wkspc + '/output/' + outname + '.%j.%N.out"\n')
-	script.write('#SBATCH --partition=' + partition + '\n')
-	script.write('#SBATCH --nodes=' + nds + '\n')
-	script.write('#SBATCH --ntasks-per-node=' + ntask_per_node + '\n')
-	script.write('#SBATCH -t ' + minust + '\n')
-	script.write('\n')
-	script.write ('export OMP_NUM_THREADS      ' + ompthrds + '\n')
-	script.write('\n')
-	script.write('ibrun --npernode ' + npernode + ' -bl ' + blevel + ' -bp ' + bpolicy + ' ' + command + ' ' + args)
-
-	return
 
 	# AUTOTUNER
 	if (autotune == 1):
