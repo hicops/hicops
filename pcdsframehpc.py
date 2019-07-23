@@ -121,8 +121,11 @@ if __name__ == '__main__':
 		sample.write('# IMPORTANT: DO NOT put any spaces between variable=value\n')
 		sample.write('# \n\n')
 
-		sample.write('# Path (absolute or relative) to Workspace directory \n')
+		sample.write('# Path (absolute or relative) to Workspace directory\n')
 		sample.write('workspace=/path/to/workspace\n\n')
+		
+		sample.write('# Job Time: hh:mm:ss (Max: 47:59:59)\n')
+		sample.write('jobtime=00:45:00\n\n')
 
 		sample.write('# Nodes available\n')
 		sample.write('nodes=2\n\n')
@@ -258,6 +261,7 @@ if __name__ == '__main__':
 	size_mb   = 0
 	mb_per_numa = 0
 	mb_per_mpi  = 0
+	jobtime='00:45:00'
 	pcdsframepath = os.getcwd()
 
 # ##################################################################################
@@ -291,6 +295,21 @@ if __name__ == '__main__':
 					print ("ERROR: Enter valid path to database.fasta")
 					sys.exit(-2)
 
+			# Set the job time
+			elif (param == 'jobtime'):
+				if (val[-1] == '\n'):
+					val = val[:-1]
+				if (val[-1] == '\r'):
+					val = val[:-1]
+
+				hh,mm,ss = map(int, val.split(':',2))
+
+				if (hh == 0 and mm == 0 and ss = 0):
+					val = '00:45:00'
+				else:
+					jobtime = val
+				print ('Job time =', jobtime)
+		
 			elif (param == 'ms2data'):
 				if (val[-1] == '\n'):
 					val = val[:-1]
@@ -806,7 +825,7 @@ if __name__ == '__main__':
 	# Construct CFIR index and search spectra
 	uparams = workspace + '/autogen/uparams.txt\n'
 	
-	genMPI_OpenMPScript(workspace, 'cfir', 'cfir', 'compute', str(nodes), str(cores), "01:00:00", str(threads), pcdsframepath + '/cfirindex/cfir.exe', str(mpi_per_node), bl, bp, uparams)
+	genMPI_OpenMPScript(workspace, 'cfir', 'cfir', 'compute', str(nodes), str(cores), jobtime, str(threads), pcdsframepath + '/cfirindex/cfir.exe', str(mpi_per_node), bl, bp, uparams)
 	# Clean and make a fresh copy of CFIR index
 #	cleancfir = call("make -C cfirindex clean", shell=True)
 #	makecfir = call("make -C cfirindex", shell=True)
