@@ -1,15 +1,40 @@
+#  
+#  This file is a part of HPC PCDSFrame software
+#
+#  Copyright (C) 2019 Parallel Computing and Data Science (PCDS) Laboratory
+#                         School of Computing and Information Sciences
+#                           Florida International University (FIU)
+#                            Authors: Muhammad Haseeb, Fahad Saeed
+#                              Email: {mhaseeb, fsaeed}@fiu.edu
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#  
+
+
 # Required Imports
 
 import os
 import sys
+import math
 import glob
 import os.path
-import datetime
 import filecmp
+import datetime
 import subprocess
 from subprocess import call
-import math
 from shutil import copyfile
+
 
 # The main function
 if __name__ == '__main__':
@@ -179,6 +204,8 @@ if __name__ == '__main__':
 	indexsize = 0
 	nions     = 0
 	size_mb   = 0
+	mb_per_numa = 0
+	mb_per_mpi  = 0
 	pcdsframepath = os.getcwd()
 
 # ##################################################################################
@@ -460,17 +487,74 @@ if __name__ == '__main__':
 
 # ##################################################################################
 
+# Generates a normal unicore job script
+def genNormalScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, command)
+	script = open(wkspc + '/autogen/' + jobname, 'w+')
+	script.write('#!/bin/bash\n')
+	script.write('\n')
+	script.write('#SBATCH --job-name="' + jobname +'"\n')
+	script.write('#SBATCH --output="' + wkspc + '/autogen/' + outname + '.out"\n')
+	script.write('#SBATCH --partition=' + partition + '\n')
+	script.write('#SBATCH --nodes=' + nds + '\n')
+	script.write('#SBATCH --ntasks-per-node=' + ntask_per_node + '\n')
+	script.write('#SBATCH -t ' + minust + '\n')
+	script.write('\n')
+	script.write(command + '\n')
+
+	return
+
+# Generates a multithreaded OpenMP job script
+def genOpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, args)
+	script = open(wkspc + '/autogen/' + jobname, 'w+')
+	script.write('#!/bin/bash\n')
+	script.write('\n')
+	script.write('#SBATCH --job-name="' + jobname +'"\n')
+	script.write('#SBATCH --output="' + wkspc + '/autogen/' + outname + '.out"\n')
+	script.write('#SBATCH --partition=' + partition + '\n')
+	script.write('#SBATCH --nodes=' + nds + '\n')
+	script.write('#SBATCH --ntasks-per-node=' + ntask_per_node + '\n')
+	script.write('#SBATCH -t ' + minust + '\n')
+	script.write('\n')
+	script.write ('export OMP_NUM_THREADS      ' + ompthrds + '\n')
+	script.write('\n')
+	script.write(command + ' ' + args)
+
+	return
+
+# Generates a Hybrid MPI/OpenMP job script
+def genMPI_OpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, npernode, blevel, bpolicy, args)
+	script = open(wkspc + '/autogen/' + jobname, 'w+')
+	script.write('#!/bin/bash\n')
+	script.write('\n')
+	script.write('#SBATCH --job-name="' + jobname +'"\n')
+	script.write('#SBATCH --output="' + wkspc + '/output/' + outname + '.%j.%N.out"\n')
+	script.write('#SBATCH --partition=' + partition + '\n')
+	script.write('#SBATCH --nodes=' + nds + '\n')
+	script.write('#SBATCH --ntasks-per-node=' + ntask_per_node + '\n')
+	script.write('#SBATCH -t ' + minust + '\n')
+	script.write('\n')
+	script.write ('export OMP_NUM_THREADS      ' + ompthrds + '\n')
+	script.write('\n')
+	script.write('ibrun --npernode ' + npernode + ' -bl ' + blevel + ' -bp ' + bpolicy + ' ' + command + ' ' + args)
+
+	return
+
 	# AUTOTUNER
 	if (autotune == 1):
 		print ("\n\n**** Autotuning parameters ****\n")
 
-		# Call the lsinfo and numactl --hardware to gather information
+		# Call the lsinfo to gather CPU information
 		if (os.path.isfile(workspace + '/autogen/lscpu.out') == False):
-			autotune = call("sbatch ./sbatch/nodeinfo", shell=True)
+			genNormalScript(workspace, 'lscpu', 'lscpu', 'compute', '1','1', '00:00:05', 'lscpu | tr -d " \\r"')
+
+			autotune = call("sbatch " + workspace + "/autogen/lscpu", shell=True)
 			print ('\nWaiting for job scheduler\n')
 
+		# Call the numactl --hardware to gather NUAM information
 		if (os.path.isfile(workspace + '/autogen/numainfo.out') == False):
-			autotune2 = call("sbatch ./sbatch/numainfo", shell=True)
+			genNormalScript(workspace, 'numainfo', 'numainfo', 'compute', '1','1', '00:00:05', 'numactl --hardware | tr -d " \\r"')
+			
+			autotune2 = call("sbatch " + workspace + "/autogen/numainfo", shell=True)
 			print ('\nWaiting for job scheduler\n')
 
 		# Wait for the lscpu process to complete 
@@ -514,7 +598,8 @@ if __name__ == '__main__':
 		if (filecmp.cmp(workspace + '/autogen/settings.txt', paramfile) == False or os.path.isfile(workspace + '/autogen/counter.out')==False):
 
 			# Prepare the pparams.txt file for seq generator
-			modfile = open(workspace + '/autogen/pparams.txt', "w+")
+			pparam = workspace + '/autogen/pparams.txt'
+			modfile = open(pparam, "w+")
 
 			# Write params for the CFIR index
 			modfile.write('/home/mhaseeb/database' + '/parts\n')
@@ -551,7 +636,10 @@ if __name__ == '__main__':
 				os.remove(workspace + '/autogen/counter.out')
 
 			# Call the counter process
-			autotune3 = call("sbatch ./sbatch/counter", shell=True)
+			cleancntr = call("make -C counter allclean", shell=True)
+			makecntr = call("make -C counter", shell=True)
+			genOpenMPScript(workspace, 'counter', 'counter', 'compute', '1', str(cores), '00:30:00', str(cores), workspace + '/counter/counter.exe', pparam)
+			autotune3 = call('sbatch ' + workspace + '/autogen/counter', shell=True)
 
 			print ('\nWaiting for job scheduler\n')
 
