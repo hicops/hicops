@@ -502,13 +502,14 @@ if __name__ == '__main__':
 					print ('Available NUMA nodes/machine =', numa)
 
 		cores_per_numa = int(cores/numa)
+		
 		minfo.close()
 
 		# Prepare the pparams.txt file for seq generator
 		modfile = open(workspace + '/autogen/pparams.txt', "w+")
 
 		# Write params for the CFIR index
-		modfile.write(workspace + '/parts\n')
+		modfile.write('/home/mhaseeb/database' + '/parts\n')
 		modfile.write(ms2data + '\n')
 		modfile.write(str(cores) + '\n')
 		modfile.write(str(min_length) + '\n')
@@ -574,6 +575,8 @@ if __name__ == '__main__':
 				
 		minfo.close()
 
+		print ('\nWaiting for COMET job scheduler\n')
+
 		# Wait for the counter process to complete
 		while (os.path.isfile('./counter.out') == False):
 			pass
@@ -590,13 +593,14 @@ if __name__ == '__main__':
 				param, val = line.split(':', 1)	
 				
 				if (param == 'spectra'):
-					indexsize = uint64(val)
+					indexsize = int(val)
 					print ('Estimated Index Size (Spectra) =', indexsize)
 				
 				elif (param == 'ions'):
-					nions = uint64(val)
+					nions = int(val)
 					size_mb = nions * 4 / (1024 * 1024)
-					print ('Estimated Index Size (MBs) =', size_mb)
+					print ('Estimated Index Size (Ions) =', nions)
+					print ('Estimated Index Size (MBs)  =', size_mb)
 
 		minfo.close()
 
