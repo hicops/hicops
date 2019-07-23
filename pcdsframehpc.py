@@ -304,7 +304,7 @@ if __name__ == '__main__':
 
 				hh,mm,ss = map(int, val.split(':',2))
 
-				if (hh == 0 and mm == 0 and ss = 0):
+				if (hh == 0 and mm == 0 and ss == 0):
 					val = '00:45:00'
 				else:
 					jobtime = val
