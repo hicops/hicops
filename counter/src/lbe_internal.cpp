@@ -23,6 +23,7 @@ using namespace std;
 
 vector<STRING> Seqs;
 ULONGLONG cumusize = 0;
+ULONGLONG ions = 0;
 
 ifstream file;
 
@@ -49,6 +50,8 @@ STATUS LBE_CountPeps(CHAR *filename)
     STRING modconditions = params.modconditions;
     UINT maxmass= params.max_mass;
     UINT minmass= params.min_mass;
+	
+	ULONGLONG localpeps = 0;
 
 #ifndef VMODS
     LBE_UNUSED_PARAM(modconditions);
@@ -79,7 +82,7 @@ STATUS LBE_CountPeps(CHAR *filename)
                 if (pepmass >= minmass && pepmass <= maxmass)
                 {
                     Seqs.push_back(line);
-                    cumusize++;
+                    localpeps++;
                 }
             }
         }
@@ -97,7 +100,7 @@ STATUS LBE_CountPeps(CHAR *filename)
     {
         status = UTILS_InitializeModInfo(&params.vModInfo);
 
-        cumusize += MODS_ModCounter();
+        localpeps += MODS_ModCounter();
 
     }
 
@@ -109,6 +112,12 @@ STATUS LBE_CountPeps(CHAR *filename)
         /* Close the file once done */
         file.close();
     }
+
+
+    cumusize += localpeps;
+    ions += (localpeps * ((Seqs.at(0).length() - 1) * params.maxz * iSERIES));
+
+    Seqs.clear();
 
     return status;
 }

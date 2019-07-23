@@ -291,7 +291,6 @@ ULONGLONG MODS_ModCounter()
     lclcntr = 0;
     partcntr = 0;
     tokens.clear();
-    Seqs.clear();
     limit = 0;
 
     return cumulative;

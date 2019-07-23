@@ -26,6 +26,7 @@ using namespace std;
 STRING dbfile;
 
 extern ULONGLONG cumusize;
+extern ULONGLONG ions;
 
 gParams params;
 
@@ -71,7 +72,8 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     }
 
     /* The only output should be the cumulative size of the index */
-    cout << cumusize << endl;
+    cout << "spectra:" << cumusize << endl;
+	cout << "ions:" << ions << endl;
 
     return status;
 }
