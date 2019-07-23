@@ -454,9 +454,8 @@ if __name__ == '__main__':
 	if (os.path.exists(workspace + '/autogen') == False):
 		os.mkdir(workspace + '/autogen')
 
-	if (os.file.exists(workspace + '/autogen/settings.txt'):	
-		if (filecmp.cmp(workspace + '/autogen/settings.txt', paramfile) == False):
-			copyfile(paramfile, workspace + '/autogen/settings.txt')
+	if (os.path.isfile(workspace + '/autogen/settings.txt') == False or filecmp.cmp(workspace + '/autogen/settings.txt', paramfile) == False):
+		copyfile(paramfile, workspace + '/autogen/settings.txt')
 
 # ##################################################################################
 
@@ -511,9 +510,7 @@ if __name__ == '__main__':
 
 		minfo.close()
 
-		print ('\nEstimating Index Size\n')
-
-		if (filecmp.cmp(workspace + '/autogen/settings.txt', paramfile) == False):
+		if (filecmp.cmp(workspace + '/autogen/settings.txt', paramfile) == False or os.path.isfile(workspace + '/autogen/counter.out')==False):
 
 			# Prepare the pparams.txt file for seq generator
 			modfile = open(workspace + '/autogen/pparams.txt', "w+")
@@ -546,10 +543,15 @@ if __name__ == '__main__':
 
 			modfile.close()
 
+			print ('\n')
+
 			# Remove the previous counter file
-			os.remove(workspace + '/autogen/counter.out')
+			if (os.path.isfile(workspace + '/autogen/counter.out')):
+				os.remove(workspace + '/autogen/counter.out')
+
 			# Call the counter process
 			autotune3 = call("sbatch ./sbatch/counter", shell=True)
+
 			print ('\nWaiting for job scheduler\n')
 
 
@@ -589,6 +591,8 @@ if __name__ == '__main__':
 		while (os.path.isfile(workspace + '/autogen/counter.out') == False):
 			pass
 
+		print ('\nEstimating Index Size\n')
+
 		# Parse the index size file
 		with open(workspace + '/autogen/counter.out') as minfo:
 			for line in minfo:
@@ -606,9 +610,9 @@ if __name__ == '__main__':
 
 				elif (param == 'ions'):
 					nions = int(val)
-					size_mb = nions * 4 / (1024 * 1024)
+					size_mb = (nions * 4 + (mpi_per_node * nodes * max_prec_mass * scale * 4)) / (1024 * 1024)
 					print ('Estimated Index Size (Ions) =', nions)
-					print ('Estimated Index Size (MBs)  =', size_mb)
+					print ('Estimated Index Size (MBs)  =', round(size_mb, 3))
 
 		minfo.close()
 
