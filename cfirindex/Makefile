@@ -1,7 +1,7 @@
 BUILD_MODE = RELEASE
 OPENMP = YES
 MPI = YES
-JOBS=1
+JOBS=4
 CXXFLAGS = -Wall -fmessage-length=0 -std=gnu++0x
 LNKFLAGS = -Wl,--wrap,memcpy
 
@@ -46,11 +46,11 @@ else
 endif
 
 # Setup parallel build jobs
-ifeq ($(OS),Windows_NT)
-	JOBS := $(NUMBER_OF_PROCESSORS)
-else
-	JOBS := $(shell grep -c ^processor /proc/cpuinfo)
-endif
+#ifeq ($(OS),Windows_NT)
+#	JOBS := $(NUMBER_OF_PROCESSORS)
+#else
+#	JOBS := $(shell grep -c ^processor /proc/cpuinfo)
+#endif
 
 # Export Build Variables
 export BUILD_MODE

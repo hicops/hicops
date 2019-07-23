@@ -1,6 +1,6 @@
 BUILD_MODE = RELEASE
 OPENMP = YES
-JOBS=1
+JOBS=4
 CXXFLAGS = -Wall -fmessage-length=0 -std=gnu++0x
 LNKFLAGS = -Wl,--wrap,memcpy
 
@@ -33,13 +33,6 @@ else ifeq ($(BUILD_MODE),RELEASE)
 	CXXFLAGS += -O3
 else
 	$(error Build mode $(BUILD_MODE) not supported by this Makefile)
-endif
-
-# Setup parallel build jobs
-ifeq ($(OS),Windows_NT)
-	JOBS := $(NUMBER_OF_PROCESSORS)
-else
-	JOBS := $(shell grep -c ^processor /proc/cpuinfo)
 endif
 
 # Export Build Variables

@@ -37,7 +37,7 @@ from shutil import copyfile
 
 
 # Generates a normal unicore job script
-def genNormalScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, command)
+def genNormalScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, comd):
 	script = open(wkspc + '/autogen/' + jobname, 'w+')
 	script.write('#!/bin/bash\n')
 	script.write('\n')
@@ -48,12 +48,12 @@ def genNormalScript(wkspc, jobname, outname, partition, nds, ntask_per_node, min
 	script.write('#SBATCH --ntasks-per-node=' + ntask_per_node + '\n')
 	script.write('#SBATCH -t ' + minust + '\n')
 	script.write('\n')
-	script.write(command + '\n')
+	script.write(comd + '\n')
 
 	return
 
 # Generates a multithreaded OpenMP job script
-def genOpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, args)
+def genOpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, args):
 	script = open(wkspc + '/autogen/' + jobname, 'w+')
 	script.write('#!/bin/bash\n')
 	script.write('\n')
@@ -71,7 +71,7 @@ def genOpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, min
 	return
 
 # Generates a Hybrid MPI/OpenMP job script
-def genMPI_OpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, npernode, blevel, bpolicy, args)
+def genMPI_OpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, npernode, blevel, bpolicy, args):
 	script = open(wkspc + '/autogen/' + jobname, 'w+')
 	script.write('#!/bin/bash\n')
 	script.write('\n')
@@ -638,7 +638,7 @@ if __name__ == '__main__':
 			# Call the counter process
 			cleancntr = call("make -C counter allclean", shell=True)
 			makecntr = call("make -C counter", shell=True)
-			genOpenMPScript(workspace, 'counter', 'counter', 'compute', '1', str(cores), '00:30:00', str(cores), workspace + '/counter/counter.exe', pparam)
+			genOpenMPScript(workspace, 'counter', 'counter', 'compute', '1', str(cores), '00:30:00', str(cores), pcdsframepath + '/counter/counter.exe', pparam)
 			autotune3 = call('sbatch ' + workspace + '/autogen/counter', shell=True)
 
 			print ('\nWaiting for job scheduler\n')
@@ -704,6 +704,16 @@ if __name__ == '__main__':
 					print ('Estimated Index Size (MBs)  =', round(size_mb, 3))
 
 		minfo.close()
+		
+		if (size_mb == 0 or nions == 0 or indexsize == 0):
+			print ('\nFATAL: counter.exe failed. Please check the ./cnterr.txt\n')
+
+			if (os.path.isfile(workspace + '/autogen/counter.out') == True):
+				copyfile(workspace + '/autogen/counter.out', pcdsframedir + '/cnterr.txt')
+				os.remove(workspace + '/autogen/counter.out')
+
+			# Exit abnormally
+			exit(-3)
 
 		print ('\n')
 
