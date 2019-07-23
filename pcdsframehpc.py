@@ -5,12 +5,11 @@ import sys
 import glob
 import os.path
 import datetime
-#import numpy as np
-#import scipy as scp
-#import pandas as pd
+import filecmp
 import subprocess
 from subprocess import call
 import math
+from shutil import copyfile
 
 # The main function
 if __name__ == '__main__':
@@ -455,6 +454,10 @@ if __name__ == '__main__':
 	if (os.path.exists(workspace + '/autogen') == False):
 		os.mkdir(workspace + '/autogen')
 
+	if (os.file.exists(workspace + '/autogen/settings.txt'):	
+		if (filecmp.cmp(workspace + '/autogen/settings.txt', paramfile) == False):
+			copyfile(paramfile, workspace + '/autogen/settings.txt')
+
 # ##################################################################################
 
 	# AUTOTUNER
@@ -508,41 +511,47 @@ if __name__ == '__main__':
 
 		minfo.close()
 
-		# Prepare the pparams.txt file for seq generator
-		modfile = open(workspace + '/autogen/pparams.txt', "w+")
-
-		# Write params for the CFIR index
-		modfile.write('/home/mhaseeb/database' + '/parts\n')
-		modfile.write(ms2data + '\n')
-		modfile.write(str(cores) + '\n')
-		modfile.write(str(min_length) + '\n')
-		modfile.write(str(max_length) + '\n')
-		modfile.write(str(maxz) + '\n')
-		modfile.write(str(dF) + '\n')
-		modfile.write(str(dM) + '\n')
-		modfile.write(str(res) + '\n')
-		modfile.write(str(scale) + '\n')
-		modfile.write(str(min_prec_mass) + '\n')
-		modfile.write(str(max_prec_mass) + '\n')
-		modfile.write(str(top_matches) + '\n')
-		modfile.write(str(shp_cnt) + '\n')
-		modfile.write(str(spadmem) + '\n')
-		modfile.write(str(policy) + '\n')
-
-		modfile.write(str(len(mods)) + '\n')
-		modfile.write(str(nmods) + '\n')
-		for info in mods:
-			aa,ms,num = info.split(' ', 2)
-			modfile.write(aa + '\n')
-			modfile.write(str(ms) + '\n')
-			modfile.write(str(num) + '\n')
-
-		modfile.close()
-
 		print ('\nEstimating Index Size\n')
 
-		# Call the counter process
-		autotune3 = call("sbatch ./sbatch/counter", shell=True)
+		if (filecmp.cmp(workspace + '/autogen/settings.txt', paramfile) == False):
+
+			# Prepare the pparams.txt file for seq generator
+			modfile = open(workspace + '/autogen/pparams.txt', "w+")
+
+			# Write params for the CFIR index
+			modfile.write('/home/mhaseeb/database' + '/parts\n')
+			modfile.write(ms2data + '\n')
+			modfile.write(str(cores) + '\n')
+			modfile.write(str(min_length) + '\n')
+			modfile.write(str(max_length) + '\n')
+			modfile.write(str(maxz) + '\n')
+			modfile.write(str(dF) + '\n')
+			modfile.write(str(dM) + '\n')
+			modfile.write(str(res) + '\n')
+			modfile.write(str(scale) + '\n')
+			modfile.write(str(min_prec_mass) + '\n')
+			modfile.write(str(max_prec_mass) + '\n')
+			modfile.write(str(top_matches) + '\n')
+			modfile.write(str(shp_cnt) + '\n')
+			modfile.write(str(spadmem) + '\n')
+			modfile.write(str(policy) + '\n')
+
+			modfile.write(str(len(mods)) + '\n')
+			modfile.write(str(nmods) + '\n')
+			for info in mods:
+				aa,ms,num = info.split(' ', 2)
+				modfile.write(aa + '\n')
+				modfile.write(str(ms) + '\n')
+				modfile.write(str(num) + '\n')
+
+			modfile.close()
+
+			# Remove the previous counter file
+			os.remove(workspace + '/autogen/counter.out')
+			# Call the counter process
+			autotune3 = call("sbatch ./sbatch/counter", shell=True)
+			print ('\nWaiting for job scheduler\n')
+
 
 		# Wait for the numainfo process to complete 
 		while (os.path.isfile(workspace + '/autogen/numainfo.out') == False):
@@ -575,8 +584,6 @@ if __name__ == '__main__':
 		print ('Available max NUMA memory (- 512 MB) =', numamem)
 
 		minfo.close()
-
-		print ('\nWaiting for job scheduler\n')
 
 		# Wait for the counter process to complete
 		while (os.path.isfile(workspace + '/autogen/counter.out') == False):
@@ -632,10 +639,6 @@ if __name__ == '__main__':
 		print('Setting MPI Policy  =', bp)
 		print('Setting MPI Binding =', bl)
 		print('Setting Index / MPI =', int(indexsize/(mpi_per_node * nodes)))
-
-		# Remove the temporary files
-		os.remove(workspace + '/autogen/counter.out')
-
 
 		print('\nSUCCESS\n')
 
@@ -706,7 +709,7 @@ if __name__ == '__main__':
 
 #	Run the PCDSFrame (CFIR)
 #	cfir = subprocess.run(['./cfirindex/cfir.exe ', uparams], stdout=subprocess.PIPE, shell=True)
-	
+
 #	print (cfir.stdout.decode('utf-8'))
 
 	print ('\nSUCCESS\n')
