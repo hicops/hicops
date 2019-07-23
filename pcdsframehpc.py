@@ -805,7 +805,8 @@ if __name__ == '__main__':
 
 	# Construct CFIR index and search spectra
 	uparams = workspace + '/autogen/uparams.txt\n'
-
+	
+	genMPI_OpenMPScript(workspace, 'cfir', 'cfir', 'compute', str(nodes), str(cores), "01:00:00", str(threads), pcdsframedir + '/cfirindex/cfir.exe', str(mpi_per_node), bl, bp, uparams)
 	# Clean and make a fresh copy of CFIR index
 #	cleancfir = call("make -C cfirindex clean", shell=True)
 #	makecfir = call("make -C cfirindex", shell=True)
