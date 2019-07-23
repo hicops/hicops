@@ -178,6 +178,8 @@ if __name__ == '__main__':
 	policy = 'cyclic'
 	spadmem = 2048
 	indexsize = 0
+	nions     = 0
+	size_mb   = 0
 
 # ##################################################################################
 
@@ -191,7 +193,7 @@ if __name__ == '__main__':
 		for line in params:
 
 			# Ignore the empty or comment lines
-			if (line[0] == '\r' or line[0] == '#' or line == '\n'):
+			if (line[0] == '\r' or line[0] == '#' or line[0] == '\n'):
 				continue
 
 			# Split line into param and value
@@ -463,18 +465,20 @@ if __name__ == '__main__':
 		autotune = call("sbatch ./sbatch/nodeinfo", shell=True)
 		autotune2 = call("sbatch ./sbatch/numainfo", shell=True)
 
+		print ('\nWaiting for COMET job scheduler\n')
+
 		# Wait for the lscpu process to complete 
 		while (os.path.isfile('./lscpu.out') == False):
 			pass
 
-		print ('Extracted System Settings\n')
+		print ('\nExtracted System Settings\n')
 
 		# Parse the machine info file
 		with open('./lscpu.out') as minfo:
 			for line in minfo:
 			
 				# Ignore the empty or comment lines
-				if (line[0] == '\r' or line[0] == '#' or line == '\n'):
+				if (line[0] == '\r' or line[0] == '#' or line[0] == '\n'):
 					continue
 
 				# Split line into param and value
@@ -531,8 +535,12 @@ if __name__ == '__main__':
 
 		modfile.close()
 
+		print ('\nEstimating Index Size\n')
+
 		# Call the counter process
-		#autotune3 = call("sbatch ./sbatch/counter", shell=True)
+		autotune3 = call("sbatch ./sbatch/counter", shell=True)
+
+		print ('\nWaiting for COMET job scheduler\n')
 
 		# Wait for the numainfo process to complete 
 		while (os.path.isfile('./numainfo.out') == False):
@@ -543,7 +551,7 @@ if __name__ == '__main__':
 			for line in minfo:
 
 				# Ignore the empty or comment lines
-				if (line[0] == '\r' or line[0] == '#' or line == '\n'):
+				if (line[0] == '\r' or line[0] == '#' or line[0] == '\n'):
 					continue
 
 				# The distance table without the : splitter formatting this point onward
@@ -575,12 +583,20 @@ if __name__ == '__main__':
 			for line in minfo:
 
 				# Ignore the empty or comment lines
-				if (line[0] == '\r' or line[0] == '#' or line == '\n'):
+				if (line[0] == '\r' or line[0] == '#' or line[0] == '\n' or line[0] == '/'):
 					continue
 
-				indexsize = int (line)
+				# Split line into param and value
+				param, val = line.split(':', 1)	
 				
-		print ('Estimated Index Size (Spectra) =', indexsize)
+				if (param == 'spectra'):
+					indexsize = uint64(val)
+					print ('Estimated Index Size (Spectra) =', indexsize)
+				
+				elif (param == 'ions'):
+					nions = uint64(val)
+					size_mb = nions * 4 / (1024 * 1024)
+					print ('Estimated Index Size (MBs) =', size_mb)
 
 		minfo.close()
 
