@@ -576,7 +576,7 @@ if __name__ == '__main__':
 
 		minfo.close()
 
-		print ('\nWaiting for COMET job scheduler\n')
+		print ('\nWaiting for job scheduler\n')
 
 		# Wait for the counter process to complete
 		while (os.path.isfile(workspace + '/autogen/counter.out') == False):
@@ -634,9 +634,7 @@ if __name__ == '__main__':
 		print('Setting Index / MPI =', int(indexsize/(mpi_per_node * nodes)))
 
 		# Remove the temporary files
-		os.remove('./lscpu.out')
-		os.remove('./numainfo.out')
-		os.remove('./counter.out')
+		os.remove(workspace + '/autogen/counter.out')
 
 
 		print('\nSUCCESS\n')
