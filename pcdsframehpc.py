@@ -370,10 +370,10 @@ if __name__ == '__main__':
 			# m/z axis resolution
 			elif (param == 'res'):
 				res = float(val)
-				if (min_prec_mass <= 0):
-					min_prec_mass = 0.01 
-				if (min_prec_mass > 5.0):
-					min_prec_mass = 5.0
+				if (res <= 0):
+					res = 0.01 
+				if (res > 5.0):
+					res = 5.0
 				print ('resolution   =', res)
 
 			# Minimum precursor mass
@@ -406,8 +406,8 @@ if __name__ == '__main__':
 			# Scorecard memory
 			elif (param == 'spadmem'):
 				spadmem = int(val)
-				if (shp_cnt < 2048):
-					shp_cnt = 2048
+				if (spadmem < 2048):
+					spadmem = 2048
 				print ('Scorecard Memory =', spadmem)
 
 			# Workspace Path
@@ -532,7 +532,7 @@ if __name__ == '__main__':
 		modfile.close()
 
 		# Call the counter process
-		autotune3 = call("sbatch ./sbatch/counter", shell=True)
+		#autotune3 = call("sbatch ./sbatch/counter", shell=True)
 
 		# Wait for the numainfo process to complete 
 		while (os.path.isfile('./numainfo.out') == False):
@@ -610,7 +610,7 @@ if __name__ == '__main__':
 		print('Setting MPI/machine =', mpi_per_node)
 		print('Setting MPI Policy  =', bp)
 		print('Setting MPI Binding =', bl)
-		print('Setting Index / MPI =', int(indexsize/(mpi_per_node * nodes))
+		print('Setting Index / MPI =', int(indexsize/(mpi_per_node * nodes)))
 
 		# Remove the temporary files
 		os.remove('./lscpu.out')
