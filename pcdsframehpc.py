@@ -28,6 +28,7 @@ import os
 import sys
 import math
 import glob
+import time
 import os.path
 import filecmp
 import datetime
@@ -583,7 +584,7 @@ if __name__ == '__main__':
 		print ("\nSUCCESS\n")
 
 		# Print the next steps
-			print ('\nRunning: '+ 'Peptide Sequence Clusterer')
+		print ('\nRunning: '+ 'Peptide Sequence Clusterer')
 
 		# Create the cluster command
 		clustercommand = './dbtools/cluster.sh ' + digesteddb + ' ' + str(min_length) + ' ' + str(max_length)
@@ -615,7 +616,7 @@ if __name__ == '__main__':
 
 		# Wait for the lscpu process to complete 
 		while (os.path.isfile(workspace + '/autogen/lscpu.out') == False):
-			pass
+			time.sleep(0.5)
 
 		print ('\nExtracted System Settings\n')
 
@@ -652,7 +653,7 @@ if __name__ == '__main__':
 		minfo.close()
 
 		# Check if params file was modified
-		if (newparams == True):
+		if (newparams == True or os.path.isfile(workspace + '/autogen/counter.out') == False):
 			# Prepare the pparams.txt file for seq generator
 			pparam = workspace + '/autogen/pparams.txt'
 			modfile = open(pparam, "w+")
@@ -704,7 +705,7 @@ if __name__ == '__main__':
 
 		# Wait for the numainfo process to complete 
 		while (os.path.isfile(workspace + '/autogen/numainfo.out') == False):
-			pass
+			time.sleep(0.5)
 
 		# Parse the machine info file
 		with open(workspace + '/autogen/numainfo.out') as minfo:
@@ -736,7 +737,7 @@ if __name__ == '__main__':
 
 		# Wait for the counter process to complete
 		while (os.path.isfile(workspace + '/autogen/counter.out') == False):
-			pass
+			time.sleep(0.5)
 
 		print ('\nEstimating Index Size\n')
 
@@ -849,6 +850,6 @@ if __name__ == '__main__':
 
 	print ('\nSUCCESS\n')
 	print ('Thank you for using HPC PCDSFrame software\n')
-	print ('Please report bugs (if any) at {mhaseeb, fsaeed}@fiu.edu\n\n')
+	print ('Please report bugs (if any) at {mhaseeb, fsaeed}@fiu.edu\n')
 
 	print ('########################################################\n')

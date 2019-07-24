@@ -7,4 +7,4 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH -t 00:00:05
 
-lscpu | tr -d " \r"
+lscpu | tr -d " \r" && numactl --hardware | tr -d " \r"
