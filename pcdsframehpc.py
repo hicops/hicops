@@ -36,6 +36,13 @@ import subprocess
 from subprocess import call
 from shutil import copyfile
 
+# Check is any jobs are running
+def checkRunningJobs(username)
+	squeue = call('squeue -u ' + username + ' | wc -l', stdout=subprocess.PIPE, shell=True)
+	if (int(proc.stdout.read()) == 1):
+		return False
+	else:
+		return True
 
 # Generates a normal unicore job script
 def genNormalScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, comd):
@@ -122,9 +129,12 @@ if __name__ == '__main__':
 		sample.write('# IMPORTANT: DO NOT put any spaces between variable=value\n')
 		sample.write('# \n\n')
 
+		sample.write('# XSEDE (Comet) Username\n')
+		sample.write('username=username\n\n')
+		
 		sample.write('# Path (absolute or relative) to Workspace directory\n')
 		sample.write('workspace=/path/to/workspace\n\n')
-		
+
 		sample.write('# Job Time: hh:mm:ss (Max: 47:59:59)\n')
 		sample.write('jobtime=00:45:00\n\n')
 
@@ -266,6 +276,7 @@ if __name__ == '__main__':
 	jobtime='00:45:00'
 	pcdsframepath = os.getcwd()
 	newparams = False
+	username = 'mhaseeb'
 
 # ##################################################################################
 
@@ -284,6 +295,15 @@ if __name__ == '__main__':
 
 			# Split line into param and value
 			param, val = line.split('=', 1)
+
+			# Set XSEDE username 
+			if (param == 'username'):
+				if (val[-1] == '\n'):
+					val = val[:-1]
+				if (val[-1] == '\r'):
+					val = val[:-1]
+
+				username = val
 
 			# Set database file 
 			if (param == 'database'):
@@ -601,27 +621,20 @@ if __name__ == '__main__':
 		print ("\n\n****** Autotuning parameters *******\n")
 
 		# Call the lsinfo to gather CPU information
-		if (os.path.isfile(workspace + '/autogen/lscpu.out') == False):
-			genNormalScript(workspace, 'lscpu', 'lscpu', 'compute', '1','1', '00:00:05', 'lscpu | tr -d " \\r"')
+		if (os.path.isfile(workspace + '/autogen/info.out') == False):
+			genNormalScript(workspace, 'info', 'info', 'compute', '1','1', '00:00:10', 'lscpu | tr -d " \\r" && numactl --hardware | tr -d " \\r"')
 
-			autotune = call("sbatch " + workspace + "/autogen/lscpu", shell=True)
-			print ('\nWaiting for job scheduler\n')
-
-		# Call the numactl --hardware to gather NUAM information
-		if (os.path.isfile(workspace + '/autogen/numainfo.out') == False):
-			genNormalScript(workspace, 'numainfo', 'numainfo', 'compute', '1','1', '00:00:05', 'numactl --hardware | tr -d " \\r"')
-
-			autotune2 = call("sbatch " + workspace + "/autogen/numainfo", shell=True)
+			autotune = call("sbatch " + workspace + "/autogen/info", shell=True)
 			print ('\nWaiting for job scheduler\n')
 
 		# Wait for the lscpu process to complete 
-		while (os.path.isfile(workspace + '/autogen/lscpu.out') == False):
+		while (os.path.isfile(workspace + '/autogen/info.out') == False and checkRunningJobs(username) == True):
 			time.sleep(0.5)
 
 		print ('\nExtracted System Settings\n')
 
 		# Parse the machine info file
-		with open(workspace + '/autogen/lscpu.out') as minfo:
+		with open(workspace + '/autogen/info.out') as minfo:
 			for line in minfo:
 
 				# Ignore the empty or comment lines
@@ -647,6 +660,16 @@ if __name__ == '__main__':
 				elif (param == 'NUMAnode(s)'):
 					numa = int(val)
 					print ('Available NUMA nodes/machine =', numa)
+
+				# Get the available NUMA memory
+				elif (param[:4] == 'node' and param[-4:] == 'free'):
+					mem = int(val[:-3]) - 512
+					if (mem < numamem):
+						numamem = mem
+					print ('Available max NUMA memory (- 512 MB) =', numamem)
+
+				elif (param == 'nodedistances'):
+					break
 
 		cores_per_numa = int(cores/numa)
 
@@ -700,43 +723,8 @@ if __name__ == '__main__':
 			# Call the counter process			
 			autotune3 = call('sbatch ' + workspace + '/autogen/counter', shell=True)
 
-			print ('\nWaiting for job scheduler\n')
-
-
-		# Wait for the numainfo process to complete 
-		while (os.path.isfile(workspace + '/autogen/numainfo.out') == False):
-			time.sleep(0.5)
-
-		# Parse the machine info file
-		with open(workspace + '/autogen/numainfo.out') as minfo:
-			for line in minfo:
-
-				# Ignore the empty or comment lines
-				if (line[0] == '\r' or line[0] == '#' or line[0] == '\n'):
-					continue
-
-				# The distance table without the : splitter formatting this point onward
-				if (line == 'nodedistances:'):
-					break
-
-				# Split line into param and value
-				param, val = line.split(':', 1)
-
-				if (param == 'nodedistances'):
-					break
-
-				# Get the available NUMA memory
-				if (param[:4] == 'node' and param[-4:] == 'free'):
-					mem = int(val[:-3]) - 512
-					if (mem < numamem):
-						numamem = mem
-
-		print ('Available max NUMA memory (- 512 MB) =', numamem)
-
-		minfo.close()
-
 		# Wait for the counter process to complete
-		while (os.path.isfile(workspace + '/autogen/counter.out') == False):
+		while (os.path.isfile(workspace + '/autogen/counter.out') == False and checkRunningJobs(username) == True):
 			time.sleep(0.5)
 
 		print ('\nEstimating Index Size\n')
