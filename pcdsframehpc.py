@@ -36,10 +36,11 @@ import subprocess
 from subprocess import call
 from shutil import copyfile
 
-# Check is any jobs are running
-def checkRunningJobs(username)
-	squeue = call('squeue -u ' + username + ' | wc -l', stdout=subprocess.PIPE, shell=True)
-	if (int(proc.stdout.read()) == 1):
+# Checks if any jobs are running
+def checkRunningJobs(username):
+	squeue = subprocess.run('squeue -u ' + username + ' | wc -l', stdout=subprocess.PIPE, shell=True)
+	proc = int(squeue.stdout.decode('utf-8'))
+	if (proc == 1):
 		return False
 	else:
 		return True
@@ -313,7 +314,7 @@ if __name__ == '__main__':
 					val = val[:-1]
 
 				database = os.path.abspath(val)
-				print ('Proteome DB   =', database)
+				print ('Processed DB parts =', database)
 				if (os.path.exists(database) == False):
 					print ("ERROR: Enter valid path to processed proteome database parts directory")
 					sys.exit(-2)
@@ -628,7 +629,7 @@ if __name__ == '__main__':
 			print ('\nWaiting for job scheduler\n')
 
 		# Wait for the lscpu process to complete 
-		while (os.path.isfile(workspace + '/autogen/info.out') == False and checkRunningJobs(username) == True):
+		while (os.path.isfile(workspace + '/autogen/info.out') == False or checkRunningJobs(username) == True):
 			time.sleep(0.5)
 
 		print ('\nExtracted System Settings\n')
@@ -724,7 +725,7 @@ if __name__ == '__main__':
 			autotune3 = call('sbatch ' + workspace + '/autogen/counter', shell=True)
 
 		# Wait for the counter process to complete
-		while (os.path.isfile(workspace + '/autogen/counter.out') == False and checkRunningJobs(username) == True):
+		while (os.path.isfile(workspace + '/autogen/counter.out') == False or checkRunningJobs(username) == True):
 			time.sleep(0.5)
 
 		print ('\nEstimating Index Size\n')
