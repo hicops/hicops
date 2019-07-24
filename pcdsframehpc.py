@@ -146,8 +146,8 @@ if __name__ == '__main__':
 		sample.write('# Index size, Sockets and NUMA nodes in the system? 1/0? \n')
 		sample.write('autotune=1\n\n')
 
-		sample.write('# ABSOLUTE path to proteome database\n')
-		sample.write('database=/path/to/database.fasta\n\n')
+		sample.write('# ABSOLUTE path to processed database parts\n')
+		sample.write('database=/path/to/processed/database/parts\n\n')
 
 		sample.write('# ABSOLUTE path to MS/MS dataset\n')
 		sample.write('ms2data=/path/to/msms/dataset\n\n')
@@ -261,8 +261,10 @@ if __name__ == '__main__':
 	size_mb   = 0
 	mb_per_numa = 0
 	mb_per_mpi  = 0
+	nparts      = 0
 	jobtime='00:45:00'
 	pcdsframepath = os.getcwd()
+	newparams = False
 
 # ##################################################################################
 
@@ -289,10 +291,10 @@ if __name__ == '__main__':
 				if (val[-1] == '\r'):
 					val = val[:-1]
 
-				database = val
+				database = os.path.abspath(val)
 				print ('Proteome DB   =', database)
-				if (os.path.isfile(database) == False):
-					print ("ERROR: Enter valid path to database.fasta")
+				if (os.path.exists(database) == False):
+					print ("ERROR: Enter valid path to processed proteome database parts directory")
 					sys.exit(-2)
 
 			# Set the job time
@@ -303,20 +305,20 @@ if __name__ == '__main__':
 					val = val[:-1]
 
 				hh,mm,ss = map(int, val.split(':',2))
-
 				if (hh == 0 and mm == 0 and ss == 0):
 					val = '00:45:00'
 				else:
 					jobtime = val
 				print ('Job time =', jobtime)
-		
+
+			# Set the ms2data path
 			elif (param == 'ms2data'):
 				if (val[-1] == '\n'):
 					val = val[:-1]
 				if (val[-1] == '\r'):
 					val = val[:-1]
 
-				ms2data = val
+				ms2data = os.path.abspath(val)
 				print ('MS/MS dataset =', ms2data)
 				if (os.path.exists(ms2data) == False):
 					print ("ERROR: Enter valid path to MS2 dataset")
@@ -553,14 +555,49 @@ if __name__ == '__main__':
 	if (os.path.exists(workspace + '/autogen') == False):
 		os.mkdir(workspace + '/autogen')
 
+	# Check if the params have been changed from the last run
 	if (os.path.isfile(workspace + '/autogen/settings.txt') == False or filecmp.cmp(workspace + '/autogen/settings.txt', paramfile) == False):
+		newparams = True
 		copyfile(paramfile, workspace + '/autogen/settings.txt')
+
+	# Check if all database parts are available
+	for k in range(min_length, max_length + 1):
+		if (os.path.isfile(database + '/' + str(k) + '.peps') == False):
+			print ('ABORT: Database part(s) are missing\n')
+			exit(-3)
 
 # ##################################################################################
 
+	# Only run the digestor and clusterer if params have been modified
+	if (newparams == True):
+		# Run the digestor now
+		digesteddb = workspace + '/digested_db.fasta'
+
+		digestcommand = "Digestor.exe -in " + database + " -out " + digesteddb + " -out_type fasta -threads " + str(cores) + " -missed_cleavages " + str(mcleavages) + " -enzyme " + enzyme +  " -min_length " + str(min_length) + " -max_length " + str(max_length) + " -FASTA:ID number -FASTA:description remove"
+
+		print ('\nRunning: Proteome Database Digestor\n')
+
+		# Run the Digester.exe
+#		digestor = call(digestcommand, shell=True)
+
+		print ("\nSUCCESS\n")
+
+		# Print the next steps
+			print ('\nRunning: '+ 'Peptide Sequence Clusterer')
+
+		# Create the cluster command
+		clustercommand = './dbtools/cluster.sh ' + digesteddb + ' ' + str(min_length) + ' ' + str(max_length)
+
+		# Run the cluster command and pass arguments
+#		cluster = call(clustercommand, shell=True)
+	
+		print ("\nSUCCESS\n")
+
+# ##################################################################################
+	
 	# AUTOTUNER
 	if (autotune == 1):
-		print ("\n\n**** Autotuning parameters ****\n")
+		print ("\n\n****** Autotuning parameters *******\n")
 
 		# Call the lsinfo to gather CPU information
 		if (os.path.isfile(workspace + '/autogen/lscpu.out') == False):
@@ -572,7 +609,7 @@ if __name__ == '__main__':
 		# Call the numactl --hardware to gather NUAM information
 		if (os.path.isfile(workspace + '/autogen/numainfo.out') == False):
 			genNormalScript(workspace, 'numainfo', 'numainfo', 'compute', '1','1', '00:00:05', 'numactl --hardware | tr -d " \\r"')
-			
+
 			autotune2 = call("sbatch " + workspace + "/autogen/numainfo", shell=True)
 			print ('\nWaiting for job scheduler\n')
 
@@ -614,8 +651,8 @@ if __name__ == '__main__':
 
 		minfo.close()
 
-		if (filecmp.cmp(workspace + '/autogen/settings.txt', paramfile) == False or os.path.isfile(workspace + '/autogen/counter.out')==False):
-
+		# Check if params file was modified
+		if (newparams == True):
 			# Prepare the pparams.txt file for seq generator
 			pparam = workspace + '/autogen/pparams.txt'
 			modfile = open(pparam, "w+")
@@ -654,10 +691,12 @@ if __name__ == '__main__':
 			if (os.path.isfile(workspace + '/autogen/counter.out')):
 				os.remove(workspace + '/autogen/counter.out')
 
-			# Call the counter process
 			cleancntr = call("make -C counter allclean", shell=True)
 			makecntr = call("make -C counter", shell=True)
+			
 			genOpenMPScript(workspace, 'counter', 'counter', 'compute', '1', str(cores), '00:30:00', str(cores), pcdsframepath + '/counter/counter.exe', pparam)
+
+			# Call the counter process			
 			autotune3 = call('sbatch ' + workspace + '/autogen/counter', shell=True)
 
 			print ('\nWaiting for job scheduler\n')
@@ -736,7 +775,7 @@ if __name__ == '__main__':
 
 		print ('\n')
 
-# ##################################################################################
+# ######################## APPLY OPTIMIZATIONS ##########################################################
 
 		# Apply the optimizations 
 
@@ -764,34 +803,11 @@ if __name__ == '__main__':
 
 		print('\nSUCCESS\n')
 
-	# Run the digestor now
-	digesteddb = workspace + '/digested_db.fasta'
-	digestcommand = "Digestor.exe -in " + database + " -out " + digesteddb + " -out_type fasta -threads " + str(threads) + " -missed_cleavages " + str(mcleavages) + " -enzyme " + enzyme +  " -min_length " + str(min_length) + " -max_length " + str(max_length) + " -FASTA:ID number -FASTA:description remove"
-	
-	print ('\nRunning: '+ digestcommand + '\n')
+# ##################################################################################
 
-	# Run the Digester.exe
-#	digestor = call(digestcommand, shell=True)
-
-	print ("\nSUCCESS\n")
-
-
-	# Print the next steps
-	print ('\nRunning: '+ 'Separate by Peptide Length')
-	print ('\nRunning: '+ 'Custom Lexicographical Sort\n')
-
-	# Print the clustering command
-	clustercommand = './bash/sep_by_len.sh ' + digesteddb + ' ' + str(min_length) + ' ' + str(max_length)
-
-	print ('Running: ' + clustercommand)
-
-	# Run the cluster command and pass arguments
-#	cluster = subprocess.run(['./bash/sep_by_len.sh ', digesteddb, str(min_length), str(max_length)], stdout=subprocess.PIPE, shell=True)
-
-	print ("\nSUCCESS\n")
-
-	# Prepare the uparams.txt file for seq generator
-	modfile = open(workspace + '/autogen/uparams.txt', "w+")
+	# Prepare the uparams.txt file for PCDSFrame
+	uparams = workspace + '/autogen/uparams.txt\n'
+	modfile = open(uparams, "w+")
 
 	# Write params for the CFIR index
 	modfile.write(workspace + '/parts\n')
@@ -822,19 +838,17 @@ if __name__ == '__main__':
 	modfile.close()
 
 
-	# Construct CFIR index and search spectra
-	uparams = workspace + '/autogen/uparams.txt\n'
-	
 	genMPI_OpenMPScript(workspace, 'cfir', 'cfir', 'compute', str(nodes), str(cores), jobtime, str(threads), pcdsframepath + '/cfirindex/cfir.exe', str(mpi_per_node), bl, bp, uparams)
+
 	# Clean and make a fresh copy of CFIR index
-#	cleancfir = call("make -C cfirindex clean", shell=True)
-#	makecfir = call("make -C cfirindex", shell=True)
+	cleancfir = call("make -C cfirindex clean", shell=True)
+	makecfir = call("make -C cfirindex", shell=True)
 
-#	Run the PCDSFrame (CFIR)
-#	cfir = subprocess.run(['./cfirindex/cfir.exe ', uparams], stdout=subprocess.PIPE, shell=True)
-
-#	print (cfir.stdout.decode('utf-8'))
+	# Run the HPC PCDSFrame
+#	cfir = call('sbatch ' + workspace + '/autogen/cfir', shell=True)
 
 	print ('\nSUCCESS\n')
-	print ('Thanks for using PCDSFrame software')
-	print ('Please report bugs (if any) at {mhaseeb, fsaeed}@fiu.edu\n')
+	print ('Thank you for using HPC PCDSFrame software\n')
+	print ('Please report bugs (if any) at {mhaseeb, fsaeed}@fiu.edu\n\n')
+
+	print ('########################################################\n')
