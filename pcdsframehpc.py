@@ -716,8 +716,10 @@ if __name__ == '__main__':
 			if (os.path.isfile(workspace + '/autogen/counter.out')):
 				os.remove(workspace + '/autogen/counter.out')
 
-			cleancntr = call("make -C counter allclean", shell=True)
-			makecntr = call("make -C counter", shell=True)
+			# Make counter.exe if missing
+			if (os.path.isfile(pcdsframepath + '/counter/counter.exe') == False):
+				cleancntr = call("make -C counter allclean", shell=True)
+				makecntr = call("make -C counter", shell=True)
 			
 			genOpenMPScript(workspace, 'counter', 'counter', 'compute', '1', str(cores), '00:30:00', str(cores), pcdsframepath + '/counter/counter.exe', pparam)
 
@@ -830,9 +832,10 @@ if __name__ == '__main__':
 
 	genMPI_OpenMPScript(workspace, 'cfir', 'cfir', 'compute', str(nodes), str(cores), jobtime, str(threads), pcdsframepath + '/cfirindex/cfir.exe', str(mpi_per_node), bl, bp, uparams)
 
-	# Clean and make a fresh copy of CFIR index
-	cleancfir = call("make -C cfirindex clean", shell=True)
-	makecfir = call("make -C cfirindex", shell=True)
+	# Clean and make a fresh copy of CFIR index if needed
+	if (os.path.isfile(pcdsframepath + '/cfirindex/cfir.exe') == False):	
+		cleancfir = call("make -C cfirindex clean", shell=True)
+		makecfir = call("make -C cfirindex", shell=True)
 
 	# Run the HPC PCDSFrame
 #	cfir = call('sbatch ' + workspace + '/autogen/cfir', shell=True)
