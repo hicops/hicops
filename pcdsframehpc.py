@@ -35,6 +35,11 @@ import datetime
 import subprocess
 from subprocess import call
 from shutil import copyfile
+from functools import reduce
+
+# Computes factors of a number in descending order
+def factors(n):    
+    return list(set(reduce(list.__add__, ([i, n//i] for i in range(1, int(n**0.5) + 1) if n % i == 0)))).sort(reverse = True)
 
 # Checks if any jobs are running
 def checkRunningJobs(username):
@@ -710,13 +715,10 @@ if __name__ == '__main__':
 
 				if (param == 'spectra'):
 					indexsize = int(val)
-					print ('Estimated Index Size (Spectra) =', indexsize)
+					print ('Estimated Index Size (x 1E6 Spectra) =', int(indexsize/(1000 * 1000)))
 
 				elif (param == 'ions'):
 					nions = int(val)
-					size_mb = (nions * 4 + (mpi_per_node * nodes * max_prec_mass * scale * 4)) / (1024 * 1024)
-					print ('Estimated Index Size (Ions) =', nions)
-					print ('Estimated Index Size (MBs)  =', round(size_mb, 3))
 
 		minfo.close()
 
@@ -739,12 +741,20 @@ if __name__ == '__main__':
 # ######################## APPLY OPTIMIZATIONS ##########################################################
 
 		# Apply the optimizations 
-
+			
 		# Case 1: Sockets >= NUMA nodes (one or multiple sockets/NUMA)
 		if (sockets >= numa):
+
 			# Set the BL to socket, BP to scatter, mpi_per_node to sockets, and threads_per_mpi to cores_per_socket
 			threads = cores_per_socket
 			mpi_per_node = sockets
+		
+
+			# Estimate size of index in MBs
+			size_mb = ((nions * 4 + (mpi_per_node * nodes * max_prec_mass * scale * 4)) / (1024 * 1024))  + (spadmem * mpi_per_node * nodes)
+
+			size_per_mpi = size_mb/mpi_per_node
+			
 			bl = 'socket'
 			bp = 'scatter'
 
@@ -752,8 +762,38 @@ if __name__ == '__main__':
 		elif (sockets < numa):
 			threads = int(cores_per_socket/numa)
 			mpi_per_node = int(sockets * numa)
+
+			# Estimate size of index in MBs
+			size_mb = ((nions * 4 + (mpi_per_node * nodes * max_prec_mass * scale * 4)) / (1024 * 1024))  + (spadmem * mpi_per_node * nodes)
+
 			bl = 'numanode'
 			bp = 'scatter'
+		
+		# Optimize based on the index size (in spectra) per MPI
+		# If partition size > 10 million, then increase number of partitions
+		min_threads = 2
+		max_mpi_per_node = cores / min_threads
+
+		if (size_mb/(mpi_per_node * nodes) > 10E6):
+			
+			# Get set of factors
+			possible = factors(threads)
+			for cc in possible:
+
+				if (cc < min_threads or mpi_per_node > max_mpi_per_node):
+					break
+				else:
+					threads = cc
+					mpi_per_node = cores/cc
+
+		# Get MBs per NUMA node
+		mbs_per_numa = size_mb/(numa * nodes)
+
+		# We hope this never happens :)
+		if (mbs_per_numa > numamem):
+			print ('WARNING: Memory required per NUMA node = ' + str(mbs_per_numa) + ' >' + str(numamem) ' = available NUMA mem\n')
+			print ('         Either increase the number of nodes or expect performance degradation due to NUMA access and page faults\n')
+
 
 		print('Tuning OpenMP and MPI settings...\n')
 		print('Setting threads/MPI =', threads)
