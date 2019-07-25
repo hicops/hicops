@@ -243,7 +243,7 @@ if __name__ == '__main__':
 	bp = 'scatter'
 	bl = 'socket'
 	autotune = 1
-	database = ''
+	dbparts = ''
 	ms2data = ''
 	nmods = 0
 	madded = 0
@@ -272,7 +272,8 @@ if __name__ == '__main__':
 	pcdsframepath = os.getcwd()
 	newparams = False
 	username = 'mhaseeb'
-
+	uparams = ''
+	pparams = ''
 # ##################################################################################
 
 	print ('\n************************************\n')
@@ -308,11 +309,11 @@ if __name__ == '__main__':
 					val = val[:-1]
 
 				dbparts = os.path.abspath(val)
-				if (os.path.exists(database) == False):
+				if (os.path.exists(dbparts) == False):
 					print ("ERROR: Enter valid path to processed proteome database parts directory")
 					sys.exit(-2)
 				else:
-					print ('Processed DB Parts =', database)
+					print ('Processed DB Parts =', dbparts)
 
 			# Set the job time
 			elif (param == 'jobtime'):
@@ -572,7 +573,7 @@ if __name__ == '__main__':
 
 	# Check if all database parts are available
 	for k in range(min_length, max_length + 1):
-		if (os.path.isfile(database + '/' + str(k) + '.peps') == False):
+		if (os.path.isfile(dbparts + '/' + str(k) + '.peps') == False):
 			print ('ABORT: Database part(s) are missing\n')
 			exit(-3)
 
@@ -628,10 +629,11 @@ if __name__ == '__main__':
 					mem = int(val[:-3]) - 512
 					if (mem < numamem):
 						numamem = mem
-					print ('Available max NUMA memory (- 512 MB) =', numamem)
 
 				elif (param == 'nodedistances'):
 					break
+
+		print ('Available max NUMA memory (- 512 MB) =', numamem)
 
 		cores_per_numa = int(cores/numa)
 
@@ -642,6 +644,7 @@ if __name__ == '__main__':
 
 			# Prepare the pparams.txt file for seq generator
 			pparams = workspace + '/autogen/pparams.txt'
+
 			modfile = open(pparams, "w+")
 
 			# Write params for the CFIR index
@@ -683,7 +686,7 @@ if __name__ == '__main__':
 				cleancntr = call("make -C counter allclean", shell=True)
 				makecntr = call("make -C counter", shell=True)
 			
-			genOpenMPScript(workspace, 'counter', 'counter', 'compute', '1', str(cores), '00:30:00', str(cores), pcdsframepath + '/counter/counter.exe', pparam)
+			genOpenMPScript(workspace, 'counter', 'counter', 'compute', '1', str(cores), '00:30:00', str(cores), pcdsframepath + '/counter/counter.exe', pparams)
 
 			# Call the counter process			
 			autotune3 = call('sbatch ' + workspace + '/autogen/counter', shell=True)
@@ -718,7 +721,8 @@ if __name__ == '__main__':
 		minfo.close()
 
 		# Remove the temporary pparams.txt
-		os.remove(pparams)
+		if (os.path.isfile(pparams)):
+			os.remove(pparams)
 		
 		if (size_mb == 0 or nions == 0 or indexsize == 0):
 			print ('\nFATAL: counter.exe failed. Please check the ./cnterr.txt\n')
@@ -763,7 +767,7 @@ if __name__ == '__main__':
 # ##################################################################################
 
 	# Prepare the uparams.txt file for PCDSFrame
-	uparams = workspace + '/autogen/uparams.txt\n'
+	uparams = workspace + '/autogen/uparams.txt'
 	modfile = open(uparams, "w+")
 
 	# Write params for the CFIR index
@@ -804,6 +808,10 @@ if __name__ == '__main__':
 
 	# Run the HPC PCDSFrame
 	cfir = call('sbatch ' + workspace + '/autogen/cfir', shell=True)
+
+	print ('The PCDSFrameHPC job is running now\n')
+	print ('You can check the job progress using: squeue -u ' + username + '\n')
+	print ('The output will be written at: '+ workspace + '/output\n\n')
 
 	print ('\nSUCCESS\n')
 	print ('Thank you for using HPC PCDSFrame software\n')
