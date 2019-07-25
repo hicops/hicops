@@ -1,11 +1,11 @@
-#  
+#
 #  This file is a part of HPC PCDSFrame software
 #
 #  Copyright (C) 2019 Parallel Computing and Data Science (PCDS) Laboratory
-#                         School of Computing and Information Sciences
-#                           Florida International University (FIU)
-#                            Authors: Muhammad Haseeb, Fahad Saeed
-#                              Email: {mhaseeb, fsaeed}@fiu.edu
+#                       School of Computing and Information Sciences
+#                         Florida International University   (FIU)
+#                          Authors: Muhammad Haseeb, Fahad Saeed
+#                            Email: {mhaseeb, fsaeed}@fiu.edu
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
-#  
+#
 
 
 # Required Imports
@@ -104,9 +104,9 @@ if __name__ == '__main__':
 	if len(sys.argv) > 1:
 		paramfile = sys.argv[1]
 	else:
-		print ("ERROR: Enter the path to params file")
-		print ("USAGE: py preprocess.py ./params.txt")
-		print ("Generate a sampleparams.txt: py preprocess.py -g")
+		print ("ERROR: Missing arguments to the PCDSFrameHPC")
+		print ("USAGE: python3.5+ pcdsframehpc.py <params>")
+		print ("GENERATE: A sample params.txt using python3.5+ pcdsframehpc.py -g")
 		sys.exit(-1)
 
 	# Generate the sampleparams.txt file
@@ -122,7 +122,7 @@ if __name__ == '__main__':
 		sample.write('# Email: {mhaseeb, fsaeed}@fiu.edu\n')
 		sample.write('# \n')
 		sample.write('# Auto generated sampleparams.txt\n')
-		sample.write('# Sample parameters generated for XSEDE Comet cluster\n')
+		sample.write('# Sample parameters generated for PCDSFrameHPC (XSEDE COMET) version\n')
 		sample.write('# For more information: https://portal.xsede.org/sdsc-comet\n')
 		sample.write('# \n')
 		sample.write('# Generated on: ' + (datetime.datetime.now()).strftime("%Y-%m-%d %H:%M %Z") + '\n')
@@ -155,11 +155,13 @@ if __name__ == '__main__':
 		sample.write('bl=socket\n\n')
 
 		sample.write('# Recommended: Auto tune MPI/OpenMP settings based on \n')
-		sample.write('# Index size, Sockets and NUMA nodes in the system? 1/0? \n')
+		sample.write('# index size, sockets and NUMA nodes in the system? 1/0? \n')
 		sample.write('autotune=1\n\n')
 
-		sample.write('# ABSOLUTE path to processed database parts\n')
-		sample.write('database=/path/to/processed/database/parts\n\n')
+		sample.write('# ABSOLUTE path to processed proteome database parts\n')
+		sample.write('# NOTE: Run the dbprocessor.py to process a FASTA \n')
+		sample.write('#       proteome database and generate dbparts\n')
+		sample.write('dbparts=/path/to/processed/database/parts\n\n')
 
 		sample.write('# ABSOLUTE path to MS/MS dataset\n')
 		sample.write('ms2data=/path/to/msms/dataset\n\n')
@@ -183,26 +185,20 @@ if __name__ == '__main__':
 		sample.write('mod13=X 0 0\n')
 		sample.write('mod14=X 0 0\n')
 		sample.write('mod15=X 0 0\n\n')
-		
-		sample.write('# Missed cleavages\n')
-		sample.write('missed_cleavages=1\n\n')
-		
+
 		sample.write('# Min peptide length\n')
 		sample.write('min_length=6\n\n')
-		
+
 		sample.write('# Max peptide length\n')
 		sample.write('max_length=40\n\n')
 
 		sample.write('# Min precursor mass (Da)\n')
 		sample.write('min_prec_mass=500\n\n')
-		
+
 		sample.write('# Max precursor mass (Da)\n')
 		sample.write('max_prec_mass=5000\n\n')
 
-		sample.write('# Digestion Enzyme\n')
-		sample.write('enzyme=Trypsin\n\n')
-
-		sample.write('# Index Distribution Policy: chunk, cyclic, zigzag\n')
+		sample.write('# HPC Data Distribution Policy: chunk, cyclic\n')
 		sample.write('policy=cyclic\n\n')
 
 		sample.write('# Max fragment charge\n')
@@ -210,13 +206,13 @@ if __name__ == '__main__':
 
 		sample.write('# Min shared peak\n')
 		sample.write('shp=4\n\n')
-		
+
 		sample.write('# Scratch pad memory for scorecard in MBs (min: 2048MB)\n')
 		sample.write('spadmem=2048\n\n')
 
 		sample.write('# Resolution (Da)\n')
 		sample.write('res=0.01\n\n')
-		
+
 		sample.write('# Precursor Mass Tolerance (+-Da): -1 means infinity \n')
 		sample.write('dM=500\n\n')
 
@@ -226,7 +222,7 @@ if __name__ == '__main__':
 		sample.write('# Top Matches to report\n')
 		sample.write('top_matches=10\n')
 
-		
+
 		print('Generated: ./sampleparams.txt')
 		print ("\nSUCCESS")
 		
@@ -252,11 +248,9 @@ if __name__ == '__main__':
 	nmods = 0
 	madded = 0
 	mods = []
-	mcleavages = 2
 	min_length = 6
 	max_length = 40
 	maxz       = 3
-	enzyme = 'Trypsin'
 	dF = 0.02
 	dM = 500
 	res = 0.01
@@ -307,17 +301,18 @@ if __name__ == '__main__':
 				username = val
 
 			# Set database file 
-			if (param == 'database'):
+			if (param == 'dbparts'):
 				if (val[-1] == '\n'):
 					val = val[:-1]
 				if (val[-1] == '\r'):
 					val = val[:-1]
 
-				database = os.path.abspath(val)
-				print ('Processed DB parts =', database)
+				dbparts = os.path.abspath(val)
 				if (os.path.exists(database) == False):
 					print ("ERROR: Enter valid path to processed proteome database parts directory")
 					sys.exit(-2)
+				else:
+					print ('Processed DB Parts =', database)
 
 			# Set the job time
 			elif (param == 'jobtime'):
@@ -341,10 +336,11 @@ if __name__ == '__main__':
 					val = val[:-1]
 
 				ms2data = os.path.abspath(val)
-				print ('MS/MS dataset =', ms2data)
 				if (os.path.exists(ms2data) == False):
 					print ("ERROR: Enter valid path to MS2 dataset")
 					sys.exit(-3)
+				else:
+					print ('MS/MS dataset =', ms2data)
 
 			# Set max nodes in the system [1,72] on COMET
 			elif (param == 'nodes'):
@@ -399,22 +395,16 @@ if __name__ == '__main__':
 				if (threads <= 0 or threads > cores):
 					threads = int(cores)
 
-			# Set the enzyme for digestion
-			elif (param == 'enzyme'):
-				if (val[-1] == '\n'):
-					val = val[:-1]
-				if (val[-1] == '\r'):
-					val = val[:-1]
-				enzyme = val
-				print ('Using enzyme  =', enzyme)
-
-			# Set the distribution policy
+			# Set the data distribution policy
 			elif (param == 'policy'):
 				if (val[-1] == '\n'):
 					val = val[:-1]
 				if (val[-1] == '\r'):
 					val = val[:-1]
 				policy = val
+				
+				if (policy != 'chunk' and policy != 'cyclic'):
+					policy = 'cyclic'
 				print ('Using policy =', policy)
 
 			# Set max mods
@@ -456,15 +446,6 @@ if __name__ == '__main__':
 				if (max_length > 60):
 					max_length = 60
 				print ('Max pep len  =', max_length)
-
-			# Set the max missed cleavages
-			elif (param == 'missed_cleavages'):
-				mcleavages = int(val)
-				if (mcleavages < 0):
-					mcleavages = 0 
-				if (mcleavages > 5):
-					mcleavages = 5
-				print ('Missed Cleavages =', mcleavages)
 
 			# Set the max fragment ion charge
 			elif (param == 'maxz'):
@@ -582,38 +563,18 @@ if __name__ == '__main__':
 		newparams = True
 		copyfile(paramfile, workspace + '/autogen/settings.txt')
 
+	# Sanity check
+	if (min_length > max_length):
+		temp = min_length
+		min_length = max_length
+		max_length = temp
+		print('WARNING: min_length > max_length. Swapping them\n')
+
 	# Check if all database parts are available
 	for k in range(min_length, max_length + 1):
 		if (os.path.isfile(database + '/' + str(k) + '.peps') == False):
 			print ('ABORT: Database part(s) are missing\n')
 			exit(-3)
-
-# ##################################################################################
-
-	# Only run the digestor and clusterer if params have been modified
-	if (newparams == True):
-		# Run the digestor now
-		digesteddb = workspace + '/digested_db.fasta'
-
-		digestcommand = "Digestor.exe -in " + database + " -out " + digesteddb + " -out_type fasta -threads " + str(cores) + " -missed_cleavages " + str(mcleavages) + " -enzyme " + enzyme +  " -min_length " + str(min_length) + " -max_length " + str(max_length) + " -FASTA:ID number -FASTA:description remove"
-
-		print ('\nRunning: Proteome Database Digestor\n')
-
-		# Run the Digester.exe
-#		digestor = call(digestcommand, shell=True)
-
-		print ("\nSUCCESS\n")
-
-		# Print the next steps
-		print ('\nRunning: '+ 'Peptide Sequence Clusterer')
-
-		# Create the cluster command
-		clustercommand = './dbtools/cluster.sh ' + digesteddb + ' ' + str(min_length) + ' ' + str(max_length)
-
-		# Run the cluster command and pass arguments
-#		cluster = call(clustercommand, shell=True)
-	
-		print ("\nSUCCESS\n")
 
 # ##################################################################################
 	
@@ -678,12 +639,13 @@ if __name__ == '__main__':
 
 		# Check if params file was modified
 		if (newparams == True or os.path.isfile(workspace + '/autogen/counter.out') == False):
+
 			# Prepare the pparams.txt file for seq generator
-			pparam = workspace + '/autogen/pparams.txt'
-			modfile = open(pparam, "w+")
+			pparams = workspace + '/autogen/pparams.txt'
+			modfile = open(pparams, "w+")
 
 			# Write params for the CFIR index
-			modfile.write('/home/mhaseeb/database' + '/parts\n')
+			modfile.write(dbparts + '\n')
 			modfile.write(ms2data + '\n')
 			modfile.write(str(cores) + '\n')
 			modfile.write(str(min_length) + '\n')
@@ -754,6 +716,9 @@ if __name__ == '__main__':
 					print ('Estimated Index Size (MBs)  =', round(size_mb, 3))
 
 		minfo.close()
+
+		# Remove the temporary pparams.txt
+		os.remove(pparams)
 		
 		if (size_mb == 0 or nions == 0 or indexsize == 0):
 			print ('\nFATAL: counter.exe failed. Please check the ./cnterr.txt\n')
@@ -802,7 +767,7 @@ if __name__ == '__main__':
 	modfile = open(uparams, "w+")
 
 	# Write params for the CFIR index
-	modfile.write(workspace + '/parts\n')
+	modfile.write(dbparts + '\n')
 	modfile.write(ms2data + '\n')
 	modfile.write(str(threads) + '\n')
 	modfile.write(str(min_length) + '\n')
@@ -829,16 +794,16 @@ if __name__ == '__main__':
 
 	modfile.close()
 
-
+	# Generate the job script
 	genMPI_OpenMPScript(workspace, 'cfir', 'cfir', 'compute', str(nodes), str(cores), jobtime, str(threads), pcdsframepath + '/cfirindex/cfir.exe', str(mpi_per_node), bl, bp, uparams)
 
 	# Clean and make a fresh copy of CFIR index if needed
-	if (os.path.isfile(pcdsframepath + '/cfirindex/cfir.exe') == False):	
+	if (os.path.isfile(pcdsframepath + '/cfirindex/cfir.exe') == False):
 		cleancfir = call("make -C cfirindex clean", shell=True)
 		makecfir = call("make -C cfirindex", shell=True)
 
 	# Run the HPC PCDSFrame
-#	cfir = call('sbatch ' + workspace + '/autogen/cfir', shell=True)
+	cfir = call('sbatch ' + workspace + '/autogen/cfir', shell=True)
 
 	print ('\nSUCCESS\n')
 	print ('Thank you for using HPC PCDSFrame software\n')

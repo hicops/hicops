@@ -9,6 +9,8 @@
 
 # Directories
 parts
+output
+dbparams.txt
 *.fasta
 mods.txt
 sampleparams.txt
