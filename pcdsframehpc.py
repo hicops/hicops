@@ -39,7 +39,7 @@ from functools import reduce
 
 # Computes factors of a number in descending order
 def factors(n):    
-    return list(set(reduce(list.__add__, ([i, n//i] for i in range(1, int(n**0.5) + 1) if n % i == 0)))).sort(reverse = True)
+    return list(set(reduce(list.__add__, ([i, n//i] for i in range(1, int(n**0.5) + 1) if n % i == 0))))
 
 # Checks if any jobs are running
 def checkRunningJobs(username):
@@ -726,7 +726,7 @@ if __name__ == '__main__':
 		if (os.path.isfile(pparams)):
 			os.remove(pparams)
 		
-		if (size_mb == 0 or nions == 0 or indexsize == 0):
+		if (nions == 0 or indexsize == 0):
 			print ('\nFATAL: counter.exe failed. Please check the ./cnterr.txt\n')
 
 			if (os.path.isfile(workspace + '/autogen/counter.out') == True):
@@ -774,24 +774,26 @@ if __name__ == '__main__':
 		min_threads = 2
 		max_mpi_per_node = cores / min_threads
 
-		if (size_mb/(mpi_per_node * nodes) > 10E6):
+		if (indexsize/(mpi_per_node * nodes) > 10E6):
 			
 			# Get set of factors
 			possible = factors(threads)
+			possible = sorted(possible, reverse=True)
+
 			for cc in possible:
 
 				if (cc < min_threads or mpi_per_node > max_mpi_per_node):
 					break
 				else:
 					threads = cc
-					mpi_per_node = cores/cc
+					mpi_per_node = int(cores/cc)
 
 		# Get MBs per NUMA node
 		mbs_per_numa = size_mb/(numa * nodes)
 
 		# We hope this never happens :)
 		if (mbs_per_numa > numamem):
-			print ('WARNING: Memory required per NUMA node = ' + str(mbs_per_numa) + ' >' + str(numamem) ' = available NUMA mem\n')
+			print ('WARNING: Memory required per NUMA node = ' + str(mbs_per_numa) + ' >' + str(numamem) + ' = available NUMA mem\n')
 			print ('         Either increase the number of nodes or expect performance degradation due to NUMA access and page faults\n')
 
 
