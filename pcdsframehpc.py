@@ -105,7 +105,13 @@ def genMPI_OpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node,
 # The main function
 if __name__ == '__main__':
 
-	# Read the arguments
+	# Check the Python version
+	pyversion = float(str(sys.version_info[0]) + '.' + str(sys.version_info[1]))
+	if (pyversion < 3.5):
+		print ('\nERROR: This software requries Python3.5 or later version')
+		print ('       Your version is Python' + str(pyversion) + '\n')
+		exit(-1)
+
 	if len(sys.argv) > 1:
 		paramfile = sys.argv[1]
 	else:
@@ -851,7 +857,7 @@ if __name__ == '__main__':
 	# Run the HPC PCDSFrame
 	cfir = call('sbatch ' + workspace + '/autogen/cfir', shell=True)
 
-	print ('The PCDSFrameHPC job is running now\n')
+	print ('\nThe PCDSFrameHPC job is running now\n')
 	print ('You can check the job progress using: squeue -u ' + username + '\n')
 	print ('The output will be written at: '+ workspace + '/output\n\n')
 
