@@ -386,7 +386,7 @@ if __name__ == '__main__':
 				if (val[-1] == '\r'):
 					val = val[:-1]
 
-				if (bl == 'socket' or bl == 'numanode' or bl == 'core'):
+				if (val == 'socket' or val == 'numanode' or val == 'core'):
 					bl = val
 				print ('Using MPI bl =', bl)
 
@@ -397,7 +397,7 @@ if __name__ == '__main__':
 				if (val[-1] == '\r'):
 					val = val[:-1]
 
-				if (bp == 'scatter' or bp == 'compact'):
+				if (val == 'scatter' or val == 'compact'):
 					bp = val
 				print ('Using MPI bp =', bp)
 
@@ -413,8 +413,8 @@ if __name__ == '__main__':
 					val = val[:-1]
 				if (val[-1] == '\r'):
 					val = val[:-1]
+
 				policy = val
-				
 				if (policy != 'chunk' and policy != 'cyclic'):
 					policy = 'cyclic'
 				print ('Using policy =', policy)
