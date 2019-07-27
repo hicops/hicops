@@ -21,6 +21,7 @@
 
 /* Data structures related to the current experimental spectrum */
 extern FLOAT *hyperscores;          /* Array to store the scores for the current especid */
+extern gParams params;
 UINT size;                          /* Size of the above array */
 UINT especid;                       /* Current especid (experimental spectrum id) */
 
@@ -156,6 +157,8 @@ std::string HYPERSCORE_Datetime()
     time (&rawtime);
     timeinfo = localtime(&rawtime);
 
-    strftime(buffer,80,"%d-%m-%Y %H-%M-%S",timeinfo);
-    return std::string(buffer);
+    strftime(buffer, 80, "%d-%m-%Y_%H-%M-%S_",timeinfo);
+
+    std::string b(buffer);
+    return b + std::to_string(params.myid) + std::to_string(omp_get_thread_num());
 }

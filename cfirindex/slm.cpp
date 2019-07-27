@@ -74,11 +74,6 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     STRING patt[3] = {".ms2", ".mzML", "mzXML"};
     CHAR extension[] = ".peps";
 
-    /* Print Header */
-    LBE_PrintHeader();
-
-    cout << endl << "Start Time: " << ctime(&start_time) << endl;
-
     if (argc < 2)
     {
         cout << "ERROR: Missing arguments\n";
@@ -87,17 +82,27 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         exit (status);
     }
 
-#ifdef MPI_INCLUDED
+#ifdef DISTMEM
     status = MPI_Init(&argc, &argv);
 #endif /* MPI_INCLUDED */
 
-    /* Parse the parameters */
-    status = ParseParams(argv[1]);
+    if (status == MPI_SUCCESS)
+    {
+        /* Parse the parameters */
+        status = ParseParams(argv[1]);
+    }
 
 #ifdef _PROFILE
     ProfilerStart("C:/work/lbe.prof");
 #endif /* _PROFILE */
 
+    if (params.myid == 0)
+    {
+        /* Print Header */
+        LBE_PrintHeader();
+
+        cout << endl << "Start Time: " << ctime(&start_time) << endl;
+    }
 
     /* Add all the query files to the vector */
     dir = opendir(params.datapath.c_str());
@@ -158,8 +163,12 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 
             /* Compute Duration */
             elapsed_seconds = end - start;
-            cout << "Counting with status:\t" << status << endl;
-            cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+
+            if (params.myid == 0)
+            {
+                cout << "Counting with status:\t" << status << endl;
+                cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+            }
         }
 
         if (status == SLM_SUCCESS)
@@ -172,8 +181,12 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 
             /* Compute Duration */
             elapsed_seconds = end - start;
-            cout << "Partitioned with status:\t" << status << endl;
-            cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+
+            if (params.myid == 0)
+            {
+                cout << "Partitioned with status:\t" << status << endl;
+                cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+            }
         }
 
         /* Initialize internal structures */
@@ -188,8 +201,12 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 
             /* Compute Duration */
             elapsed_seconds = end - start;
-            cout << "Initialized with status:\t" << status << endl;
-            cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+
+            if (params.myid == 0)
+            {
+                cout << "Initialized with status:\t" << status << endl;
+                cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+            }
         }
 
         /* Distribution Algorithm */
@@ -204,8 +221,12 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 
             /* Compute Duration */
             elapsed_seconds = end - start;
-            cout << "Internal Partitions with status:\t" << status << endl;
-            cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+
+            if (params.myid == 0)
+            {
+                cout << "Internal Partitions with status:\t" << status << endl;
+                cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+            }
         }
 
         /* DSLIM-Transform */
@@ -220,8 +241,12 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 
             /* Compute Duration */
             elapsed_seconds = end - start;
-            cout << "CFIR Index with status:\t\t" << status << endl;
-            cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+
+            if (params.myid == 0)
+            {
+                cout << "CFIR Index with status:\t\t" << status << endl;
+                cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+            }
         }
     }
 
@@ -251,7 +276,11 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 #ifdef BENCHMARK
             fileio += omp_get_wtime() - duration;
 #endif
-            cout << "Query File: " << queryfiles[qf] << endl;
+            if (params.myid == 0)
+            {
+                cout << "Query File: " << queryfiles[qf] << endl;
+            }
+
             ESpecSeqs ss;
 
             UINT spectra = 0;
@@ -280,6 +309,11 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 
                 start = chrono::system_clock::now();
 
+                if (params.myid == 0)
+                {
+                    cout << "Querying: \n" << endl;
+                }
+
                 /* Query the chunk */
                 status = DSLIM_QuerySpectrum(ss, ms2specs, slm_index, (maxlen - minlen + 1));
 
@@ -290,10 +324,14 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 
             }
 
-            /* Compute Duration */
-            cout << "Queried Spectra:\t\t" << spectra << endl;
-            cout << "Query Time: " << qtime.count() << "s" << endl;
-            cout << "Queried with status:\t\t" << status << endl << endl;
+            //if (params.myid == 0)
+            {
+                /* Compute Duration */
+                cout << "Queried Spectra:\t\t" << spectra << endl;
+                cout << "Query Time: " << qtime.count() << "s" << endl;
+                cout << "Queried with status:\t\t" << status << endl << endl;
+            }
+
             end = chrono::system_clock::now();
 
             if (ss.moz != NULL)
@@ -318,21 +356,21 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         }
     }
 
+    for (UINT peplen = minlen; peplen <= maxlen; peplen++)
+    {
+        status = LBE_Deinitialize(slm_index + peplen - minlen);
+    }
+
+#ifdef DISTMEM
+    status = MPI_Finalize();
+#endif /* DISTMEM */
+
     /* Print end time */
     auto end_tim = chrono::system_clock::now();
     time_t end_time = chrono::system_clock::to_time_t(end_tim);
     cout << endl << "End Time: " << ctime(&end_time) << endl;
     elapsed_seconds = end_tim - start_tim;
     cout << "Total Elapsed Time: " << elapsed_seconds.count() << "s" <<endl;
-
-    for (UINT peplen = minlen; peplen <= maxlen; peplen++)
-    {
-        status = LBE_Deinitialize(slm_index + peplen - minlen);
-    }
-
-#ifdef MPI_INCLUDED
-    status = MPI_Finalize();
-#endif /* MPI_INCLUDED */
 
     /* Print final program status */
     cout << "\n\nEnded with status: \t\t" << status << endl << endl;
@@ -521,13 +559,13 @@ static STATUS ParseParams(CHAR* paramfile)
             params.perf[nn] = 1.0;
         }
 
-#ifdef MPI_INCLUDED
+#ifdef DISTMEM
         status = MPI_Comm_rank(MPI_COMM_WORLD, (INT *)&params.myid);
         status = MPI_Comm_size(MPI_COMM_WORLD, (INT *)&params.nodes);
 #else
         params.myid = 0;
         params.nodes = 1;
-#endif /* MPI_INCLUDED */
+#endif /* DISTMEM */
 
         pfile.close();
     }

@@ -339,6 +339,26 @@ typedef struct _globalParams
 
     SLM_vMods vModInfo;
 
+	_globalParams()
+	{
+		threads = 1;
+		min_len = 4;
+		max_len = 40;
+		maxz     = 3;
+		topmatches = 10;
+		scale      = 100;
+		min_shp    = 4;
+		nodes      = 1;
+		myid       = 0;
+		spadmem    = 2048;
+		min_mass = 500;
+		max_mass = 5000;
+		dF       = (UINT)(0.02 * scale);
+		dM       = 500.0;
+		res      = 0.01;
+		perf    = NULL;
+        policy = _cyclic;
+	}
 }gParams;
 
 
@@ -353,17 +373,5 @@ typedef struct _eSpecSeqs
     UINT                 numPeaks;  /* Total length of moz array i.e. total number of peaks */
     UINT                 numSpecs;  /* Number of theoretical spectra */
 } ESpecSeqs;
-
-/************************* SLM Query DSTs ************************/
-typedef struct _Query
-{
-    /* Raw chosen fragments/peaks from the input MS/MS spectrum   */
-    PEAK Peaks[QALEN] = {0};
-
-/* HM: Enable if intensity information is also required in future */
-#if (defined(REQUIRE_INTENSITY))
-    INTENSITY Intensities[QUERYPK] = {0};
-#endif /* (defined(REQUIRE_INTENSITY)) */
-} Query;
 
 #endif /* INCLUDE_SLM_DSTS_H_ */

@@ -1,3 +1,12 @@
+# 
+# Peptide Sequence Clusterer
+# Copyrights(C) 2019 PCDS Laboratory
+# Muhammad Haseeb, and Fahad Saeed
+# School of Computing and Information Sciences
+# Florida International University (FIU), Miami, FL
+# Email: {mhaseeb, fsaeed}@fiu.edu
+#
+
 #!/bin/bash
 
 # Path to input peptide database
@@ -10,11 +19,11 @@ MAX=$3
 # Perform C-term K/R data wrangling?
 WRNG=$4
 
-# Temp File
-TEMPR=PEPDB.tmp
-
 # Output Directory
-OUTPUT=./parts
+OUTPUT=$5/parts
+
+# Temp File
+TEMPR=$5/PEPDB.tmp
 
 # Remove the previously existing ./parts if present
 rm -rf ${OUTPUT}

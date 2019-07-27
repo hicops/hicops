@@ -118,7 +118,7 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
              BYC   *bycPtr = Score[thno].byc;
              iBYC *ibycPtr = Score[thno].ibyc;
 
-            if (thno == 0)
+            if (thno == 0 && params.myid == 0)
             {
                 std::cout << "\rDONE: " << (queries * 100) /len << "%";
             }
@@ -216,8 +216,8 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                     }
 
                     /* Clear the scorecard */
-                    std::memset(bycPtr+ minlimit, 0x0, sizeof(BYC) * csize);
-                    std::memset(ibycPtr+ minlimit, 0x0, sizeof(iBYC) * csize);
+                    std::memset(bycPtr + minlimit, 0x0, sizeof(BYC) * csize);
+                    std::memset(ibycPtr + minlimit, 0x0, sizeof(iBYC) * csize);
                 }
             }
 
@@ -241,6 +241,9 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
     return status;
 }
 
+/*
+ * DSLIM_DeallocateSC
+ */
 STATUS DSLIM_DeallocateSC(VOID)
 {
     /* Free the Scorecard memory */
