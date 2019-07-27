@@ -48,7 +48,7 @@ STATUS HS_InitFile()
     if (!FileInitiated)
     {
         std::stringstream sst;
-        sst << HYPERSCORE_Datetime() << ".tsv";
+        sst << params.workspace + '/' + HYPERSCORE_Datetime() << ".tsv";
         myfile.open(sst.str());
         FileInitiated = true;
     }
@@ -160,5 +160,5 @@ std::string HYPERSCORE_Datetime()
     strftime(buffer, 80, "%d-%m-%Y_%H-%M-%S_",timeinfo);
 
     std::string b(buffer);
-    return b + std::to_string(params.myid) + std::to_string(omp_get_thread_num());
+    return b + std::to_string(params.myid) + '_' + std::to_string(omp_get_thread_num());
 }
