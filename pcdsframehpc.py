@@ -629,7 +629,7 @@ if __name__ == '__main__':
 
 				elif (param == 'Core(s)persocket'):
 					cores_per_socket = int(val)
-					print ('Available cores/socket  =', threads)
+					print ('Available cores/socket  =', cores_per_socket)
 
 				elif (param == 'NUMAnode(s)'):
 					numa = int(val)
