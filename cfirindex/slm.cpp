@@ -375,7 +375,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     /* Print final program status */
     cout << "\n\nEnded with status: \t\t" << status << endl << endl;
 
-#if 0 //def BENCHMARK
+#ifdef BENCHMARK
     cout << "File I/O Time: \t\t\t" << fileio << 's' << endl;
     cout << "Compute Time: \t\t\t" << compute << 's' << endl;
     cout << "Memory Time: \t\t\t" << memory << 's' << endl << endl;
@@ -388,7 +388,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 #endif /* BENCHMARK */
 
 #ifdef _PROFILE
-    ProfilerFlush()
+    ProfilerFlush();
     ProfilerStop();
 #endif /* _PROFILE */
 
@@ -439,6 +439,17 @@ static STATUS ParseParams(CHAR* paramfile)
         }
 
         params.datapath = line;
+
+        /* Get path to workspace path */
+        getline(pfile, line);
+
+        /* Check for a dangling / character */
+        if (line.at(line.length()- 1) == '/')
+        {
+            line = line.substr(0, line.size() - 1);
+        }
+
+        params.workspace = line;
 
         /* Get the max threads to use */
         getline(pfile, line);

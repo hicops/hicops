@@ -821,6 +821,7 @@ if __name__ == '__main__':
 	# Write params for the CFIR index
 	modfile.write(dbparts + '\n')
 	modfile.write(ms2data + '\n')
+	modfile.write(workspace + '/output\n')
 	modfile.write(str(threads) + '\n')
 	modfile.write(str(min_length) + '\n')
 	modfile.write(str(max_length) + '\n')
