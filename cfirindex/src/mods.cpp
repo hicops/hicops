@@ -43,7 +43,7 @@ static LONGLONG count(STRING s, STRING conditions);
 static VOID MODS_ModList(STRING peptide, vector<INT> conditions,
                          INT total, pepEntry container, INT letter,
                          bool novel, INT modsSeen, UINT refid);
-static VOID MODS_GenCombinations(VOID);
+static VOID MODS_GenCombinations();
 #endif /* VMODS */
 
 
@@ -79,7 +79,7 @@ INT cmpvarEntries(const VOID* lhs, const void *rhs)
  *
  * OUTPUT: none
  */
-static VOID MODS_GenCombinations(VOID)
+static VOID MODS_GenCombinations()
 {
     //run this at start of main to fill Comb with the proper values
     Comb[0][0] = 1;

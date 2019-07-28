@@ -118,6 +118,6 @@ BOOL LBE_ApplyPolicy(Index *index,  BOOL pepmod, UINT key);
  * INPUT : none
  * OUTPUT: none
  */
-VOID   LBE_PrintHeader(VOID);
+VOID   LBE_PrintHeader();
 
 #endif /* LBE_H_ */

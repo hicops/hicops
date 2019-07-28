@@ -209,10 +209,14 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                     }
 
                     /* Print the highest hyperscore per chunk */
-#pragma omp critical
+                    if (maxhv > 0.0)
                     {
-                        /* Printing the hyperscore in OpenMP mode */
-                        status = HYPERSCORE_Calculate(queries, idaa, maxhv);
+
+#pragma omp critical
+                        { 
+                            /* Printing the hyperscore in OpenMP mode */
+                            status = HYPERSCORE_Calculate(queries, idaa, maxhv);
+                        }
                     }
 
                     /* Clear the scorecard */

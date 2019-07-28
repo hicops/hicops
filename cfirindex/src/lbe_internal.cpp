@@ -513,7 +513,7 @@ STATUS LBE_CountPeps(CHAR *filename, Index *index)
  * INPUT : none
  * OUTPUT: none
  */
-VOID LBE_PrintHeader(VOID)
+VOID LBE_PrintHeader()
 {
     cout << "\n"
             "*********************************"

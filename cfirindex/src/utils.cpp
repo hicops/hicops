@@ -115,7 +115,7 @@ FLOAT StatMods[26] = {
  * OUTPUT:
  * @procs: Number of processors
  */
-UINT UTILS_GetNumProcs(VOID)
+UINT UTILS_GetNumProcs()
 {
     UINT procs = 1;
 
