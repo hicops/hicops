@@ -333,6 +333,7 @@ typedef struct _globalParams
 
     STRING dbpath;
     STRING datapath;
+    STRING workspace;
     STRING modconditions;
 
     DistPolicy policy;
