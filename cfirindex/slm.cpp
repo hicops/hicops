@@ -86,7 +86,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     status = MPI_Init(&argc, &argv);
 #endif /* MPI_INCLUDED */
 
-    if (status == MPI_SUCCESS)
+    if (status == SLM_SUCCESS)
     {
         /* Parse the parameters */
         status = ParseParams(argv[1]);
@@ -145,6 +145,19 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         status = ERR_INVLD_MEMORY;
     }
 
+    /* Initialize the mod information */
+    if (status == SLM_SUCCESS)
+    {
+        status = UTILS_InitializeModInfo(&params.vModInfo);
+    }
+
+    /* Initialize the ModGen Engine */
+    if (status == SLM_SUCCESS)
+    {
+        status = MODS_Initialize();
+    }
+
+    /* Do not forget to set dbfile as private in OpenMP loop */
     for (UINT peplen = minlen; peplen <= maxlen; peplen++)
     {
         dbfile = params.dbpath + "/" + std::to_string(peplen) + extension;
@@ -324,6 +337,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 
             }
 
+            /* TODO: Uncomment this thing */
             //if (params.myid == 0)
             {
                 /* Compute Duration */
@@ -389,7 +403,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 
 #ifdef _PROFILE
     ProfilerFlush();
-    ProfilerStop();
+	ProfilerStop();
 #endif /* _PROFILE */
 
     /* Make sure stdout is empty at the end */
@@ -545,6 +559,10 @@ static STATUS ParseParams(CHAR* paramfile)
             {
                 /* Get and set the modAAs */
                 getline(pfile, line);
+
+                /* Convert to all uppercases if not already */
+                std::transform(line.begin(), line.end(), line.begin(), ::toupper);
+
                 params.modconditions += " " + line;
 
                 std::strncpy((char *) params.vModInfo.vmods[md].residues, (const char *) line.c_str(),
@@ -576,6 +594,7 @@ static STATUS ParseParams(CHAR* paramfile)
 #else
         params.myid = 0;
         params.nodes = 1;
+
 #endif /* DISTMEM */
 
         pfile.close();
