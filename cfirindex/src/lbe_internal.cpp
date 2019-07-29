@@ -23,7 +23,7 @@ using namespace std;
 
 vector<STRING> Seqs;
 UINT cumusize = 0;
-
+UINT *varCount = NULL;
 ifstream file;
 
 extern gParams params;
@@ -131,8 +131,11 @@ STATUS LBE_Initialize(Index *index)
     STATUS status = SLM_SUCCESS;
     UINT iCount = 1;
     STRING seq;
-    UINT threads = params.threads;
     STRING modconditions = params.modconditions;
+
+#ifdef _OPENMP
+    UINT threads = params.threads;
+#endif /* _OPENMP */
 
     /* Check if ">" entries are > 0 */
     if (index->lclpepCnt > 0)
@@ -225,6 +228,13 @@ STATUS LBE_Initialize(Index *index)
         std::sort(index->pepEntries, index->pepEntries + index->lcltotCnt, CmpPepEntries);
     }
 
+    /* Deinitialize varCount */
+    if (varCount != NULL)
+    {
+        delete[] varCount;
+        varCount = NULL;
+    }
+
     if (status != SLM_SUCCESS)
     {
         (VOID) LBE_Deinitialize(index);
@@ -239,7 +249,10 @@ STATUS LBE_GeneratePeps(Index *index)
     UINT interval = index->lclpepCnt;
     pepEntry *entries = index->pepEntries;
     UINT seqlen = Seqs.at(0).length();
+
+#ifdef _OPENMP
     UINT threads = params.threads;
+#endif /* _OPENMP */
 
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads) schedule(static)
@@ -464,17 +477,22 @@ STATUS LBE_CountPeps(CHAR *filename, Index *index)
     fileio += omp_get_wtime() - duration;
 #endif
 
+    /* Allocate teh varCount array */
+    if (status == SLM_SUCCESS)
+    {
+        varCount = new UINT[index->pepCount + 1];
+    }
+
 #ifdef VMODS
     /* Count the number of variable mods given
      * modification information */
     if (status == SLM_SUCCESS)
     {
-        status = UTILS_InitializeModInfo(&params.vModInfo);
-
 #ifdef BENCHMARK
         duration = omp_get_wtime();
 #endif
-        index->modCount = MODS_ModCounter();
+
+        index->modCount = MODS_ModCounter(index);
 
 #ifdef BENCHMARK
         compute += omp_get_wtime() - duration;
@@ -482,6 +500,12 @@ STATUS LBE_CountPeps(CHAR *filename, Index *index)
     }
 
 #endif /* VMODS */
+
+    /* Check if any errors occurred in MODS_ModCounter */
+    if (index->modCount == (UINT)(-1))
+    {
+        status = ERR_INVLD_SIZE;
+    }
 
     /* Print if everything is okay */
     if (status == SLM_SUCCESS)

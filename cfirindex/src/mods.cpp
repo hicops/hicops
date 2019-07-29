@@ -23,29 +23,91 @@
 using namespace std;
 
 /* Global Variables */
-map<AA, INT> condLookup;
-UINT lclcntr;
-UINT partcntr;
 STRING *mods;
 Index *lclindex;
+/* SLM Mods Index   */
+pepEntry    *modEntries;
+
+/* Initialized only once global */
+map<AA, INT> condLookup;
 vector<STRING> tokens;
 UINT limit = 0;
 ULONGLONG Comb[MAX_COMBS][MAX_COMBS];
-pepEntry    *modEntries; /* SLM Mods Index    */
+vector<INT> condList;
 
 /* External Variables */
 extern gParams params;
+extern UINT *varCount;
+
 #ifdef VMODS
-extern vector<STRING>     Seqs; /* Peptide Sequences */
+
+/* Peptide Sequences */
+extern vector<STRING> Seqs;
 
 /* Static Functions */
-static LONGLONG count(STRING s, STRING conditions);
+static ULONGLONG count(STRING s, STRING conditions);
+
 static VOID MODS_ModList(STRING peptide, vector<INT> conditions,
                          INT total, pepEntry container, INT letter,
-                         bool novel, INT modsSeen, UINT refid);
+                         bool novel, INT modsSeen, UINT refid,
+                         UINT &global, UINT &local);
+
 static VOID MODS_GenCombinations();
+
 #endif /* VMODS */
 
+/*
+ * FUNCTION: MODS_Initialize
+ *
+ * DESCRIPTION: Initialize global variables and conditions
+ *
+ * INPUT: none
+ *
+ * OUTPUT: status of execution
+ */
+STATUS MODS_Initialize()
+{
+#ifdef VMODS
+    STRING conditions = params.modconditions;
+    STRING allLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    pepEntry container;
+    STRING token;
+    stringstream ss(conditions);
+
+    while (ss >> token)
+    {
+        tokens.push_back(token);
+    }
+
+    limit = stoi(tokens[0]);
+
+    /* Generate all possible combinations pre-handed */
+    (VOID) MODS_GenCombinations();
+
+    /* Reset conditions for all letters */
+    for (INT i = 0; i < 26; i++)
+    {
+        condLookup[allLetters[i]] = -1;
+    }
+
+    /* Set up conditions lookup table */
+    for (UINT i = 0; i < (tokens.size() - 1) / 2; i++)
+    {
+        for (UINT j = 0; j < tokens[(2 * i) + 1].size(); j++)
+        {
+            /* Fill up the condLookup */
+            condLookup[tokens[(2 * i) + 1][j]] = i;
+        }
+
+        /* Push the allowed modification numbers into condList */
+        condList.push_back(stoi(tokens[(2 * i) + 2]));
+    }
+
+#endif /* VMODS */
+
+    /* Return SLM_SUCCESS */
+    return SLM_SUCCESS;
+}
 
 INT cmpvarEntries(const VOID* lhs, const void *rhs)
 {
@@ -85,17 +147,21 @@ static VOID MODS_GenCombinations()
     Comb[0][0] = 1;
     Comb[1][0] = 1;
     Comb[1][1] = 1;
-    for (int i = 1; i < 64; i++)
+
+    for (int i = 1; i < MAX_COMBS; i++)
     {
         Comb[i][0] = 1;
+
         for (int j = 1; j <= (i + 1) / 2; j++)
         {
             Comb[i][j] = Comb[i - 1][j - 1] + Comb[i - 1][j];
         }
+
         for (int j = i / 2; j < i; j++)
         {
             Comb[i][j] = Comb[i][i - j];
         }
+
         Comb[i][i] = 1;
     }
 }
@@ -112,8 +178,8 @@ static VOID MODS_GenCombinations()
  * OUTPUT:
  * @Comb: nCk
  */
-ULONGLONG combine(int n, int k) {
-    //return factorial(n) / factorial(k) / factorial(n-k);
+ULONGLONG combine(int n, int k)
+{
     return Comb[n][k];
 }
 
@@ -132,7 +198,7 @@ ULONGLONG combine(int n, int k) {
  */
 LONGLONG partition2(vector<INT> a, INT b)
 {
-    INT sum = 0;
+    LONGLONG sum = 0;
     vector<INT> a2;
 
     /* Set up basic conditions */
@@ -224,13 +290,13 @@ LONGLONG partition3(vector<vector<INT> > A, vector<INT> B, INT limit)
  * DESCRIPTION: Main partition method
  *
  * INPUT:
- * @s         : Peptide sequence
+ * @sequence  : Peptide sequence
  * @conditions: Mod conditions
  *
  * OUTPUT:
- * @nmods: Number of mods generated for @s
+ * @nmods: Number of mods generated for @seq
  */
-static LONGLONG count(STRING s, STRING conditions)
+static ULONGLONG count(STRING s, STRING conditions)
 {
     map<CHAR, INT> AAcounts;
     vector<vector<INT>> A;
@@ -257,7 +323,6 @@ static LONGLONG count(STRING s, STRING conditions)
     return partition3(A, B, limit);
 }
 
-
 /*
  * FUNCTION: MODS_ModList
  *
@@ -276,20 +341,20 @@ static LONGLONG count(STRING s, STRING conditions)
  */
 static VOID MODS_ModList(STRING peptide, vector<INT> conditions,
                          INT total, pepEntry container, INT letter,
-                         bool novel, INT modsSeen, UINT refid)
+                         bool novel, INT modsSeen, UINT refid, UINT &global, UINT &local)
 {
     if (novel && letter != 0)
     {
-        if (LBE_ApplyPolicy(lclindex, true, lclcntr) == true)
+        if (LBE_ApplyPolicy(lclindex, true, global) == true)
         {
-            modEntries[partcntr] = container;
-            modEntries[partcntr].Mass = UTILS_CalculateModMass((AA *)Seqs.at(modEntries[partcntr].seqID).c_str(),
+            modEntries[local] = container;
+            modEntries[local].Mass = UTILS_CalculateModMass((AA *)Seqs.at(modEntries[local].seqID).c_str(),
                                                                 Seqs.at(0).length(),
-                                                                modEntries[partcntr].sites.modNum);
-            partcntr++;
+                                                                modEntries[local].sites.modNum);
+            local++;
         }
 
-        lclcntr++;
+        global++;
 
 #ifdef DEBUG
         mods[lclcntr] = peptide;
@@ -320,12 +385,12 @@ static VOID MODS_ModList(STRING peptide, vector<INT> conditions,
         STRING dupPeptide = peptide;
         dupPeptide[letter] += 32;
 
-        MODS_ModList(dupPeptide, dupConditions, total - 1, dupContainer, letter + 1, true, modsSeen + 1, refid);
+        MODS_ModList(dupPeptide, dupConditions, total - 1, dupContainer, letter + 1, true, modsSeen + 1, refid, global, local);
     }
 
     if (letter < (INT) peptide.size())
     {
-        MODS_ModList(peptide, conditions, total, container, letter + 1, false, modsSeen, refid);
+        MODS_ModList(peptide, conditions, total, container, letter + 1, false, modsSeen, refid, global, local);
     }
 
     return;
@@ -345,37 +410,26 @@ static VOID MODS_ModList(STRING peptide, vector<INT> conditions,
  * OUTPUT:
  * @cumulative: Number of mods
  */
-LONGLONG MODS_ModCounter()
+ULONGLONG MODS_ModCounter(Index *index)
 {
-    LONGLONG cumulative = 0;
+    ULONGLONG cumulative = 0;
 
     UINT threads = params.threads;
     STRING conditions = params.modconditions;
 
 #ifdef VMODS
-    STRING token;
-    stringstream ss(conditions);
-
-    while (ss >> token)
-    {
-        tokens.push_back(token);
-    }
-
-    limit = stoi(tokens[0]);
 
     /* Return if no mods to generate */
     if (limit > 0)
     {
-        /* Generate all possible combinations pre-handed */
-        (VOID) MODS_GenCombinations();
-
         /* Parallel modcounter */
 #ifdef _OPENMP
             /* The parallel for loop */
 #pragma omp parallel for num_threads (threads) schedule(static) reduction(+: cumulative)
             for (UINT i = 0; i < Seqs.size(); i++)
             {
-                cumulative += count(Seqs.at(i), conditions) - 1;
+                varCount[i] = count(Seqs.at(i), conditions) - 1;
+                cumulative += varCount[i];
             }
 
 #else
@@ -383,8 +437,15 @@ LONGLONG MODS_ModCounter()
 
        for (UINT i = 0; i < Seqs.size(); i++)
        {
-            cumulative += count(Seqs.at(i), conditions) - 1;
+            varCount[i] = count(Seqs.at(i), conditions) - 1;
+            cumulative += varCount[i];
        }
+
+       if (varCount[Seqs.size()]  != index->modCount)
+       {
+           cumulative = (UINT)(-1);
+       }
+
 #endif /* _OPENMP */
 
 #endif /* VMODS */
@@ -392,6 +453,16 @@ LONGLONG MODS_ModCounter()
 #ifndef VMODS
         LBE_UNUSED_PARAM(conditions);
 #endif /* VMODS */
+    }
+
+    UINT count = varCount[0];
+    varCount[0] = 0;
+
+    for (UINT ii = 1; ii <= Seqs.size(); ii++)
+    {
+        UINT tmpcount = varCount[ii];
+        varCount[ii] = varCount[ii - 1] + count;
+        count = tmpcount;
     }
 
     return cumulative;
@@ -423,32 +494,11 @@ STATUS MODS_GenerateMods(Index *index)
 #ifdef VMODS
     STRING allLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     pepEntry container;
-    vector<INT> condList;
 
-    /* Reset the local counters */
-    lclcntr = 0;
-    partcntr = 0;
+    /* Copy the global condList into the local one */
+    vector<INT> lclcondList = condList;
 
     lclindex = index;
-
-    /* Reset conditions for all letters */
-    for (INT i = 0; i < 26; i++)
-    {
-        condLookup[allLetters[i]] = -1;
-    }
-
-    /* Set up conditions lookup table */
-    for (UINT i = 0; i < (tokens.size() - 1) / 2; i++)
-    {
-        for (UINT j = 0; j < tokens[(2 * i) + 1].size(); j++)
-        {
-            /* Fill up the condLookup */
-            condLookup[tokens[(2 * i) + 1][j]] = i;
-        }
-
-        /* Push the allowed modification numbers into condList */
-        condList.push_back(stoi(tokens[(2 * i) + 2]));
-    }
 
 #ifdef DEBUG
     /* Print the number of modifications */
@@ -457,28 +507,32 @@ STATUS MODS_GenerateMods(Index *index)
     mods = new STRING[modCount];
 #endif /* DEBUG */
 
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(params.threads) schedule (static)
+#endif /* _OPENMP */
     for (UINT i = 0; i < Seqs.size(); i++)
     {
 #ifdef DEBUG
         cout << Seqs.at(i).length() << '\t' << lclcntr << '\t' << Seqs.at(i) << '\t' << modCount << endl;
 #endif /* DEBUG */
 
-        UINT stt = partcntr;
-        MODS_ModList(Seqs[i], condList, limit, container, 0, false, 0, i);
-        UINT ssz = partcntr - stt;
+        /* Make global and local index */
+        UINT globalidx = varCount[i];
+        UINT localidx  = UINT(varCount[i] / params.nodes);
 
-        std::qsort((void *)(modEntries+stt), ssz, sizeof(pepEntry), cmpvarEntries);
+        UINT stt = localidx;
+        MODS_ModList(Seqs[i], lclcondList, limit, container, 0, false, 0, i, globalidx, localidx);
+        UINT ssz = localidx - stt;
+
+        std::qsort((void *)(modEntries + stt), ssz, sizeof(pepEntry), cmpvarEntries);
     }
 
-    if (lclcntr != index->modCount)
-    {
-        status = ERR_INVLD_SIZE;
-    }
-
+/*
     if (partcntr != index->lclmodCnt)
     {
         status = ERR_INVLD_SIZE;
     }
+*/
 
 #ifdef DEBUG
     /* Print for DEBUG information */
@@ -495,10 +549,6 @@ STATUS MODS_GenerateMods(Index *index)
 
 #endif /* VMODS */
 
-    lclcntr = 0;
-    partcntr = 0;
-    tokens.clear();
-    limit = 0;
-
+    /* Return the status */
     return status;
 }

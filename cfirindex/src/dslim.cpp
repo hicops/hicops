@@ -561,8 +561,11 @@ STATUS DSLIM_Optimize(Index *index, UINT chunk_number)
 
     UINT *iAPtr = index->ionIndex[chunk_number].iA;
     UINT *bAPtr = index->ionIndex[chunk_number].bA;
+
+#ifdef _OPENMP
     UINT interval = 50 *params.scale;
     UINT threads = params.threads;
+#endif /* _OPENMP */
 
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads) schedule(dynamic, interval)

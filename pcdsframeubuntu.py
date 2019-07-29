@@ -138,9 +138,6 @@ if __name__ == '__main__':
 		sample.write('# Max precursor mass (Da)\n')
 		sample.write('max_prec_mass=5000\n\n')
 
-		sample.write('# HPC Data Distribution Policy: chunk, cyclic\n')
-		sample.write('policy=cyclic\n\n')
-
 		sample.write('# Max fragment charge\n')
 		sample.write('maxz=3\n\n')
 
@@ -309,18 +306,6 @@ if __name__ == '__main__':
 				threads = int(val)
 				if (threads <= 0 or threads > max_cpus):
 					threads = int(max_cpus)
-
-			# Set the data distribution policy
-			elif (param == 'policy'):
-				if (val[-1] == '\n'):
-					val = val[:-1]
-				if (val[-1] == '\r'):
-					val = val[:-1]
-				policy = val
-				
-				if (policy != 'chunk' and policy != 'cyclic'):
-					policy = 'cyclic'
-				print ('Using policy =', policy)
 
 			# Set max mods
 			elif (param == 'nmods'):
