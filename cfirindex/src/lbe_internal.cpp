@@ -540,11 +540,11 @@ STATUS LBE_CountPeps(CHAR *filename, Index *index)
 VOID LBE_PrintHeader()
 {
     cout << "\n"
-            "*********************************"
-            "\n          CFIR Search         \n"
-            "Florida International University\n"
-            "        Miami, FL, USA\n"
-            "*********************************"
+            "*********************************\n"
+            "  The MS/MS Proteomics Pipeline  \n"
+            "Florida International University \n"
+            "        Miami, FL, USA           \n"
+            "*********************************\n"
           << endl << endl;
 
     return;

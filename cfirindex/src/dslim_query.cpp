@@ -145,6 +145,7 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                     }
 
                     /* Query all fragments in each spectrum */
+                    /* Query all fragments in each spectrum */
                     for (UINT k = 0; k < qspeclen; k++)
                     {
                         /* Check for any zeros
@@ -163,7 +164,7 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                                 /* Calculate parent peptide ID */
                                 INT ppid = (raw / speclen);
 
-                                if (ppid >= minlimit && ppid < maxlimit)
+                                if (ppid >= minlimit && ppid <= maxlimit)
                                 {
                                     /* Update corresponding scorecard entries */
                                     if ((raw % speclen) < speclen / 2)
@@ -185,9 +186,6 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                     INT idaa = -1;
                     FLOAT maxhv = 0.0;
 
-/*                    UINT csize = ((chno == index[ixx].nChunks - 1) && (index[ixx].nChunks > 1)) ?
-                                    index[ixx].lastchunksize : index[ixx].chunksize;
-*/
                     INT csize = maxlimit - minlimit;
 
                     for (INT it = minlimit; it < maxlimit; it++)
@@ -358,9 +356,14 @@ static INT DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max)
         return DSLIM_BinFindMin(entries, pmass1, min, max);
     }
 
-    while (pmass1 == entries[half].Mass)
+    if (pmass1 == entries[half].Mass)
     {
-        half--;
+        while (pmass1 == entries[half].Mass)
+        {
+            half--;
+        }
+
+        half++;
     }
 
     return half;
@@ -394,9 +397,14 @@ static INT DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max)
         return DSLIM_BinFindMax(entries, pmass2, min, max);
     }
 
-    while (pmass2 == entries[half].Mass)
+    if (pmass2 == entries[half].Mass)
     {
-        half++;
+        while (pmass2 == entries[half].Mass)
+        {
+            half++;
+        }
+
+        half--;
     }
 
     return half;
