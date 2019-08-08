@@ -22,6 +22,8 @@
 #define INCLUDE_SLM_DSTS_H_
 
 #include "common.h"
+#include "minheap.h"
+#include <cstring>
 
 /* Types of modifications allowed by SLM_Mods     */
 #define MAX_MOD_TYPES                        15
@@ -271,14 +273,6 @@ typedef struct _iBYC
     UINT iyc   = 0;
 } iBYC;
 
-typedef struct _BYICount
-{
-    BYC     *byc = NULL;       /* Both counts */
-    iBYC   *ibyc = NULL;       /* Sum of b/y ion intensities */
-} BYICount;
-
-#define BYISIZE                 (sizeof(UCHAR) * 2 + sizeof(UINT) * 2)
-
 typedef struct _SLMchunk
 {
     UINT    *iA = NULL; /* Ions Array (iA)   */
@@ -311,68 +305,212 @@ typedef struct _Index
 /* Structure for global Parameters */
 typedef struct _globalParams
 {
-    UINT threads = 1;
-    UINT min_len = 4;
-    UINT max_len = 40;
-    UINT maxz     = 3;
-    UINT topmatches = 10;
-    UINT scale      = 100;
-    UINT min_shp    = 4;
-    UINT nodes      = 1;
-    UINT myid       = 0;
-    UINT spadmem    = 2048;
+    UINT threads;
+    UINT min_len;
+    UINT max_len;
+    UINT maxz;
+    UINT topmatches;
+    UINT scale;
+    UINT min_shp;
+    UINT min_cpsm;
+    UINT nodes;
+    UINT myid;
+    UINT spadmem;
 
-    UINT min_mass = 500.0;
-    UINT max_mass = 5000.0;
-    UINT dF       = (UINT)(0.02 * scale);
+    UINT min_mass;
+    UINT max_mass;
+    UINT dF;
 
-    DOUBLE dM       = 500.0;
-    DOUBLE res      = 0.01;
+    INT  base_int;
+    INT  min_int;
 
-    DOUBLE *perf    = NULL;
+    DOUBLE dM;
+    DOUBLE res;
+
+    DOUBLE *perf;
 
     STRING dbpath;
     STRING datapath;
     STRING workspace;
     STRING modconditions;
 
-    DistPolicy policy = _cyclic;
+    DistPolicy policy;
 
     SLM_vMods vModInfo;
 
-	_globalParams()
-	{
-		threads = 1;
-		min_len = 4;
-		max_len = 40;
-		maxz     = 3;
-		topmatches = 10;
-		scale      = 100;
-		min_shp    = 4;
-		nodes      = 1;
-		myid       = 0;
-		spadmem    = 2048;
-		min_mass = 500;
-		max_mass = 5000;
-		dF       = (UINT)(0.02 * scale);
-		dM       = 500.0;
-		res      = 0.01;
-		perf    = NULL;
+    _globalParams()
+    {
+        threads = 1;
+        min_len = 6;
+        max_len = 40;
+        maxz = 3;
+        topmatches = 10;
+        scale = 100;
+        min_shp = 4;
+        min_cpsm = 4;
+        base_int = 100000;
+        min_int = 0.01 * base_int;
+        nodes = 1;
+        myid = 0;
+        spadmem = 2048;
+        min_mass = 500;
+        max_mass = 5000;
+        dF = (UINT) (0.02 * scale);
+        dM = 500.0;
+        res = 0.01;
+        perf = NULL;
         policy = _cyclic;
 	}
 }gParams;
 
 
-/* Same as specSeqs below but has intensity values for experimental spectra */
-typedef struct _eSpecSeqs
+/* Experimental MS/MS spectra data */
+typedef struct _queries
 {
     UINT                *moz;       /* Stores the m/z values of the spectra */
     UINT                *intensity; /* Stores the intensity values of the experimental spectra */
-    //BOOL              *iType;     /* Stores the ion type of the coresponding peak in miz */
     UINT                *idx;       /* Row ptr. Starting index of each row */
     FLOAT               *precurse;  /* Stores the precursor mass of each spectrum. */
     UINT                 numPeaks;  /* Total length of moz array i.e. total number of peaks */
     UINT                 numSpecs;  /* Number of theoretical spectra */
-} ESpecSeqs;
+} Queries;
+
+/* Score entry that goes into the heap */
+typedef struct _heapEntry
+{
+    /* The index * + offset */
+    USHORT   idxoffset;
+
+    /* Number of shared ions in the spectra */
+    USHORT sharedions;
+
+    /* Total ions in spectrum */
+    USHORT totalions;
+
+    /* Parent spectrum ID in the respective chunk of index */
+    UINT  psid;
+
+    /* Computed hyperscore */
+    FLOAT hyperscore;
+
+    /* Constructor */
+    _heapEntry()
+    {
+        idxoffset = 0;
+        psid = 0;
+        hyperscore = 0;
+        sharedions = 0;
+        totalions = 0;
+    }
+
+    /* Overload = operator */
+    _heapEntry& operator=(const _heapEntry& rhs)
+    {
+        /* Check for self assignment */
+        if (this != &rhs)
+        {
+            this->idxoffset = rhs.idxoffset;
+            this->psid = rhs.psid;
+            this->hyperscore = rhs.hyperscore;
+            this->sharedions = rhs.sharedions;
+            this->totalions = rhs.totalions;
+        }
+
+        return *this;
+    }
+
+    BOOL operator <=(const _heapEntry& rhs)
+    {
+        return this->hyperscore <= rhs.hyperscore;
+    }
+
+    BOOL operator <(const _heapEntry& rhs)
+    {
+        return this->hyperscore < rhs.hyperscore;
+    }
+
+    BOOL operator >=(const _heapEntry& rhs)
+    {
+        return this->hyperscore >= rhs.hyperscore;
+    }
+
+    BOOL operator >(const _heapEntry& rhs)
+    {
+        return this->hyperscore > rhs.hyperscore;
+    }
+
+    BOOL operator ==(const _heapEntry& rhs)
+    {
+        return this->hyperscore == rhs.hyperscore;
+    }
+
+} hCell;
+
+/* This structure will be made per thread */
+typedef struct _Results
+{
+    /* Number of candidate PSMs (n) */
+    UINT cpsms;
+
+    /* Min heap to keep track of top
+     */
+    minHeap<hCell> topK;
+
+    /************************
+     * Required variables per
+     * query for expect score
+     ************************/
+
+    /* The y = mx + b form
+     * for linear regression
+     */
+    FLOAT weight;
+    FLOAT bias;
+
+    INT minhypscore;
+    INT maxhypscore;
+    INT nexthypscore;
+
+    /* Survival function s(x) vs log(score) */
+    DOUBLE *survival;
+    DOUBLE *xaxis;
+
+    /* Constructor */
+    _Results()
+    {
+        cpsms = 0;
+        weight = 0;
+        bias = 0;
+        minhypscore = 0;
+        maxhypscore = 0;
+        nexthypscore = 0;
+        survival = NULL;
+        xaxis = NULL;
+    }
+
+    void reset()
+    {
+        cpsms = 0;
+        weight = 0;
+        bias = 0;
+        minhypscore = 0;
+        maxhypscore = 0;
+        nexthypscore = 0;
+
+        std::memset(survival, 0x0, sizeof(UINT) * (2 + MAX_HYPERSCORE * 10));
+
+        topK.heap_reset();
+    }
+
+} Results;
+
+typedef struct _BYICount
+{
+    BYC     *byc = NULL;       /* Both counts */
+    iBYC   *ibyc = NULL;       /* Sum of b/y ion intensities */
+    Results        res;
+} BYICount;
+
+#define BYISIZE                 (sizeof(UCHAR) * 2 + sizeof(UINT) * 2)
 
 #endif /* INCLUDE_SLM_DSTS_H_ */

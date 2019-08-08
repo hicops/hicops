@@ -217,14 +217,8 @@ STATUS MSQuery_ExtractQueryChunk(UINT start, UINT count, UINT *QA)
 {
     STATUS status = SLM_SUCCESS;
     UINT *QAPtr = NULL;
-    UINT threads = params.threads;
-
     UINT startspec = start;
     UINT endspec = start + count;
-
-#ifndef _OPENMP
-    LBE_UNUSED_PARAM(threads);
-#endif
 
     if (startspec >= QAcount)
     {
@@ -239,7 +233,7 @@ STATUS MSQuery_ExtractQueryChunk(UINT start, UINT count, UINT *QA)
         }
 
 #ifdef _OPENMP
-#pragma omp parallel for num_threads(threads) schedule(static)
+#pragma omp parallel for num_threads(params.threads) schedule(static)
 #endif /* _OPENMP */
         for (UINT spec = startspec; spec < endspec; spec++)
         {
@@ -337,7 +331,7 @@ STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, UINT *QAPtr)
 
 }
 
-/* Author: Usman
+/* Author: Haseeb
  * FUNCTION: MSQuery_ExtractQueryChunk
  *
  * DESCRIPTION: Extract a specific chunk of spectra from query file
@@ -350,7 +344,7 @@ STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, UINT *QAPtr)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS MSQuery_ExtractQueryChunk(UINT count, ESpecSeqs &expSpecs)
+STATUS MSQuery_ExtractQueryChunk(UINT count, Queries &expSpecs)
 {
     STATUS status = SLM_SUCCESS;
     //UINT *QAPtr = NULL;
@@ -397,7 +391,7 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, ESpecSeqs &expSpecs)
 
             l_peaks += spectrum.size() < QALEN? spectrum.size() : QALEN;
             l_count++;
-            expSpecs.idx[l_count] = l_peaks;
+//          expSpecs.idx[l_count] = l_peaks;
 
             tempReader.nextSpectrum(spectrum);
         }
@@ -411,10 +405,9 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, ESpecSeqs &expSpecs)
 
         for (UINT spec = startspec; spec < endspec; spec++)
         {
-            UINT offset = expSpecs.idx[spec - startspec]; //0, 1, 2, ...., count
+            UINT index = spec - startspec; //0, 1, 2, ...., count
 
-            status = MSQUERY_ProcessQuerySpectrum((CHAR *) MS2file.c_str(), expSpecs, offset);
-
+            status = MSQUERY_ProcessQuerySpectrum((CHAR *) MS2file.c_str(), expSpecs, index);
         }
     }
     running_count += count;
@@ -422,7 +415,7 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, ESpecSeqs &expSpecs)
     return status;
 }
 
-/* Author: Usman
+/* Author: Haseeb
  * FUNCTION: MSQUERY_ProcessQuerySpectrum
  *
  * DESCRIPTION: Process a Query Spectrum and extract peaks
@@ -436,7 +429,7 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, ESpecSeqs &expSpecs)
  * @status: Status of execution
  */
 
-STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, ESpecSeqs &expSpecs, UINT offset)
+STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, Queries &expSpecs, UINT where)
 {
     STATUS status = SLM_SUCCESS;
     Spectrum Spectrum;
@@ -451,11 +444,11 @@ STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, ESpecSeqs &expSpecs, UINT of
 
     if (gReader.readFile(filename, Spectrum, currScan) && status == SLM_SUCCESS)
     {
-        UINT SpectrumSize = Spectrum.size();
+        INT SpectrumSize = Spectrum.size();
         UINT dIntArr[SpectrumSize];
         UINT mzArray[SpectrumSize];
 
-        for (UINT j = 0; j < SpectrumSize; j++)
+        for (INT j = 0; j < SpectrumSize; j++)
         {
             mzArray[j] = (UINT)(Spectrum.at(j).mz * params.scale);
             dIntArr[j] = (UINT)(Spectrum.at(j).intensity * 1000);
@@ -465,28 +458,43 @@ STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, ESpecSeqs &expSpecs, UINT of
         /* Sort m/z based on Intensities */
         KeyVal_Parallel<UINT, UINT>(dIntArr, mzArray, SpectrumSize, threads);
 #else
-        KeyVal_Serial<UINT, UINT>(dIntArr, mzArray, SpectrumSize);
+        KeyVal_Serial<UINT, UINT>(dIntArr, mzArray, (UINT)SpectrumSize);
 #endif /* _OPENMP */
 
+
+        DOUBLE factor = ((DOUBLE)params.base_int/dIntArr[SpectrumSize - 1]);
+
+        /* Set the highest peak to base intensity */
+        dIntArr[SpectrumSize - 1] = params.base_int;
+        UINT speclen = 1;
+
+        /* Scale the rest of the peaks to the base peak */
+        for (INT j = SpectrumSize - 2; j >= (SpectrumSize - QALEN) && j >= 0; j--)
+        {
+            dIntArr[j] *= factor;
+
+            if (dIntArr[j] >= (UINT)params.min_int)
+            {
+                speclen++;
+            }
+        }
+
+        /* Update the indices */
+        UINT offset = expSpecs.idx[where];
+        expSpecs.idx[where + 1] = expSpecs.idx[where] + speclen;
+
         /* Check the size of spectrum */
-        if (SpectrumSize >= QALEN)
+        if (speclen >= QALEN)
         {
             /* Copy the last QALEN elements to QAPtr */
-            std::memcpy(&expSpecs.moz[offset], (mzArray + SpectrumSize - QALEN), (QALEN * sizeof(UINT)));
-            std::memcpy(&expSpecs.intensity[offset], (dIntArr + SpectrumSize - QALEN), (QALEN * sizeof(UINT)));
+            std::memcpy(&expSpecs.moz[offset], (mzArray + speclen - QALEN), (QALEN * sizeof(UINT)));
+            std::memcpy(&expSpecs.intensity[offset], (dIntArr + speclen - QALEN), (QALEN * sizeof(UINT)));
         }
         else
         {
             /* Fill in zeros which are not treated as trivial queries */
-            //std::memset(&expSpecs.moz[offset], 0x0, ((QALEN - SpectrumSize) * sizeof(UINT)));
-            //std::memset(&expSpecs.intensity[offset], 0x0, ((QALEN - SpectrumSize) * sizeof(UINT)));
-
-            /* Fill in rest of the spectrum */
-            //std::memcpy(&expSpecs.moz[offset] + (QALEN - SpectrumSize), mzArray, (SpectrumSize * sizeof(UINT)));
-            //std::memcpy(&expSpecs.intensity[offset] + (QALEN - SpectrumSize), dIntArr, (SpectrumSize * sizeof(UINT)));
-
-            std::memcpy(&expSpecs.moz[offset], mzArray, (SpectrumSize * sizeof(UINT)));
-            std::memcpy(&expSpecs.intensity[offset], dIntArr, (SpectrumSize * sizeof(UINT)));
+            std::memcpy(&expSpecs.moz[offset], mzArray, (speclen * sizeof(UINT)));
+            std::memcpy(&expSpecs.intensity[offset], dIntArr, (speclen * sizeof(UINT)));
         }
 
 #ifdef DEBUG

@@ -147,6 +147,12 @@ if __name__ == '__main__':
 		sample.write('# Required min PSM hits \n')
 		sample.write('min_hits=4\n\n')
 
+		sample.write('# Base normalized Intensity for MS/MS data \n')
+		sample.write('base_int=100000\n\n')
+
+		sample.write('# Cutoff ratio wrt base intensity \n')
+		sample.write('cutoff_ratio=0.01\n\n')
+
 		sample.write('# Scratch pad memory for scorecard in MBs (min: 2048MB)\n')
 		sample.write('spadmem=2048\n\n')
 
@@ -201,6 +207,8 @@ if __name__ == '__main__':
 	top_matches = 10
 	shp_cnt = 4
 	min_hits = 4
+	base_int = 100000
+	cutoff_ratio = 0.01
 	workspace = './workspace'
 	policy = 'cyclic'
 	spadmem = 2048
@@ -418,6 +426,23 @@ if __name__ == '__main__':
 				if (min_hits < 4):
 					min_hits = 4
 				print ('Required min PSM hits =', min_hits)
+
+			# Base Normalized Intensity
+			elif (param == 'base_int'):
+				base_int = int(val)
+				if (base_int < 1000):
+					base_int = 1000
+
+				print ('Base Normalized Intensity =', base_int)
+				
+			# Intensity Cutoff Ratio
+			elif (param == 'cutoff_ratio'):
+				cutoff_ratio = float(val)
+				if (cutoff_ratio >= 0.20):
+					cutoff_ratio = 0.20
+				if (cutoff_ratio <= 0):
+					cutoff_ratio = 0.01
+				print ('Intensity Cutoff Ratio =', cutoff_ratio)
 
 			# Scorecard memory
 			elif (param == 'spadmem'):
@@ -727,6 +752,8 @@ if __name__ == '__main__':
 	modfile.write(str(top_matches) + '\n')
 	modfile.write(str(shp_cnt) + '\n')
 	modfile.write(str(min_hits) + '\n')
+	modfile.write(str(base_int) + '\n')
+	modfile.write(str(cutoff_ratio) + '\n')
 	modfile.write(str(spadmem) + '\n')
 	modfile.write(str(policy) + '\n')
 

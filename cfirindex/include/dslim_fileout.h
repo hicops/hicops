@@ -17,8 +17,8 @@
  *
  */
 
-#ifndef INCLUDE_HYPERSCORE_H_
-#define INCLUDE_HYPERSCORE_H_
+#ifndef INCLUDE_DSLIM_FILEOUT_H_
+#define INCLUDE_DSLIM_FILEOUT_H_
 
 /* Most beautiful includes I've ever seen */
 #include <sstream>
@@ -27,12 +27,11 @@
 #include "slmerr.h"
 
 /* Function Definitions */
-STATUS HYPERSCORE_Calculate(UINT specid, INT psid, FLOAT maxhv);
-STATUS HYPERSCORE_WriteHeaders ();
-STATUS HS_InitFile();
-STATUS HS_DeinitFile();
-STATUS HYPERSCORE_WriteToFile();
-ULONGLONG HYPERSCORE_Factorial(ULONGLONG n);
-std::string HYPERSCORE_Datetime();
+STATUS    DFile_PrintScore(Index *index, UINT specid, FLOAT pmass,
+                           hCell* psm, DOUBLE e_x, UINT npsms);
+STATUS    DFile_InitFiles();
+STATUS    DFile_DeinitFiles();
+ULONGLONG DFile_Factorial(ULONGLONG n);
+STRING    DFile_Datetime();
 
-#endif
+#endif /* DSLIM_FILEOUT */

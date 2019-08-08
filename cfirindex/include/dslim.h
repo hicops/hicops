@@ -116,6 +116,7 @@ STATUS DSLIM_Optimize(Index *index, UINT chunk_number);
  */
 STATUS DSLIM_InitializeSC(UINT threads, Index *index);
 
+STATUS DSLIM_ModelSurvivalFunction(Results *resPtr);
 /*
  * FUNCTION: DSLIM_Analyze
  *
@@ -160,7 +161,7 @@ STATUS DSLIM_DeallocateSpecArr();
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT indexchunks);
+STATUS DSLIM_QuerySpectrum(Queries &ss, UINT len, Index *index, UINT indexchunks);
 
 /* FUNCTION: DSLIM_WriteLIBSVM
  *
@@ -174,6 +175,8 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT indexchun
  * @status: Status of execution
  */
 STATUS DSLIM_WriteLIBSVM(STRING path, UINT peplen, UINT chno);
+
+
 
 STATUS DSLIM_WriteCSV(STRING path, UINT peplen, UINT chno);
 #endif /* DSLIM_H_ */

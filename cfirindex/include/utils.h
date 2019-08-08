@@ -217,6 +217,8 @@ FLOAT UTILS_CalculateModMass(AA *seq, UINT len, UINT vModInfo);
  */
 FLOAT UTILS_GenerateModSpectrum(CHAR *seq, UINT len, UINT *Spectrum, modAA modInfo);
 
+void UTILS_LinearRegression(INT n, DOUBLE x[], DOUBLE y[], DOUBLE &a, DOUBLE &b);
+
 #endif /* VMODS */
 
 #endif /* INCLUDE_UTILS_H_ */

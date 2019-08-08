@@ -280,6 +280,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         /* Initialize and process Query Spectra */
         for (UINT qf = 0; qf < queryfiles.size(); qf++)
         {
+            start = chrono::system_clock::now();
 #ifdef BENCHMARK
             duration = omp_get_wtime();
 #endif
@@ -289,18 +290,25 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 #ifdef BENCHMARK
             fileio += omp_get_wtime() - duration;
 #endif
+            end = chrono::system_clock::now();
+
+            /* Compute Duration */
+            elapsed_seconds = end - start;
+
             if (params.myid == 0)
             {
                 cout << "Query File: " << queryfiles[qf] << endl;
+                cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
             }
 
-            ESpecSeqs ss;
+            Queries ss;
 
             UINT spectra = 0;
 
             /* DSLIM Query Algorithm */
             if (status == SLM_SUCCESS)
             {
+                start = chrono::system_clock::now();
 #ifdef BENCHMARK
                 duration = omp_get_wtime();
 #endif
@@ -310,6 +318,17 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 #ifdef BENCHMARK
                 fileio += omp_get_wtime() - duration;
 #endif
+                end = chrono::system_clock::now();
+
+                /* Compute Duration */
+                elapsed_seconds = end - start;
+
+                if (params.myid == 0)
+                {
+                    cout << "Extracted Spectra :\t\t" << ss.numSpecs << endl;
+                    cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                }
+
                 UINT ms2specs = ss.numSpecs;
 
                 /* If the chunksize is zero, all done */
@@ -517,6 +536,19 @@ static STATUS ParseParams(CHAR* paramfile)
         getline(pfile, line);
         params.min_shp = std::atoi(line.c_str());
 
+        /* Get the minhits threshold */
+        getline(pfile, line);
+        params.min_cpsm = std::atoi(line.c_str());
+
+        /* Base Intensity */
+        getline(pfile, line);
+        params.base_int = std::atoi(line.c_str());
+
+        /* Cutoff intensity ratio */
+        getline(pfile, line);
+        params.min_int = (INT)(std::atof(line.c_str()) * (DOUBLE)(params.base_int));
+
+        /* Get the scorecard + scratch memory */
         getline(pfile, line);
         params.spadmem = std::atoi(line.c_str());
 
