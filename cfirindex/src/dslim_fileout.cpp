@@ -91,7 +91,7 @@ STATUS DFile_PrintScore(Index *index, UINT specid, FLOAT pmass, hCell* psm, DOUB
     CHAR pepseq[peplen + 1];
 
     /* Adds the string followed by the \0 character into the buffer */
-    snprintf((CHAR *)&(pepseq[0]), peplen + 1, lclindex->pepIndex.seqs + (psm->psid * peplen));
+    snprintf((CHAR *)&(pepseq[0]), peplen + 1, lclindex->pepIndex.seqs + (lclindex->pepEntries[psm->psid].seqID * peplen));
 
     /* Make a string from the char [] */
     STRING pep = pepseq;
