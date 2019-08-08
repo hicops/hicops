@@ -84,7 +84,7 @@ INT    MSQuery_ExtractQueryChunk(UINT *QA);
  */
 STATUS MSQuery_ExtractQueryChunk(UINT start, UINT count, UINT *QA);
 
-STATUS MSQuery_ExtractQueryChunk(UINT count, ESpecSeqs &expSpecs);
+STATUS MSQuery_ExtractQueryChunk(UINT count, Queries &expSpecs);
 /*
  * FUNCTION: MSQUERY_ProcessQuerySpectrum
  *
@@ -100,4 +100,4 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, ESpecSeqs &expSpecs);
  */
 STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, UINT *QAPtr);
 
-STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, ESpecSeqs &expSpecs, UINT offset);
+STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, Queries &expSpecs, UINT offset);

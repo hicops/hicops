@@ -18,8 +18,8 @@
  *
  */
 
+#include "dslim_fileout.h"
 #include "dslim.h"
-#include "hyperscore.h"
 
 extern gParams   params;
 extern BYICount  *Score;
@@ -66,7 +66,7 @@ static INT DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
+STATUS DSLIM_QuerySpectrum(Queries &ss, UINT len, Index *index, UINT idxchunk)
 {
     STATUS status = SLM_SUCCESS;
     UINT maxz = params.maxz;
@@ -82,7 +82,7 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
 
     if (status == SLM_SUCCESS)
     {
-        status = HS_InitFile();
+        status = DFile_InitFiles();
     }
 
 #ifdef BENCHMARK
@@ -111,12 +111,14 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
 #endif
              /* Pointer to each query spectrum */
              UINT *QAPtr = ss.moz + ss.idx[queries];
+             FLOAT pmass = ss.precurse[queries];
              UINT *iPtr = ss.intensity + ss.idx[queries];
              UINT qspeclen = ss.idx[queries + 1] - ss.idx[queries];
              UINT thno = omp_get_thread_num();
 
              BYC   *bycPtr = Score[thno].byc;
              iBYC *ibycPtr = Score[thno].ibyc;
+             Results *resPtr = &Score[thno].res;
 
             if (thno == 0 && params.myid == 0)
             {
@@ -163,7 +165,7 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                                 /* Calculate parent peptide ID */
                                 INT ppid = (raw / speclen);
 
-                                if (ppid >= minlimit && ppid < maxlimit)
+                                if (ppid >= minlimit && ppid <= maxlimit)
                                 {
                                     /* Update corresponding scorecard entries */
                                     if ((raw % speclen) < speclen / 2)
@@ -182,40 +184,37 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                         }
                     }
 
-                    INT idaa = -1;
-                    FLOAT maxhv = 0.0;
-
-/*                    UINT csize = ((chno == index[ixx].nChunks - 1) && (index[ixx].nChunks > 1)) ?
-                                    index[ixx].lastchunksize : index[ixx].chunksize;
-*/
                     INT csize = maxlimit - minlimit;
 
                     for (INT it = minlimit; it < maxlimit; it++)
                     {
                         if (bycPtr[it].bc + bycPtr[it].yc > params.min_shp)
                         {
-                            FLOAT hyperscore = log(0.001 + HYPERSCORE_Factorial(ULONGLONG(bycPtr[it].bc)) *
-                                                   HYPERSCORE_Factorial(ULONGLONG(bycPtr[it].yc)) *
-                                                   ibycPtr[it].ibc *
-                                                   ibycPtr[it].iyc) - 6;
+                            /* Create a heap cell */
+                            hCell cell;
 
-                            if (hyperscore > maxhv)
+                            /* Fill in the information */
+                            cell.hyperscore = log10(0.001 +
+                                                    DFile_Factorial(ULONGLONG(bycPtr[it].bc)) *
+                                                    DFile_Factorial(ULONGLONG(bycPtr[it].yc)) *
+                                                    ibycPtr[it].ibc *
+                                                    ibycPtr[it].iyc);
+
+                            /* Hyperscore < 0 means either no b- or y- ions were matches */
+                            if (cell.hyperscore > 0)
                             {
-                                idaa = it; //DSLIM_GenerateIndex(&index[ixx], (csize * chno) + it);
-                                maxhv = hyperscore;
+                                cell.idxoffset = ixx;
+                                cell.psid = it;
+                                cell.sharedions = bycPtr[it].bc + bycPtr[it].yc;
+                                cell.totalions = speclen;
+
+                                /* Insert the cell in the heap dst */
+                                resPtr->topK.insert(cell);
+                                /* Increase the N */
+                                resPtr->cpsms += 1;
+                                /* Update the histogram */
+                                resPtr->survival[(INT) (cell.hyperscore * 10 + 0.5)] += 1;
                             }
-                        }
-
-                    }
-
-                    /* Print the highest hyperscore per chunk */
-                    if (maxhv > 0.0)
-                    {
-
-#pragma omp critical
-                        { 
-                            /* Printing the hyperscore in OpenMP mode */
-                            status = HYPERSCORE_Calculate(queries, idaa, maxhv);
                         }
                     }
 
@@ -224,6 +223,29 @@ STATUS DSLIM_QuerySpectrum(ESpecSeqs &ss, UINT len, Index *index, UINT idxchunk)
                     std::memset(ibycPtr + minlimit, 0x0, sizeof(iBYC) * csize);
                 }
             }
+
+            /* Compute expect score if there are any candidate PSMs */
+            if (resPtr->cpsms > params.min_cpsm)
+            {
+                status = DSLIM_ModelSurvivalFunction(resPtr);
+
+                hCell psm = resPtr->topK.getMax();
+
+                /* Estimate the log (s(x)); x = log(hyperscore) */
+                DOUBLE lgs_x = resPtr->weight * (psm.hyperscore * 10 + 0.5) + resPtr->bias;
+
+                /* Compute the s(x) */
+                DOUBLE s_x = pow(10, lgs_x);
+
+                /* e(x) = n * s(x) */
+                DOUBLE e_x = std::min(100.0, resPtr->cpsms * s_x);
+
+                /* Printing the scores in OpenMP mode */
+                status = DFile_PrintScore(index, queries, pmass, &psm, e_x, resPtr->cpsms);
+            }
+
+            /* Reset the results */
+            resPtr->reset();
 
 #ifdef BENCHMARK
             tcons[thno] += omp_get_wtime() - stime;
@@ -257,9 +279,13 @@ STATUS DSLIM_DeallocateSC()
         {
             delete[] Score[thd].byc;
             delete[] Score[thd].ibyc;
+            delete[] Score[thd].res.survival;
+            delete[] Score[thd].res.xaxis;
 
             Score[thd].byc = NULL;
             Score[thd].ibyc = NULL;
+            Score[thd].res.survival = NULL;
+            Score[thd].res.xaxis = NULL;
         }
 
         delete[] Score;
@@ -358,9 +384,14 @@ static INT DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max)
         return DSLIM_BinFindMin(entries, pmass1, min, max);
     }
 
-    while (pmass1 == entries[half].Mass)
+    if (pmass1 == entries[half].Mass)
     {
-        half--;
+        while (pmass1 == entries[half].Mass)
+        {
+            half--;
+        }
+
+        half++;
     }
 
     return half;
@@ -394,11 +425,163 @@ static INT DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max)
         return DSLIM_BinFindMax(entries, pmass2, min, max);
     }
 
-    while (pmass2 == entries[half].Mass)
+    if (pmass2 == entries[half].Mass)
     {
         half++;
+
+        while (pmass2 == entries[half].Mass)
+        {
+            half++;
+        }
+
+        half--;
     }
 
     return half;
+
+}
+
+STATUS DSLIM_ModelSurvivalFunction(Results *resPtr)
+{
+    STATUS status = SLM_SUCCESS;
+
+    /* Total size and tailends */
+    UINT N = resPtr->cpsms;
+
+    /* Choosing the kneePt and endPt to be
+     * at 70.7% and 99% respectively */
+    UINT kneePt = N - (UINT)((float)N * 0.707);
+    UINT endPt = (UINT)((float)N * 0.995);
+
+    /* Copy the slope and bias into local variables */
+    DOUBLE slope = resPtr->weight;
+    DOUBLE bias = resPtr->bias;
+
+    /* Histogram pointer */
+    DOUBLE *histogram = resPtr->survival;
+    const INT histosize = 2 + (MAX_HYPERSCORE * 10);
+
+    /* The extracted tail */
+    DOUBLE *tail = NULL;
+    DOUBLE *axis = NULL;
+    INT tailsize = 0;
+
+    /* Loop indexing variable */
+    INT ii = 0;
+
+    /* Construct the model */
+
+    /* Initialize the max hyperscore */
+    for (ii = histosize - 1; ii > 0; ii--)
+    {
+        if (histogram[ii] > 0)
+        {
+            resPtr->maxhypscore = ii;
+            ii--;
+            break;
+        }
+    }
+
+    /* Initialize nexthypscore */
+    for (; ii > 0; ii--)
+    {
+        if (histogram[ii] > 0)
+        {
+            resPtr->nexthypscore = ii;
+            break;
+        }
+    }
+
+    /* Initialize minhypscore */
+    for (ii = 0; ii < resPtr->nexthypscore; ii++)
+    {
+        if (histogram[ii] > 0)
+        {
+            resPtr->minhypscore = ii;
+            break;
+        }
+    }
+
+    /* Set the minhypscore at kneepoint: ~ 70.7% */
+    UINT cumulative = 0;
+
+    for (ii = resPtr->minhypscore; ii < resPtr->nexthypscore; ii++)
+    {
+        cumulative += histogram[ii];
+
+        /* Mark the lower end of the tail */
+        if (cumulative >= kneePt)
+        {
+            if (ii > resPtr->minhypscore)
+            {
+                resPtr->minhypscore = ii;
+            }
+
+            break;
+        }
+    }
+
+    /* Set the nexthypscore at endPt: ~99.5% */
+    cumulative = N;
+
+    for (ii = resPtr->maxhypscore; ii >= resPtr->minhypscore; ii--)
+    {
+        cumulative -= histogram[ii];
+
+        /* Mark the upper end of tail */
+        if (cumulative <= endPt)
+        {
+            if (ii < resPtr->nexthypscore)
+            {
+                resPtr->nexthypscore = ii;
+            }
+
+            break;
+        }
+    }
+
+    /* If both ends at the same point,
+     * set the upper end to maxhypscore
+     */
+    if (resPtr->nexthypscore <= resPtr->minhypscore)
+    {
+        resPtr->nexthypscore = resPtr->maxhypscore;
+    }
+
+    /* Construct s(x) = 1 - CDF in [minhyp, nexthyp] */
+    UINT count = histogram[resPtr->nexthypscore];
+
+    for (ii = resPtr->nexthypscore - 1; ii >= resPtr->minhypscore; ii--)
+    {
+        UINT tmpcount = histogram[ii];
+
+        cumulative -= tmpcount;
+        histogram[ii] = (count + histogram[ii + 1]);
+        count = tmpcount;
+    }
+
+    /* Construct log_10(s(x)) */
+    for (ii = resPtr->minhypscore; ii <= resPtr->nexthypscore; ii++)
+    {
+        histogram[ii] = log10(histogram[ii] / N);
+    }
+
+    /* Set the tailPtr, scoreaxis and tailsize */
+    tail = histogram + resPtr->minhypscore;
+    axis = resPtr->xaxis + resPtr->minhypscore;
+    tailsize = resPtr->nexthypscore - resPtr->minhypscore + 1;
+
+    /* Perform linear regression (least sq. error) on
+     * tail curve and find slope (m) and bias (b)
+     */
+    (VOID) UTILS_LinearRegression(tailsize, axis, tail, slope, bias);
+
+    /* Assign back from local variables */
+    resPtr->weight = slope;
+    resPtr->bias = bias;
+
+
+    /* Return the status */
+    return status;
 
 }

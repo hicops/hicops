@@ -132,7 +132,11 @@ STATUS LBE_Initialize(Index *index)
     UINT iCount = 1;
     STRING seq;
     STRING modconditions = params.modconditions;
-	
+
+#ifdef _OPENMP
+    UINT threads = params.threads;
+#endif /* _OPENMP */
+
     /* Check if ">" entries are > 0 */
     if (index->lclpepCnt > 0)
     {
@@ -164,7 +168,7 @@ STATUS LBE_Initialize(Index *index)
 #endif /* DEBUG */
 
 #ifdef _OPENMP
-#pragma omp parallel for num_threads(params.threads) schedule (static) reduction(+: iCount)
+#pragma omp parallel for num_threads(threads) schedule (static) reduction(+: iCount)
 #endif
         for (UINT i = 0; i < Seqs.size(); i++)
         {
@@ -247,7 +251,11 @@ STATUS LBE_GeneratePeps(Index *index)
     UINT seqlen = Seqs.at(0).length();
 
 #ifdef _OPENMP
-#pragma omp parallel for num_threads(params.threads) schedule(static)
+    UINT threads = params.threads;
+#endif /* _OPENMP */
+
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(threads) schedule(static)
 #endif /* _OPENMP */
     for (UINT fill = 0; fill < interval; fill++)
     {
@@ -532,11 +540,11 @@ STATUS LBE_CountPeps(CHAR *filename, Index *index)
 VOID LBE_PrintHeader()
 {
     cout << "\n"
-            "*********************************"
-            "\n          CFIR Search         \n"
-            "Florida International University\n"
-            "        Miami, FL, USA\n"
-            "*********************************"
+            "*********************************\n"
+            "  The HPC MS/MS Proteomics Pipe  \n"
+            "Florida International University \n"
+            "        Miami, FL, USA           \n"
+            "*********************************\n"
           << endl << endl;
 
     return;

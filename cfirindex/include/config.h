@@ -1,5 +1,5 @@
 /*
- *  This file is part of SLM-Transform
+ *  This file is part of PCDSFrame software
  *  Copyright (C) 2019  Muhammad Haseeb, Fahad Saeed
  *  Florida International University, Miami, FL
  *
@@ -23,11 +23,10 @@
 
 /************** Developer Mode options: Danger Area *****************/
 
-
 /* Contains MACROS that configure SLM Index build */
 
 /* Manually switch _OPENMP */
-//#undef _OPENMP
+#undef _OPENMP
 
 /* Manually switch MPI */
 //#undef DISTMEM
@@ -43,8 +42,7 @@
 /* How many query spectra per chunk */
 #define QCHUNK                   50000
 
-/* How many top matches required at max */
-#define MAXMATCHES               99999
+#define MAX_HYPERSCORE           100
 
 /* Enable DSLIM Mods construction                 */
 #define VMODS
@@ -55,15 +53,7 @@
 /* Enable debug checkpoints                       */
 #undef DEBUG
 
-/* Recycle and reuse the already allocated memory
- * instead of new allocations when possible       */
-#undef RECYCLE
-
-/* Future: Define if the peak intensities
- * are required for the query spectra             */
-#undef REQUIRE_INTENSITY
-
-/* TODO:  Only b- and -y-ions used in current
+/* FUTURE:  Only b- and y-ions used in current
  *               implementation                   */
 
 /* Define the Ion Series and add it to iSERIES    */
@@ -76,7 +66,7 @@
 #define NLOSS                     0
 #define IMMONIUM                  0
 
-/* Number of ion series to generate per spectrum  */
+/* Number of ion series generated per spectrum  */
 #define iSERIES                   (aIONS + \
                                    bIONS + \
                                    cIONS + \

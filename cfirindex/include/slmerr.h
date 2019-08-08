@@ -41,5 +41,6 @@
 #define ERR_INVLD_SORT           (SLM_ERROR_BASE -  9)
 #define ERR_INVLD_MOD            (SLM_ERROR_BASE - 10)
 #define ERR_INVLD_NODE_RANK      (SLM_ERROR_BASE - 11)
+#define ERR_NOT_ENOUGH_DATA      (SLM_ERROR_BASE - 12)
 
 #endif /* INCLUDE_SLMERR_H_ */

@@ -522,12 +522,35 @@ STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs)
 
     if (Score != NULL)
     {
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static, 1) num_threads(params.threads)
+#endif /* _OPENMP */
         for (UINT thd = 0; thd < params.threads; thd++)
         {
             Score[thd].byc = new BYC[sAize];
             memset(Score[thd].byc, 0x0, 2 * sizeof(UCHAR) * sAize);
             Score[thd].ibyc = new iBYC[sAize];
             memset(Score[thd].ibyc, 0x0, 2 * sizeof(UINT) * sAize);
+
+            /* Initialize the histogram */
+            Score[thd].res.survival = new DOUBLE[1 + (MAX_HYPERSCORE * 10) + 1]; // +2 for accumulation
+
+            /* Evaluate to the nearest power of 2 */
+            UINT num = (params.topmatches == 0)? 1: params.topmatches;
+            num = (UINT)(floor(log2(num) + 0.999));
+
+            std::memset(Score[thd].res.survival, 0x0, sizeof (DOUBLE) * (2 + MAX_HYPERSCORE * 10));
+
+            /* Initialize the log(score) axis */
+            Score[thd].res.xaxis = new DOUBLE[1 + (MAX_HYPERSCORE * 10) + 1];
+
+            for (UINT k = 0; k < 1 + (MAX_HYPERSCORE * 10) + 1; k++)
+            {
+                Score[thd].res.xaxis[k] = k;
+            }
+
+            /* Initialize the heap */
+            Score[thd].res.topK.heap_init(1 << num);
         }
     }
     else
@@ -563,7 +586,12 @@ STATUS DSLIM_Optimize(Index *index, UINT chunk_number)
     UINT *bAPtr = index->ionIndex[chunk_number].bA;
 
 #ifdef _OPENMP
-#pragma omp parallel for num_threads(params.threads) schedule(dynamic, (50 * params.scale))
+    UINT interval = 50 *params.scale;
+    UINT threads = params.threads;
+#endif /* _OPENMP */
+
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(threads) schedule(dynamic, interval)
 #endif /* _OPENMP */
     /* Stablize the entries in iAPtr */
     for (UINT kk = 0; kk < (params.max_mass * params.scale); kk++)

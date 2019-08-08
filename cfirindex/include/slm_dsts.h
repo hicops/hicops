@@ -22,6 +22,8 @@
 #define INCLUDE_SLM_DSTS_H_
 
 #include "common.h"
+#include "minheap.h"
+#include <cstring>
 
 /* Types of modifications allowed by SLM_Mods     */
 #define MAX_MOD_TYPES                        15
@@ -39,9 +41,9 @@ typedef enum _DistPolicy
 
 typedef struct _SLM_varAA
 {
-    AA     residues[4];    /* Modified AA residues in this modification - Upto 4 */
-    UINT  modMass;         /* Scaled mass of the modification                    */
-    USHORT aa_per_peptide; /* Allowed modified residues per peptide sequence     */
+    AA     residues[4]   = ""; /* Modified AA residues in this modification - Upto 4 */
+    UINT  modMass         = 0; /* Scaled mass of the modification                    */
+    USHORT aa_per_peptide = 0; /* Allowed modified residues per peptide sequence     */
 
     _SLM_varAA& operator=(const _SLM_varAA& rhs)
     {
@@ -64,8 +66,8 @@ typedef struct _SLM_varAA
 
 typedef struct _SLM_Mods
 {
-    USHORT       vmods_per_pep; /* Total allowed modified residues per sequence */
-    USHORT            num_vars; /* Number of types of modifications added to index - Max: 7 */
+    USHORT       vmods_per_pep = 0; /* Total allowed modified residues per sequence */
+    USHORT            num_vars = 0; /* Number of types of modifications added to index - Max: 7 */
     SLM_varAA vmods[MAX_MOD_TYPES]; /* Information for each modification added to index */
 
     /* Overload = operator */
@@ -90,15 +92,15 @@ typedef struct _SLM_Mods
 
 typedef struct _pepSeq
 {
-    AA        *seqs; /* Stores peptide sequence, could store as strings as well */
-    USHORT   peplen; /* Stores sequence length */
-    UINT        AAs; /* Total number of characters */
+    AA        *seqs = NULL; /* Stores peptide sequence, could store as strings as well */
+    USHORT   peplen    = 0; /* Stores sequence length */
+    UINT        AAs    = 0; /* Total number of characters */
 } PepSeqs;
 
 typedef struct _modAA
 {
-    ULONGLONG  sites; /* maxlen(pep) = 60AA + 2 bits (termini mods)      */
-    UINT  modNum; /* 4 bits per mods num, Max 8 mods allowed per pep */
+    ULONGLONG  sites = 0x0; /* maxlen(pep) = 60AA + 2 bits (termini mods)      */
+    UINT  modNum =     0x0; /* 4 bits per mods num, Max 8 mods allowed per pep */
 
     /* Overload = operator */
     _modAA& operator=(const _modAA& rhs)
@@ -261,47 +263,39 @@ typedef struct _pepEntry
  */
 typedef struct _BYC
 {
-    UCHAR   bc;        /* b ion count */
-    UCHAR   yc;        /* y ion count */
+    UCHAR   bc  = 0;        /* b ion count */
+    UCHAR   yc  = 0;        /* y ion count */
 } BYC;
 
 typedef struct _iBYC
 {
-    UINT ibc;
-    UINT iyc;
+    UINT ibc   = 0;
+    UINT iyc   = 0;
 } iBYC;
-
-typedef struct _BYICount
-{
-    BYC     *byc;       /* Both counts */
-    iBYC   *ibyc;       /* Sum of b/y ion intensities */
-} BYICount;
-
-#define BYISIZE                 (sizeof(UCHAR) * 2 + sizeof(UINT) * 2)
 
 typedef struct _SLMchunk
 {
-    UINT    *iA; /* Ions Array (iA)   */
-    UINT    *bA; /* Bucket Array (bA) */
+    UINT    *iA = NULL; /* Ions Array (iA)   */
+    UINT    *bA = NULL; /* Bucket Array (bA) */
 
 #ifdef FUTURE
-    UCHAR *bits; /* Scorecard bits    */
+    UCHAR *bits = NULL; /* Scorecard bits    */
 #endif /* FUTURE */
 } SLMchunk;
 
 /* Structure for each pep file */
 typedef struct _Index
 {
-    UINT pepCount;
-    UINT modCount;
-    UINT totalCount;
+    UINT pepCount         = 0;
+    UINT modCount         = 0;
+    UINT totalCount       = 0;
 
-    UINT lclpepCnt;
-    UINT lclmodCnt;
-    UINT lcltotCnt;
-    UINT nChunks;
-    UINT chunksize;
-    UINT lastchunksize;
+    UINT lclpepCnt        = 0;
+    UINT lclmodCnt        = 0;
+    UINT lcltotCnt        = 0;
+    UINT nChunks          = 0;
+    UINT chunksize        = 0;
+    UINT lastchunksize    = 0;
 
     PepSeqs          pepIndex;
     pepEntry      *pepEntries;
@@ -318,6 +312,7 @@ typedef struct _globalParams
     UINT topmatches;
     UINT scale;
     UINT min_shp;
+    UINT min_cpsm;
     UINT nodes;
     UINT myid;
     UINT spadmem;
@@ -325,6 +320,9 @@ typedef struct _globalParams
     UINT min_mass;
     UINT max_mass;
     UINT dF;
+
+    INT  base_int;
+    INT  min_int;
 
     DOUBLE dM;
     DOUBLE res;
@@ -340,39 +338,179 @@ typedef struct _globalParams
 
     SLM_vMods vModInfo;
 
-	_globalParams()
-	{
-		threads = 1;
-		min_len = 4;
-		max_len = 40;
-		maxz     = 3;
-		topmatches = 10;
-		scale      = 100;
-		min_shp    = 4;
-		nodes      = 1;
-		myid       = 0;
-		spadmem    = 2048;
-		min_mass = 500;
-		max_mass = 5000;
-		dF       = (UINT)(0.02 * scale);
-		dM       = 500.0;
-		res      = 0.01;
-		perf    = NULL;
+    _globalParams()
+    {
+        threads = 1;
+        min_len = 6;
+        max_len = 40;
+        maxz = 3;
+        topmatches = 10;
+        scale = 100;
+        min_shp = 4;
+        min_cpsm = 4;
+        base_int = 100000;
+        min_int = 0.01 * base_int;
+        nodes = 1;
+        myid = 0;
+        spadmem = 2048;
+        min_mass = 500;
+        max_mass = 5000;
+        dF = (UINT) (0.02 * scale);
+        dM = 500.0;
+        res = 0.01;
+        perf = NULL;
         policy = _cyclic;
 	}
 }gParams;
 
 
-/* Same as specSeqs below but has intensity values for experimental spectra */
-typedef struct _eSpecSeqs
+/* Experimental MS/MS spectra data */
+typedef struct _queries
 {
     UINT                *moz;       /* Stores the m/z values of the spectra */
     UINT                *intensity; /* Stores the intensity values of the experimental spectra */
-    //BOOL              *iType;     /* Stores the ion type of the coresponding peak in miz */
     UINT                *idx;       /* Row ptr. Starting index of each row */
     FLOAT               *precurse;  /* Stores the precursor mass of each spectrum. */
     UINT                 numPeaks;  /* Total length of moz array i.e. total number of peaks */
     UINT                 numSpecs;  /* Number of theoretical spectra */
-} ESpecSeqs;
+} Queries;
+
+/* Score entry that goes into the heap */
+typedef struct _heapEntry
+{
+    /* The index * + offset */
+    USHORT   idxoffset;
+
+    /* Number of shared ions in the spectra */
+    USHORT sharedions;
+
+    /* Total ions in spectrum */
+    USHORT totalions;
+
+    /* Parent spectrum ID in the respective chunk of index */
+    UINT  psid;
+
+    /* Computed hyperscore */
+    FLOAT hyperscore;
+
+    /* Constructor */
+    _heapEntry()
+    {
+        idxoffset = 0;
+        psid = 0;
+        hyperscore = 0;
+        sharedions = 0;
+        totalions = 0;
+    }
+
+    /* Overload = operator */
+    _heapEntry& operator=(const _heapEntry& rhs)
+    {
+        /* Check for self assignment */
+        if (this != &rhs)
+        {
+            this->idxoffset = rhs.idxoffset;
+            this->psid = rhs.psid;
+            this->hyperscore = rhs.hyperscore;
+            this->sharedions = rhs.sharedions;
+            this->totalions = rhs.totalions;
+        }
+
+        return *this;
+    }
+
+    BOOL operator <=(const _heapEntry& rhs)
+    {
+        return this->hyperscore <= rhs.hyperscore;
+    }
+
+    BOOL operator <(const _heapEntry& rhs)
+    {
+        return this->hyperscore < rhs.hyperscore;
+    }
+
+    BOOL operator >=(const _heapEntry& rhs)
+    {
+        return this->hyperscore >= rhs.hyperscore;
+    }
+
+    BOOL operator >(const _heapEntry& rhs)
+    {
+        return this->hyperscore > rhs.hyperscore;
+    }
+
+    BOOL operator ==(const _heapEntry& rhs)
+    {
+        return this->hyperscore == rhs.hyperscore;
+    }
+
+} hCell;
+
+/* This structure will be made per thread */
+typedef struct _Results
+{
+    /* Number of candidate PSMs (n) */
+    UINT cpsms;
+
+    /* Min heap to keep track of top
+     */
+    minHeap<hCell> topK;
+
+    /************************
+     * Required variables per
+     * query for expect score
+     ************************/
+
+    /* The y = mx + b form
+     * for linear regression
+     */
+    FLOAT weight;
+    FLOAT bias;
+
+    INT minhypscore;
+    INT maxhypscore;
+    INT nexthypscore;
+
+    /* Survival function s(x) vs log(score) */
+    DOUBLE *survival;
+    DOUBLE *xaxis;
+
+    /* Constructor */
+    _Results()
+    {
+        cpsms = 0;
+        weight = 0;
+        bias = 0;
+        minhypscore = 0;
+        maxhypscore = 0;
+        nexthypscore = 0;
+        survival = NULL;
+        xaxis = NULL;
+    }
+
+    void reset()
+    {
+        cpsms = 0;
+        weight = 0;
+        bias = 0;
+        minhypscore = 0;
+        maxhypscore = 0;
+        nexthypscore = 0;
+
+        std::memset(survival, 0x0, sizeof(UINT) * (2 + MAX_HYPERSCORE * 10));
+
+        topK.heap_reset();
+    }
+
+} Results;
+
+typedef struct _BYICount
+{
+    BYC     *byc = NULL;       /* Both counts */
+    iBYC   *ibyc = NULL;       /* Sum of b/y ion intensities */
+    Results        res;
+} BYICount;
+
+#define BYISIZE                 (sizeof(UCHAR) * 2 + sizeof(UINT) * 2)
 
 #endif /* INCLUDE_SLM_DSTS_H_ */

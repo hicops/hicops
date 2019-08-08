@@ -60,4 +60,3 @@ ULONGLONG  MODS_ModCounter(Index *index);
 STATUS MODS_GenerateMods(Index * index);
 
 STATUS MODS_Initialize();
-

@@ -491,13 +491,96 @@ FLOAT UTILS_GenerateModSpectrum(CHAR *seq, UINT len, UINT *Spectrum, modAA modIn
 
     return mass;
 }
+
 #endif /* VMODS */
+
+//****************************************************************************
+//
+//  Source: https://people.sc.fsu.edu/~jburkardt/cpp_src/llsq/llsq.html
+//
+//
+//  Purpose:
+//
+//    LLSQ solves a linear least squares problem matching a line to data.
+//
+//  Discussion:
+//
+//    A formula for a line of the form Y = A * X + B is sought, which
+//    will minimize the root-mean-square error to N data points ( X[I], Y[I] );
+//
+//  Licensing:
+//
+//    This code is distributed under the GNU LGPL license.
+//
+//  Modified:
+//
+//    17 July 2011
+//
+//  Author:
+//
+//    John Burkardt
+//
+//  Parameters:
+//
+//    Input, int N, the number of data values.
+//
+//    Input, double X[N], Y[N], the coordinates of the data points.
+//
+//    Output, double &A, &B, the slope and Y-intercept of the least-squares
+//    approximate to the data.
+//
+
+//****************************************************************************
+
+void UTILS_LinearRegression(INT n, DOUBLE x[], DOUBLE y[], DOUBLE &a, DOUBLE &b)
+{
+    DOUBLE bot;
+    INT i;
+    DOUBLE top;
+    DOUBLE xbar;
+    DOUBLE ybar;
+//
+//  Special case.
+//
+    if (n == 1)
+    {
+        a = 0.0;
+        b = y[0];
+        return;
+    }
+//
+//  Average X and Y.
+//
+    xbar = 0.0;
+    ybar = 0.0;
+    for (i = 0; i < n; i++)
+    {
+        xbar = xbar + x[i];
+        ybar = ybar + y[i];
+    }
+    xbar = xbar / (DOUBLE) n;
+    ybar = ybar / (DOUBLE) n;
+//
+//  Compute Beta.
+//
+    top = 0.0;
+    bot = 0.0;
+    for (i = 0; i < n; i++)
+    {
+        top = top + (x[i] - xbar) * (y[i] - ybar);
+        bot = bot + (x[i] - xbar) * (x[i] - xbar);
+    }
+    a = top / bot;
+
+    b = ybar - a * xbar;
+
+    return;
+}
 
 extern "C"
 {
 /* some systems do not have newest memcpy@@GLIBC_2.14 - stay with old good one */
 asm (".symver memcpy, memcpy@GLIBC_2.2.5");
-
 void *__wrap_memcpy(void *dest, const void *src, size_t n)
 {
     return memcpy(dest, src, n);
