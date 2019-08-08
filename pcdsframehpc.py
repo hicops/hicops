@@ -809,7 +809,7 @@ if __name__ == '__main__':
 
 			for cc in possible:
 
-				if (cc < min_threads or mpi_per_node > max_mpi_per_node):
+				if (indexsize/(mpi_per_node * nodes) <= 10E6 or cc < min_threads or mpi_per_node > max_mpi_per_node):
 					break
 				else:
 					threads = cc
