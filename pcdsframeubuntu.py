@@ -66,7 +66,7 @@ if __name__ == '__main__':
 		sample.write('# \n')
 		sample.write('# The MS/MS Proteomics Pipeline\n')
 		sample.write('# Copyrights(C) 2019 PCDS Laboratory\n')
-		sample.write('# Muhammad Haseeb, Muhammad Usman Tariq, and Fahad Saeed')
+		sample.write('# Muhammad Haseeb, and Fahad Saeed')
 		sample.write('# School of Computing and Information Sciences\n')
 		sample.write('# Florida International University (FIU), Miami, FL\n')
 		sample.write('# Email: {mhaseeb, mutariq, fsaeed}@fiu.edu\n')
@@ -144,6 +144,9 @@ if __name__ == '__main__':
 		sample.write('# Min shared peak\n')
 		sample.write('shp=4\n\n')
 
+		sample.write('# Required min PSM hits \n')
+		sample.write('min_hits=4\n\n')
+
 		sample.write('# Scratch pad memory for scorecard in MBs (min: 2048MB)\n')
 		sample.write('spadmem=2048\n\n')
 
@@ -197,6 +200,7 @@ if __name__ == '__main__':
 	max_prec_mass = 5000
 	top_matches = 10
 	shp_cnt = 4
+	min_hits = 4
 	workspace = './workspace'
 	policy = 'cyclic'
 	spadmem = 2048
@@ -407,6 +411,13 @@ if __name__ == '__main__':
 				if (shp_cnt > 20):
 					shp_cnt = 20
 				print ('Min Shared Peaks =', shp_cnt)
+				
+			# Minimum required PSM hits
+			elif (param == 'min_hits'):
+				min_hits = int(val)
+				if (min_hits < 4):
+					min_hits = 4
+				print ('Required min PSM hits =', min_hits)
 
 			# Scorecard memory
 			elif (param == 'spadmem'):
@@ -715,6 +726,7 @@ if __name__ == '__main__':
 	modfile.write(str(max_prec_mass) + '\n')
 	modfile.write(str(top_matches) + '\n')
 	modfile.write(str(shp_cnt) + '\n')
+	modfile.write(str(min_hits) + '\n')
 	modfile.write(str(spadmem) + '\n')
 	modfile.write(str(policy) + '\n')
 
@@ -747,6 +759,6 @@ if __name__ == '__main__':
 
 	print ('\nSUCCESS\n')
 	print ('Thank you for using PCDSFrame software\n')
-	print ('Please report bugs (if any) at {mhaseeb, mutariq, fsaeed}@fiu.edu\n')
+	print ('Please report bugs (if any) at {mhaseeb, fsaeed}@fiu.edu\n')
 
 	print ('########################################################\n')
