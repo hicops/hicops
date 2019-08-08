@@ -300,6 +300,23 @@ typedef struct _Index
     PepSeqs          pepIndex;
     pepEntry      *pepEntries;
     SLMchunk        *ionIndex;
+
+    _Index()
+    {
+        pepCount = 0;
+        modCount = 0;
+        totalCount = 0;
+
+        lclpepCnt = 0;
+        lclmodCnt = 0;
+        lcltotCnt = 0;
+        nChunks = 0;
+        chunksize = 0;
+        lastchunksize = 0;
+
+        pepEntries = NULL;
+        ionIndex = NULL;
+    }
 } Index;
 
 /* Structure for global Parameters */
