@@ -41,9 +41,16 @@ typedef enum _DistPolicy
 
 typedef struct _SLM_varAA
 {
-    AA     residues[4]; /* Modified AA residues in this modification - Upto 4 */
-    UINT  modMass; /* Scaled mass of the modification                    */
+    AA     residues[4]   ; /* Modified AA residues in this modification - Upto 4 */
+    UINT  modMass        ; /* Scaled mass of the modification                    */
     USHORT aa_per_peptide; /* Allowed modified residues per peptide sequence     */
+
+    _SLM_varAA()
+    {
+        residues[0]= '\0';
+        modMass = 0;
+        aa_per_peptide = 0;
+    }
 
     _SLM_varAA& operator=(const _SLM_varAA& rhs)
     {
@@ -66,9 +73,15 @@ typedef struct _SLM_varAA
 
 typedef struct _SLM_Mods
 {
-    USHORT       vmods_per_pep; /* Total allowed modified residues per sequence */
-    USHORT            num_vars; /* Number of types of modifications added to index - Max: 7 */
+    USHORT       vmods_per_pep    ; /* Total allowed modified residues per sequence */
+    USHORT            num_vars    ; /* Number of types of modifications added to index - Max: 7 */
     SLM_varAA vmods[MAX_MOD_TYPES]; /* Information for each modification added to index */
+
+    _SLM_Mods()
+    {
+        vmods_per_pep = 0;
+        num_vars = 0;
+    }
 
     /* Overload = operator */
     _SLM_Mods& operator=(const _SLM_Mods& rhs)
@@ -95,12 +108,26 @@ typedef struct _pepSeq
     AA        *seqs; /* Stores peptide sequence, could store as strings as well */
     USHORT   peplen; /* Stores sequence length */
     UINT        AAs; /* Total number of characters */
+
+    _pepSeq()
+    {
+        seqs = NULL;
+        peplen = 0;
+        AAs = 0;
+    }
+
 } PepSeqs;
 
 typedef struct _modAA
 {
     ULONGLONG  sites; /* maxlen(pep) = 60AA + 2 bits (termini mods)      */
-    UINT  modNum; /* 4 bits per mods num, Max 8 mods allowed per pep */
+    UINT  modNum    ; /* 4 bits per mods num, Max 8 mods allowed per pep */
+
+    _modAA()
+    {
+        modNum = 0x0;
+        sites = 0x0;
+    }
 
     /* Overload = operator */
     _modAA& operator=(const _modAA& rhs)
@@ -265,18 +292,37 @@ typedef struct _BYC
 {
     UCHAR   bc;        /* b ion count */
     UCHAR   yc;        /* y ion count */
+
+    _BYC()
+    {
+        bc = 0;
+        yc = 0;
+    }
+
 } BYC;
 
 typedef struct _iBYC
 {
     UINT ibc;
     UINT iyc;
+
+    _iBYC()
+    {
+        ibc = 0;
+        iyc = 0;
+    }
 } iBYC;
 
 typedef struct _SLMchunk
 {
-    UINT    *iA = NULL; /* Ions Array (iA)   */
-    UINT    *bA = NULL; /* Bucket Array (bA) */
+    UINT    *iA; /* Ions Array (iA)   */
+    UINT    *bA; /* Bucket Array (bA) */
+
+    _SLMchunk()
+    {
+        iA = NULL;
+        bA = NULL;
+    }
 
 #ifdef FUTURE
     UCHAR *bits = NULL; /* Scorecard bits    */
@@ -286,15 +332,15 @@ typedef struct _SLMchunk
 /* Structure for each pep file */
 typedef struct _Index
 {
-    UINT pepCount;
-    UINT modCount;
-    UINT totalCount;
+    UINT pepCount     ;
+    UINT modCount     ;
+    UINT totalCount   ;
 
-    UINT lclpepCnt;
-    UINT lclmodCnt;
-    UINT lcltotCnt;
-    UINT nChunks;
-    UINT chunksize;
+    UINT lclpepCnt    ;
+    UINT lclmodCnt    ;
+    UINT lcltotCnt    ;
+    UINT nChunks      ;
+    UINT chunksize    ;
     UINT lastchunksize;
 
     PepSeqs          pepIndex;
@@ -384,12 +430,22 @@ typedef struct _globalParams
 /* Experimental MS/MS spectra data */
 typedef struct _queries
 {
-    UINT                *moz;       /* Stores the m/z values of the spectra */
-    UINT                *intensity; /* Stores the intensity values of the experimental spectra */
-    UINT                *idx;       /* Row ptr. Starting index of each row */
-    FLOAT               *precurse;  /* Stores the precursor mass of each spectrum. */
-    UINT                 numPeaks;  /* Total length of moz array i.e. total number of peaks */
-    UINT                 numSpecs;  /* Number of theoretical spectra */
+    UINT        *moz; /* Stores the m/z values of the spectra */
+    UINT  *intensity; /* Stores the intensity values of the experimental spectra */
+    UINT        *idx; /* Row ptr. Starting index of each row */
+    FLOAT  *precurse; /* Stores the precursor mass of each spectrum. */
+    UINT    numPeaks;
+    UINT    numSpecs; /* Number of theoretical spectra */
+
+    _queries()
+    {
+        moz = NULL;
+        intensity = NULL;
+        idx = NULL;
+        precurse = NULL;
+        numPeaks = 0;
+        numSpecs = 0;
+    }
 } Queries;
 
 /* Score entry that goes into the heap */
@@ -523,9 +579,16 @@ typedef struct _Results
 
 typedef struct _BYICount
 {
-    BYC     *byc = NULL;       /* Both counts */
-    iBYC   *ibyc = NULL;       /* Sum of b/y ion intensities */
+    BYC     *byc;       /* Both counts */
+    iBYC   *ibyc;       /* Sum of b/y ion intensities */
     Results        res;
+
+    _BYICount()
+    {
+        byc = NULL;
+        ibyc = NULL;
+    }
+
 } BYICount;
 
 #define BYISIZE                 (sizeof(UCHAR) * 2 + sizeof(UINT) * 2)
