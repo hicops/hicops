@@ -441,11 +441,6 @@ ULONGLONG MODS_ModCounter(Index *index)
             cumulative += varCount[i];
        }
 
-       if (varCount[Seqs.size()]  != index->modCount)
-       {
-           cumulative = (UINT)(-1);
-       }
-
 #endif /* _OPENMP */
 
 #endif /* VMODS */
@@ -463,6 +458,11 @@ ULONGLONG MODS_ModCounter(Index *index)
         UINT tmpcount = varCount[ii];
         varCount[ii] = varCount[ii - 1] + count;
         count = tmpcount;
+    }
+
+    if (varCount[Seqs.size()]  != cumulative)
+    {
+        cumulative = (UINT)(-1);
     }
 
     return cumulative;

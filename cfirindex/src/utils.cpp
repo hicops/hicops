@@ -494,11 +494,7 @@ FLOAT UTILS_GenerateModSpectrum(CHAR *seq, UINT len, UINT *Spectrum, modAA modIn
 
 #endif /* VMODS */
 
-//****************************************************************************80
-
-void UTILS_LinearRegression(INT n, DOUBLE x[], DOUBLE y[], DOUBLE &a, DOUBLE &b)
-
-//****************************************************************************80
+//****************************************************************************
 //
 //  Source: https://people.sc.fsu.edu/~jburkardt/cpp_src/llsq/llsq.html
 //
@@ -533,6 +529,10 @@ void UTILS_LinearRegression(INT n, DOUBLE x[], DOUBLE y[], DOUBLE &a, DOUBLE &b)
 //    Output, double &A, &B, the slope and Y-intercept of the least-squares
 //    approximate to the data.
 //
+
+//****************************************************************************
+
+void UTILS_LinearRegression(INT n, DOUBLE x[], DOUBLE y[], DOUBLE &a, DOUBLE &b)
 {
     DOUBLE bot;
     INT i;

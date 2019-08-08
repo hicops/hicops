@@ -26,7 +26,7 @@
 /* Contains MACROS that configure SLM Index build */
 
 /* Manually switch _OPENMP */
-#undef _OPENMP
+//#undef _OPENMP
 
 /* Manually switch MPI */
 //#undef DISTMEM
