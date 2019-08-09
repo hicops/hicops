@@ -24,6 +24,8 @@
 /* Global parameters */
 extern gParams params;
 
+BOOL FilesInit = false;
+
 /* Data structures for the output file */
 std::ofstream *tsvs = NULL; /* The output files */
 
@@ -40,25 +42,32 @@ std::ofstream *tsvs = NULL; /* The output files */
  */
 STATUS DFile_InitFiles()
 {
-    STATUS status = ERR_BAD_MEM_ALLOC;
+    STATUS status = SLM_SUCCESS;
 
-    tsvs = new std::ofstream[params.threads];
-
-    STRING common = params.workspace + '/' + DFile_Datetime();
-
-    if (tsvs != NULL)
+    if (FilesInit == false)
     {
-        status = SLM_SUCCESS;
+        status = ERR_BAD_MEM_ALLOC;
 
-        for (UINT f = 0; f < params.threads; f++)
+        tsvs = new std::ofstream[params.threads];
+
+        STRING common = params.workspace + '/' + DFile_Datetime();
+
+        if (tsvs != NULL)
         {
-            STRING filename = common + "_" + std::to_string(f) + ".tsv";
-            tsvs[f].open(filename);
+            status = SLM_SUCCESS;
 
-            tsvs[f] << "scan_num\t" << "prec_mass\t" << "peptide\t"
-                    << "matched_ions\t" << "total_ions\t"
-                    << "calc_pep_mass\t" << "mass_diff\t" << "mod_info\t"
-                    << "hyperscore\t" << "expectscore\t" << "num_hits" << std::endl;
+            FilesInit = true;
+
+            for (UINT f = 0; f < params.threads; f++)
+            {
+                STRING filename = common + "_" + std::to_string(f) + ".tsv";
+                tsvs[f].open(filename);
+
+                tsvs[f] << "scan_num\t" << "prec_mass\t" << "peptide\t"
+                        << "matched_ions\t" << "total_ions\t"
+                        << "calc_pep_mass\t" << "mass_diff\t" << "mod_info\t"
+                        << "hyperscore\t" << "expectscore\t" << "num_hits" << std::endl;
+            }
         }
     }
 
@@ -76,6 +85,8 @@ STATUS DFile_DeinitFiles()
 
     tsvs = NULL;
 
+    FilesInit = false;
+
     return SLM_SUCCESS;
 }
 
@@ -91,7 +102,8 @@ STATUS DFile_PrintScore(Index *index, UINT specid, FLOAT pmass, hCell* psm, DOUB
     CHAR pepseq[peplen + 1];
 
     /* Adds the string followed by the \0 character into the buffer */
-    snprintf((CHAR *)&(pepseq[0]), peplen + 1, lclindex->pepIndex.seqs + (lclindex->pepEntries[psm->psid].seqID * peplen));
+    snprintf((CHAR *)&(pepseq[0]), peplen + 1, lclindex->pepIndex.seqs +
+             (lclindex->pepEntries[psm->psid].seqID * peplen));
 
     /* Make a string from the char [] */
     STRING pep = pepseq;

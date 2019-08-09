@@ -534,8 +534,8 @@ FLOAT UTILS_GenerateModSpectrum(CHAR *seq, UINT len, UINT *Spectrum, modAA modIn
 
 void UTILS_LinearRegression(INT n, DOUBLE x[], DOUBLE y[], DOUBLE &a, DOUBLE &b)
 {
-    DOUBLE bot;
     INT i;
+    DOUBLE bot;
     DOUBLE top;
     DOUBLE xbar;
     DOUBLE ybar;
@@ -553,6 +553,7 @@ void UTILS_LinearRegression(INT n, DOUBLE x[], DOUBLE y[], DOUBLE &a, DOUBLE &b)
 //
     xbar = 0.0;
     ybar = 0.0;
+
     for (i = 0; i < n; i++)
     {
         xbar = xbar + x[i];
@@ -576,4 +577,3 @@ void UTILS_LinearRegression(INT n, DOUBLE x[], DOUBLE y[], DOUBLE &a, DOUBLE &b)
 
     return;
 }
-

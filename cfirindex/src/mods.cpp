@@ -448,21 +448,22 @@ ULONGLONG MODS_ModCounter(Index *index)
 #ifndef VMODS
         LBE_UNUSED_PARAM(conditions);
 #endif /* VMODS */
-    }
 
-    UINT count = varCount[0];
-    varCount[0] = 0;
 
-    for (UINT ii = 1; ii <= Seqs.size(); ii++)
-    {
-        UINT tmpcount = varCount[ii];
-        varCount[ii] = varCount[ii - 1] + count;
-        count = tmpcount;
-    }
+        UINT count = varCount[0];
+        varCount[0] = 0;
 
-    if (varCount[Seqs.size()]  != cumulative)
-    {
-        cumulative = (UINT)(-1);
+        for (UINT ii = 1; ii <= Seqs.size(); ii++)
+        {
+            UINT tmpcount = varCount[ii];
+            varCount[ii] = varCount[ii - 1] + count;
+            count = tmpcount;
+        }
+
+        if (varCount[Seqs.size()] != cumulative)
+        {
+            cumulative = (UINT) (-1);
+        }
     }
 
     return cumulative;

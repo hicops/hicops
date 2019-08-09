@@ -331,7 +331,7 @@ STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, UINT *QAPtr)
 
 }
 
-/* Author: Haseeb
+/*
  * FUNCTION: MSQuery_ExtractQueryChunk
  *
  * DESCRIPTION: Extract a specific chunk of spectra from query file
@@ -410,12 +410,13 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, Queries &expSpecs)
             status = MSQUERY_ProcessQuerySpectrum((CHAR *) MS2file.c_str(), expSpecs, index);
         }
     }
+
     running_count += count;
 
     return status;
 }
 
-/* Author: Haseeb
+/*
  * FUNCTION: MSQUERY_ProcessQuerySpectrum
  *
  * DESCRIPTION: Process a Query Spectrum and extract peaks
@@ -487,14 +488,14 @@ STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, Queries &expSpecs, UINT wher
         if (speclen >= QALEN)
         {
             /* Copy the last QALEN elements to QAPtr */
-            std::memcpy(&expSpecs.moz[offset], (mzArray + speclen - QALEN), (QALEN * sizeof(UINT)));
-            std::memcpy(&expSpecs.intensity[offset], (dIntArr + speclen - QALEN), (QALEN * sizeof(UINT)));
+            std::memcpy(&expSpecs.moz[offset], (mzArray + SpectrumSize - QALEN), (QALEN * sizeof(UINT)));
+            std::memcpy(&expSpecs.intensity[offset], (dIntArr + SpectrumSize - QALEN), (QALEN * sizeof(UINT)));
         }
         else
         {
-            /* Fill in zeros which are not treated as trivial queries */
-            std::memcpy(&expSpecs.moz[offset], mzArray, (speclen * sizeof(UINT)));
-            std::memcpy(&expSpecs.intensity[offset], dIntArr, (speclen * sizeof(UINT)));
+            /* Fill in zeros which are treated as trivial queries */
+            std::memcpy(&expSpecs.moz[offset], (mzArray + SpectrumSize - speclen), (speclen * sizeof(UINT)));
+            std::memcpy(&expSpecs.intensity[offset], (dIntArr + SpectrumSize - speclen), (speclen * sizeof(UINT)));
         }
 
 #ifdef DEBUG
