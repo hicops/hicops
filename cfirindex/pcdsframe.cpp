@@ -71,7 +71,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     chrono::duration<double> elapsed_seconds = end - start;
     chrono::duration<double> qtime = end - start;
 
-    STRING patt[3] = {".ms2", ".mzML", "mzXML"};
+    STRING patt[3] = {".ms2", ".mzML", ".mzXML"};
     CHAR extension[] = ".peps";
 
     if (argc < 2)
