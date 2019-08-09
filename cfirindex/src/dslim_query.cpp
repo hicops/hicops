@@ -188,7 +188,7 @@ STATUS DSLIM_QuerySpectrum(Queries &ss, UINT len, Index *index, UINT idxchunk)
 
                     for (INT it = minlimit; it < maxlimit; it++)
                     {
-                        if (bycPtr[it].bc + bycPtr[it].yc > params.min_shp)
+                        if (bycPtr[it].bc + bycPtr[it].yc >= params.min_shp)
                         {
                             /* Create a heap cell */
                             hCell cell;
@@ -567,8 +567,8 @@ STATUS DSLIM_ModelSurvivalFunction(Results *resPtr)
     }
 
     /* Set the tailPtr, scoreaxis and tailsize */
-    tail = histogram + resPtr->minhypscore;
-    axis = resPtr->xaxis + resPtr->minhypscore;
+    tail     = histogram + resPtr->minhypscore;
+    axis     = resPtr->xaxis + resPtr->minhypscore;
     tailsize = resPtr->nexthypscore - resPtr->minhypscore + 1;
 
     /* Perform linear regression (least sq. error) on
@@ -578,7 +578,7 @@ STATUS DSLIM_ModelSurvivalFunction(Results *resPtr)
 
     /* Assign back from local variables */
     resPtr->weight = slope;
-    resPtr->bias = bias;
+    resPtr->bias   =  bias;
 
 
     /* Return the status */
