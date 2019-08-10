@@ -27,6 +27,7 @@
 
 /* Types of modifications allowed by SLM_Mods     */
 #define MAX_MOD_TYPES                        15
+#define MAX_SEQ_LEN                          60
 
 /************************* Common DSTs ************************/
 
@@ -389,6 +390,7 @@ typedef struct _globalParams
 
     DOUBLE dM;
     DOUBLE res;
+    DOUBLE expect_max;
 
     DOUBLE *perf;
 
@@ -409,6 +411,7 @@ typedef struct _globalParams
         maxz = 3;
         topmatches = 10;
         scale = 100;
+        expect_max = 20;
         min_shp = 4;
         min_cpsm = 4;
         base_int = 100000;
@@ -446,6 +449,7 @@ typedef struct _queries
         numPeaks = 0;
         numSpecs = 0;
     }
+
 } Queries;
 
 /* Score entry that goes into the heap */

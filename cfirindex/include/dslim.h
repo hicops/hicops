@@ -161,7 +161,7 @@ STATUS DSLIM_DeallocateSpecArr();
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_QuerySpectrum(Queries &ss, UINT len, Index *index, UINT indexchunks);
+STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT indexchunks);
 
 /* FUNCTION: DSLIM_WriteLIBSVM
  *

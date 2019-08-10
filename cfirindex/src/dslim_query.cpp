@@ -66,7 +66,7 @@ static INT DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_QuerySpectrum(Queries &ss, UINT len, Index *index, UINT idxchunk)
+STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
 {
     STATUS status = SLM_SUCCESS;
     UINT maxz = params.maxz;
@@ -104,16 +104,16 @@ STATUS DSLIM_QuerySpectrum(Queries &ss, UINT len, Index *index, UINT idxchunk)
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
 #endif /* _OPENMP */
-         for (UINT queries = 0; queries < len; queries++)
+         for (UINT queries = 0; queries < ss->numSpecs; queries++)
          {
 #ifdef BENCHMARK
             DOUBLE stime = omp_get_wtime();
 #endif
              /* Pointer to each query spectrum */
-             UINT *QAPtr = ss.moz + ss.idx[queries];
-             FLOAT pmass = ss.precurse[queries];
-             UINT *iPtr = ss.intensity + ss.idx[queries];
-             UINT qspeclen = ss.idx[queries + 1] - ss.idx[queries];
+             UINT *QAPtr = ss->moz + ss->idx[queries];
+             FLOAT pmass= ss->precurse[queries];
+             UINT *iPtr = ss->intensity + ss->idx[queries];
+             UINT qspeclen = ss->idx[queries + 1] - ss->idx[queries];
              UINT thno = omp_get_thread_num();
 
              BYC   *bycPtr = Score[thno].byc;
@@ -122,7 +122,7 @@ STATUS DSLIM_QuerySpectrum(Queries &ss, UINT len, Index *index, UINT idxchunk)
 
             if (thno == 0 && params.myid == 0)
             {
-                std::cout << "\rDONE: " << (queries * 100) /len << "%";
+                std::cout << "\rDONE: " << (queries * 100) /ss->numSpecs << "%";
             }
 
             for (UINT ixx = 0; ixx < idxchunk; ixx++)
@@ -138,7 +138,7 @@ STATUS DSLIM_QuerySpectrum(Queries &ss, UINT len, Index *index, UINT idxchunk)
                     INT minlimit = 0;
                     INT maxlimit = 0;
 
-                    DSLIM_BinarySearch(index + ixx, ss.precurse[queries], minlimit, maxlimit);
+                    DSLIM_BinarySearch(index + ixx, ss->precurse[queries], minlimit, maxlimit);
 
                     /* Spectrum violates limits */
                     if ((maxlimit - minlimit) < 1)
@@ -238,10 +238,13 @@ STATUS DSLIM_QuerySpectrum(Queries &ss, UINT len, Index *index, UINT idxchunk)
                 DOUBLE s_x = pow(10, lgs_x);
 
                 /* e(x) = n * s(x) */
-                DOUBLE e_x = std::min(100.0, resPtr->cpsms * s_x);
+                DOUBLE e_x = resPtr->cpsms * s_x;
 
-                /* Printing the scores in OpenMP mode */
-                status = DFile_PrintScore(index, queries, pmass, &psm, e_x, resPtr->cpsms);
+                if (e_x < params.expect_max)
+                {
+                    /* Printing the scores in OpenMP mode */
+                    status = DFile_PrintScore(index, queries, pmass, &psm, e_x, resPtr->cpsms);
+                }
             }
 
             /* Reset the results */

@@ -344,10 +344,9 @@ STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, UINT *QAPtr)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS MSQuery_ExtractQueryChunk(UINT count, Queries &expSpecs)
+STATUS MSQuery_ExtractQueryChunk(UINT count, Queries *expSpecs, INT &remaining)
 {
     STATUS status = SLM_SUCCESS;
-    //UINT *QAPtr = NULL;
 
     /* half open interval [startspec, endspec) */
     UINT startspec = running_count;
@@ -367,10 +366,10 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, Queries &expSpecs)
         }
     }
 
-    expSpecs.numSpecs = count;
-    expSpecs.idx = new UINT[expSpecs.numSpecs + 1];
-    expSpecs.precurse = new FLOAT[expSpecs.numSpecs];
-    expSpecs.idx[0] = 0; //Set starting point to zero.
+    expSpecs->numSpecs = count;
+    expSpecs->idx = new UINT[expSpecs->numSpecs + 1];
+    expSpecs->precurse = new FLOAT[expSpecs->numSpecs];
+    expSpecs->idx[0] = 0; //Set starting point to zero.
 
     MSReader tempReader;
     Spectrum spectrum;
@@ -387,7 +386,7 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, Queries &expSpecs)
 
         while (spectrum.getScanNumber() != 0 && l_count < count)
         {
-            expSpecs.precurse[l_count] = spectrum.atZ(0).mh;
+            expSpecs->precurse[l_count] = spectrum.atZ(0).mh;
 
             l_peaks += spectrum.size() < QALEN? spectrum.size() : QALEN;
             l_count++;
@@ -399,19 +398,23 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, Queries &expSpecs)
 
     if (status == SLM_SUCCESS)
     {
-        expSpecs.numPeaks = l_peaks;
-        expSpecs.moz = new UINT[expSpecs.numPeaks];
-        expSpecs.intensity = new UINT[expSpecs.numPeaks];
+        expSpecs->numPeaks = l_peaks;
+        expSpecs->moz = new UINT[expSpecs->numPeaks];
+        expSpecs->intensity = new UINT[expSpecs->numPeaks];
 
         for (UINT spec = startspec; spec < endspec; spec++)
         {
-            UINT index = spec - startspec; //0, 1, 2, ...., count
+            UINT index = spec - startspec;
 
             status = MSQUERY_ProcessQuerySpectrum((CHAR *) MS2file.c_str(), expSpecs, index);
         }
     }
 
+    /* Update the runnning count */
     running_count += count;
+
+    /* Set the number of remaining spectra count */
+    remaining = QAcount - running_count;
 
     return status;
 }
@@ -430,7 +433,7 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, Queries &expSpecs)
  * @status: Status of execution
  */
 
-STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, Queries &expSpecs, UINT where)
+STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, Queries *expSpecs, UINT where)
 {
     STATUS status = SLM_SUCCESS;
     Spectrum Spectrum;
@@ -481,21 +484,21 @@ STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, Queries &expSpecs, UINT wher
         }
 
         /* Update the indices */
-        UINT offset = expSpecs.idx[where];
-        expSpecs.idx[where + 1] = expSpecs.idx[where] + speclen;
+        UINT offset = expSpecs->idx[where];
+        expSpecs->idx[where + 1] = expSpecs->idx[where] + speclen;
 
         /* Check the size of spectrum */
         if (speclen >= QALEN)
         {
             /* Copy the last QALEN elements to QAPtr */
-            std::memcpy(&expSpecs.moz[offset], (mzArray + SpectrumSize - QALEN), (QALEN * sizeof(UINT)));
-            std::memcpy(&expSpecs.intensity[offset], (dIntArr + SpectrumSize - QALEN), (QALEN * sizeof(UINT)));
+            std::memcpy(&expSpecs->moz[offset], (mzArray + SpectrumSize - QALEN), (QALEN * sizeof(UINT)));
+            std::memcpy(&expSpecs->intensity[offset], (dIntArr + SpectrumSize - QALEN), (QALEN * sizeof(UINT)));
         }
         else
         {
             /* Fill in zeros which are treated as trivial queries */
-            std::memcpy(&expSpecs.moz[offset], (mzArray + SpectrumSize - speclen), (speclen * sizeof(UINT)));
-            std::memcpy(&expSpecs.intensity[offset], (dIntArr + SpectrumSize - speclen), (speclen * sizeof(UINT)));
+            std::memcpy(&expSpecs->moz[offset], (mzArray + SpectrumSize - speclen), (speclen * sizeof(UINT)));
+            std::memcpy(&expSpecs->intensity[offset], (dIntArr + SpectrumSize - speclen), (speclen * sizeof(UINT)));
         }
 
 #ifdef DEBUG

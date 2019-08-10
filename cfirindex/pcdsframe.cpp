@@ -283,13 +283,13 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
             start = chrono::system_clock::now();
 #ifdef BENCHMARK
             duration = omp_get_wtime();
-#endif
+#endif /* BENCHMARK */
             /* Initialize Query MS/MS file */
             status = MSQuery_InitializeQueryFile((CHAR *) queryfiles[qf].c_str());
 
 #ifdef BENCHMARK
             fileio += omp_get_wtime() - duration;
-#endif
+#endif /* BENCHMARK */
             end = chrono::system_clock::now();
 
             /* Compute Duration */
@@ -302,58 +302,52 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
             }
 
             Queries ss;
-
             UINT spectra = 0;
+            INT rem_spec = 1; // Init to 1 for first loop to run
 
             /* DSLIM Query Algorithm */
             if (status == SLM_SUCCESS)
             {
-                start = chrono::system_clock::now();
+                for (;rem_spec > 0;)
+                {
+                    start = chrono::system_clock::now();
 #ifdef BENCHMARK
-                duration = omp_get_wtime();
-#endif
-                /* Extract a chunk and return the chunksize */
-                status = MSQuery_ExtractQueryChunk(QCHUNK, ss);
+                    duration = omp_get_wtime();
+#endif /* BENCHMARK */
+                    /* Extract a chunk and return the chunksize */
+                    status = MSQuery_ExtractQueryChunk(QCHUNK, &ss, rem_spec);
+
+                    spectra += ss.numSpecs;
 
 #ifdef BENCHMARK
-                fileio += omp_get_wtime() - duration;
-#endif
-                end = chrono::system_clock::now();
+                    fileio += omp_get_wtime() - duration;
+#endif /* BENCHMARK */
+                    end = chrono::system_clock::now();
 
-                /* Compute Duration */
-                elapsed_seconds = end - start;
+                    /* Compute Duration */
+                    elapsed_seconds = end - start;
 
-                if (params.myid == 0)
-                {
-                    cout << "Extracted Spectra :\t\t" << ss.numSpecs << endl;
-                    cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                    if (params.myid == 0)
+                    {
+                        cout << "Extracted Spectra :\t\t" << ss.numSpecs << endl;
+                        cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                    }
+
+                    start = chrono::system_clock::now();
+
+                    if (params.myid == 0)
+                    {
+                        cout << "Querying: \n" << endl;
+                    }
+
+                    /* Query the chunk */
+                    status = DSLIM_QuerySpectrum(&ss, slm_index, (maxlen - minlen + 1));
+
+                    end = chrono::system_clock::now();
+
+                    /* Compute Duration */
+                    qtime += end - start;
                 }
-
-                UINT ms2specs = ss.numSpecs;
-
-                /* If the chunksize is zero, all done */
-                if (ms2specs <= 0)
-                {
-                    break;
-                }
-
-                spectra += ms2specs;
-
-                start = chrono::system_clock::now();
-
-                if (params.myid == 0)
-                {
-                    cout << "Querying: \n" << endl;
-                }
-
-                /* Query the chunk */
-                status = DSLIM_QuerySpectrum(ss, ms2specs, slm_index, (maxlen - minlen + 1));
-
-                end = chrono::system_clock::now();
-
-                /* Compute Duration */
-                qtime += end - start;
-
             }
 
             /* TODO: Uncomment this thing */
@@ -370,21 +364,25 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
             if (ss.moz != NULL)
             {
                 delete[] ss.moz;
+                ss.moz = NULL;
             }
 
             if (ss.intensity != NULL)
             {
                 delete[] ss.intensity;
+                ss.intensity = NULL;
             }
 
             if (ss.precurse != NULL)
             {
                 delete[] ss.precurse;
+                ss.precurse = NULL;
             }
 
             if (ss.idx != NULL)
             {
                 delete[] ss.idx;
+                ss.idx = NULL;
             }
         }
     }
@@ -531,6 +529,10 @@ static STATUS ParseParams(CHAR* paramfile)
         /* Get the top matches to report */
         getline(pfile, line);
         params.topmatches = std::atoi(line.c_str());
+
+        /* Get the max expect score to report */
+        getline(pfile, line);
+        params.expect_max = std::atof(line.c_str());
 
         /* Get the shp threshold */
         getline(pfile, line);

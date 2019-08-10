@@ -39,9 +39,10 @@
 /* Number of fragments (peaks) per query spectrum */
 #define QALEN                    100
 
-/* How many query spectra per chunk */
-#define QCHUNK                   50000
+/* How many query spectra per batch */
+#define QCHUNK                   10000
 
+/* Maximum hyperscore that is possible */
 #define MAX_HYPERSCORE           100
 
 /* Enable DSLIM Mods construction                 */

@@ -239,6 +239,9 @@ if __name__ == '__main__':
 		sample.write('# Top Matches to report\n')
 		sample.write('top_matches=10\n')
 
+		sample.write('# Max expect value to report\n')
+		sample.write('expect_max=20.0\n')
+
 
 		print('Generated: ./sampleparams.txt')
 		print ("\nSUCCESS")
@@ -252,6 +255,7 @@ if __name__ == '__main__':
 	sockets = 2
 	numa = 2
 	nodes = 2
+	expect_max = 20.0
 	numamem = math.inf
 	mpi_per_node = sockets
 	cores_per_socket = int(cores/sockets)
@@ -564,7 +568,17 @@ if __name__ == '__main__':
 			# Maximum precursor mass
 			elif (param == 'top_matches'):
 				top_matches = int(val)
+				if (top_matches < 1):
+					top_matches = 1
 				print ('Top matches =', top_matches)
+
+			elif (param == 'expect_max'):
+				expect_max = float(val)
+				if (expect_max < 0):
+					expect_max = 0
+				if (expect_max > 100):
+					expect_max = 100
+				print ('Max expect value to report =', expect_max)
 
 #	print ('Mods Added', mods)
 
@@ -854,6 +868,7 @@ if __name__ == '__main__':
 	modfile.write(str(min_prec_mass) + '\n')
 	modfile.write(str(max_prec_mass) + '\n')
 	modfile.write(str(top_matches) + '\n')
+	modfile.write(str(expect_max) + '\n')
 	modfile.write(str(shp_cnt) + '\n')
 	modfile.write(str(min_hits) + '\n')
 	modfile.write(str(base_int) + '\n')
