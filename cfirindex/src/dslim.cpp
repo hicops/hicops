@@ -549,8 +549,8 @@ STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs)
                 Score[thd].res.xaxis[k] = k;
             }
 
-            /* Initialize the heap */
-            Score[thd].res.topK.heap_init(1 << num);
+            /* Initialize the heap with size = pow(2, num) - 1 */
+            Score[thd].res.topK.heap_init((1 << num) - 1);
         }
     }
     else
