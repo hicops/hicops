@@ -173,13 +173,12 @@ int minHeap<T>::heapify(int element_position)
      */
     int smallest_element_position = element_position;
 
-    if (array[left_child_position] < array[smallest_element_position] && left_child_position < size)
+    if (left_child_position < size && array[left_child_position] < array[smallest_element_position])
     {
         smallest_element_position = left_child_position;
     }
 
-    if (array[right_child_position] < array[smallest_element_position]
-            && right_child_position < size)
+    if (right_child_position < size && array[right_child_position] < array[smallest_element_position])
     {
         smallest_element_position = right_child_position;
     }
@@ -189,6 +188,7 @@ int minHeap<T>::heapify(int element_position)
         swap(array[smallest_element_position], array[element_position]);
         heapify(smallest_element_position);
     }
+
     return 0;
 }
 

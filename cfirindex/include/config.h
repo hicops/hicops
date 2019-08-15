@@ -40,7 +40,7 @@
 #define QALEN                    100
 
 /* How many query spectra per batch */
-#define QCHUNK                   10000
+#define QCHUNK                   50000
 
 /* Maximum hyperscore that is possible */
 #define MAX_HYPERSCORE           100
