@@ -473,11 +473,21 @@ typedef struct _heapEntry
     /* Constructor */
     _heapEntry()
     {
-        idxoffset = 0;
-        psid = 0;
+        idxoffset  = 0;
+        psid       = 0;
         hyperscore = 0;
         sharedions = 0;
-        totalions = 0;
+        totalions  = 0;
+    }
+
+    /* Copy constructor */
+    _heapEntry(const _heapEntry &obj)
+    {
+        idxoffset  = obj.idxoffset;
+        psid       = obj.psid;
+        hyperscore = obj.hyperscore;
+        sharedions = obj.sharedions;
+        totalions  = obj.totalions;
     }
 
     /* Overload = operator */
@@ -486,11 +496,11 @@ typedef struct _heapEntry
         /* Check for self assignment */
         if (this != &rhs)
         {
-            this->idxoffset = rhs.idxoffset;
-            this->psid = rhs.psid;
+            this->idxoffset  = rhs.idxoffset;
+            this->psid       = rhs.psid;
             this->hyperscore = rhs.hyperscore;
             this->sharedions = rhs.sharedions;
-            this->totalions = rhs.totalions;
+            this->totalions  = rhs.totalions;
         }
 
         return *this;
