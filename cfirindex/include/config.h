@@ -54,6 +54,11 @@
 /* Enable debug checkpoints                       */
 #undef DEBUG
 
+/* Define to analyze the distributed partial results
+ * instead of dumping them into file
+ */
+#undef ANALYSIS
+
 /* FUTURE:  Only b- and y-ions used in current
  *               implementation                   */
 

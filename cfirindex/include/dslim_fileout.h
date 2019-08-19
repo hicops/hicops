@@ -27,6 +27,7 @@
 #include "slmerr.h"
 
 /* Function Definitions */
+STATUS  DFile_PrintPartials(UINT specid, Results *resPtr);
 STATUS    DFile_PrintScore(Index *index, UINT specid, FLOAT pmass,
                            hCell* psm, DOUBLE e_x, UINT npsms);
 STATUS    DFile_InitFiles();

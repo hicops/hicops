@@ -242,8 +242,12 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
 
                 if (e_x < params.expect_max)
                 {
+#ifndef ANALYSIS
                     /* Printing the scores in OpenMP mode */
                     status = DFile_PrintScore(index, queries, pmass, &psm, e_x, resPtr->cpsms);
+#else
+                    status = DFile_PrintPartials(queries, resPtr);
+#endif /* ANALYSIS */
                 }
             }
 
@@ -454,7 +458,10 @@ STATUS DSLIM_ModelSurvivalFunction(Results *resPtr)
     /* Choosing the kneePt and endPt to be
      * at 70.7% and 99% respectively */
     UINT kneePt = N - (UINT)((float)N * 0.707);
+
+#ifndef ANALYSIS
     UINT endPt = (UINT)((float)N * 0.995);
+#endif /* ANALYSIS */
 
     /* Copy the slope and bias into local variables */
     DOUBLE slope = resPtr->weight;
@@ -524,6 +531,7 @@ STATUS DSLIM_ModelSurvivalFunction(Results *resPtr)
         }
     }
 
+#ifndef ANALYSIS
     /* Set the nexthypscore at endPt: ~99.5% */
     cumulative = N;
 
@@ -542,6 +550,7 @@ STATUS DSLIM_ModelSurvivalFunction(Results *resPtr)
             break;
         }
     }
+#endif /* ANALYSIS */
 
     /* If both ends at the same point,
      * set the upper end to maxhypscore

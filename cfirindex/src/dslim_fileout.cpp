@@ -63,10 +63,16 @@ STATUS DFile_InitFiles()
                 STRING filename = common + "_" + std::to_string(f) + ".tsv";
                 tsvs[f].open(filename);
 
+#ifndef ANALYSIS
                 tsvs[f] << "scan_num\t" << "prec_mass\t" << "peptide\t"
                         << "matched_ions\t" << "total_ions\t"
                         << "calc_pep_mass\t" << "mass_diff\t" << "mod_info\t"
                         << "hyperscore\t" << "expectscore\t" << "num_hits" << std::endl;
+#else
+                tsvs[f] << "scan_num\t" << "cpsm\t" << "weight\t"
+                        << "bias\t" << "min\t"
+                        << "max\t" << std::endl;
+#endif /* ANALYSIS */
             }
         }
     }
@@ -88,6 +94,22 @@ STATUS DFile_DeinitFiles()
     FilesInit = false;
 
     return SLM_SUCCESS;
+}
+
+STATUS  DFile_PrintPartials(UINT specid, Results *resPtr)
+{
+    STATUS status = SLM_SUCCESS;
+    UINT thno = omp_get_thread_num();
+
+    tsvs[thno]         << std::to_string(specid + 1);
+    tsvs[thno]         << std::to_string(resPtr->cpsms);
+    tsvs[thno]         << std::to_string(resPtr->weight);
+    tsvs[thno]         << std::to_string(resPtr->bias);
+    tsvs[thno]         << std::to_string(resPtr->minhypscore);
+    tsvs[thno]         << std::to_string(resPtr->nexthypscore);
+
+    return status;
+
 }
 
 STATUS DFile_PrintScore(Index *index, UINT specid, FLOAT pmass, hCell* psm, DOUBLE e_x, UINT npsms)
