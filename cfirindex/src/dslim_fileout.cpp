@@ -71,7 +71,7 @@ STATUS DFile_InitFiles()
 #else
                 tsvs[f] << "scan_num\t" << "cpsm\t" << "weight\t"
                         << "bias\t" << "min\t"
-                        << "max\t" << std::endl;
+                        << "max" << std::endl;
 #endif /* ANALYSIS */
             }
         }
@@ -102,11 +102,13 @@ STATUS  DFile_PrintPartials(UINT specid, Results *resPtr)
     UINT thno = omp_get_thread_num();
 
     tsvs[thno]         << std::to_string(specid + 1);
-    tsvs[thno]         << std::to_string(resPtr->cpsms);
-    tsvs[thno]         << std::to_string(resPtr->weight);
-    tsvs[thno]         << std::to_string(resPtr->bias);
-    tsvs[thno]         << std::to_string(resPtr->minhypscore);
-    tsvs[thno]         << std::to_string(resPtr->nexthypscore);
+    tsvs[thno] << '\t' << std::to_string(resPtr->cpsms);
+    tsvs[thno] << '\t' << std::to_string(resPtr->weight);
+    tsvs[thno] << '\t' << std::to_string(resPtr->bias);
+    tsvs[thno] << '\t' << std::to_string(resPtr->minhypscore);
+    tsvs[thno] << '\t' << std::to_string(resPtr->nexthypscore);
+
+    tsvs[thno] << std::endl;
 
     return status;
 
