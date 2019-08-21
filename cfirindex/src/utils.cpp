@@ -559,6 +559,7 @@ void UTILS_LinearRegression(INT n, DOUBLE x[], DOUBLE y[], DOUBLE &a, DOUBLE &b)
         xbar = xbar + x[i];
         ybar = ybar + y[i];
     }
+
     xbar = xbar / (DOUBLE) n;
     ybar = ybar / (DOUBLE) n;
 //
@@ -576,14 +577,4 @@ void UTILS_LinearRegression(INT n, DOUBLE x[], DOUBLE y[], DOUBLE &a, DOUBLE &b)
     b = ybar - a * xbar;
 
     return;
-}
-
-extern "C"
-{
-/* some systems do not have newest memcpy@@GLIBC_2.14 - stay with old good one */
-asm (".symver memcpy, memcpy@GLIBC_2.2.5");
-void *__wrap_memcpy(void *dest, const void *src, size_t n)
-{
-    return memcpy(dest, src, n);
-}
 }

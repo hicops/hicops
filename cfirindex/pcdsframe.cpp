@@ -129,7 +129,9 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
             }
         }
     }
-    else
+
+    /* No file to query - Abort */
+    if (queryfiles.size() < 1)
     {
         status = ERR_FILE_NOT_FOUND;
     }
@@ -138,8 +140,13 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     UINT minlen = params.min_len;
     UINT maxlen = params.max_len;
 
-    slm_index = new Index[maxlen - minlen + 1];
+    /* Create (max - min + 1) instances of SLM_Index */
+    if (status == SLM_SUCCESS)
+    {
+        slm_index = new Index[maxlen - minlen + 1];
+    }
 
+    /* Check if successful memory allocation */
     if (slm_index == NULL)
     {
         status = ERR_INVLD_MEMORY;
@@ -277,114 +284,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     /* Query the index */
     if (status == SLM_SUCCESS)
     {
-        /* Initialize and process Query Spectra */
-        for (UINT qf = 0; qf < queryfiles.size(); qf++)
-        {
-            start = chrono::system_clock::now();
-#ifdef BENCHMARK
-            duration = omp_get_wtime();
-#endif /* BENCHMARK */
-            /* Initialize Query MS/MS file */
-            status = MSQuery_InitializeQueryFile((CHAR *) queryfiles[qf].c_str());
-
-#ifdef BENCHMARK
-            fileio += omp_get_wtime() - duration;
-#endif /* BENCHMARK */
-            end = chrono::system_clock::now();
-
-            /* Compute Duration */
-            elapsed_seconds = end - start;
-
-            if (params.myid == 0)
-            {
-                cout << "Query File: " << queryfiles[qf] << endl;
-                cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
-            }
-
-            Queries ss;
-            UINT spectra = 0;
-            INT rem_spec = 1; // Init to 1 for first loop to run
-
-            /* DSLIM Query Algorithm */
-            if (status == SLM_SUCCESS)
-            {
-                for (;rem_spec > 0;)
-                {
-                    start = chrono::system_clock::now();
-#ifdef BENCHMARK
-                    duration = omp_get_wtime();
-#endif /* BENCHMARK */
-                    /* Extract a chunk and return the chunksize */
-                    status = MSQuery_ExtractQueryChunk(QCHUNK, &ss, rem_spec);
-
-                    spectra += ss.numSpecs;
-
-#ifdef BENCHMARK
-                    fileio += omp_get_wtime() - duration;
-#endif /* BENCHMARK */
-                    end = chrono::system_clock::now();
-
-                    /* Compute Duration */
-                    elapsed_seconds = end - start;
-
-                    if (params.myid == 0)
-                    {
-                        cout << "Extracted Spectra :\t\t" << ss.numSpecs << endl;
-                        cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
-                    }
-
-                    start = chrono::system_clock::now();
-
-                    if (params.myid == 0)
-                    {
-                        cout << "Querying: \n" << endl;
-                    }
-
-                    /* Query the chunk */
-                    status = DSLIM_QuerySpectrum(&ss, slm_index, (maxlen - minlen + 1));
-
-                    end = chrono::system_clock::now();
-
-                    /* Compute Duration */
-                    qtime += end - start;
-                }
-            }
-
-            /* TODO: Uncomment this thing */
-            //if (params.myid == 0)
-            {
-                /* Compute Duration */
-                cout << "Queried Spectra:\t\t" << spectra << endl;
-                cout << "Query Time: " << qtime.count() << "s" << endl;
-                cout << "Queried with status:\t\t" << status << endl << endl;
-            }
-
-            end = chrono::system_clock::now();
-
-            if (ss.moz != NULL)
-            {
-                delete[] ss.moz;
-                ss.moz = NULL;
-            }
-
-            if (ss.intensity != NULL)
-            {
-                delete[] ss.intensity;
-                ss.intensity = NULL;
-            }
-
-            if (ss.precurse != NULL)
-            {
-                delete[] ss.precurse;
-                ss.precurse = NULL;
-            }
-
-            if (ss.idx != NULL)
-            {
-                delete[] ss.idx;
-                ss.idx = NULL;
-            }
-        }
+        status = DSLIM_SearchManager(slm_index);
     }
 
     for (UINT peplen = minlen; peplen <= maxlen; peplen++)

@@ -19,10 +19,15 @@
  */
 
 #include "dslim_fileout.h"
+#include "msquery.h"
 #include "dslim.h"
+#include <queue>
+
+using namespace std;
 
 extern gParams   params;
 extern BYICount  *Score;
+extern vector<STRING> queryfiles;
 
 #ifdef BENCHMARK
 static DOUBLE duration = 0;
@@ -32,17 +37,8 @@ extern DOUBLE memory;
 #endif /* BENCHMARK */
 
 /* Global variables */
-INT qspecnum = -1;
-INT chnum    = -1;
-
-
-#ifdef FUTURE
-extern pepEntry    *pepEntries; /* SLM Peptide Index */
-extern PepSeqs          seqPep; /* Peptide sequences */
-#ifdef VMODS
-extern varEntry    *modEntries;
-#endif /* VMODS */
-#endif /* FUTURE */
+queue <partRes *> workQ;
+queue <partRes *> commQ;
 
 /* Global Variables */
 FLOAT *hyperscores = NULL;
@@ -51,6 +47,124 @@ UCHAR *sCArr = NULL;
 static VOID DSLIM_BinarySearch(Index *, FLOAT, INT&, INT&);
 static INT DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max);
 static INT DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max);
+
+/* FUNCTION: DSLIM_SearchManager
+ *
+ * DESCRIPTION: Manages and performs the Peptide Search
+ *
+ *
+ * INPUT:
+ * @slm_index : Pointer to the SLM_Index
+ *
+ * OUTPUT:
+ * @status: Status of execution
+ */
+STATUS DSLIM_SearchManager(Index *index)
+{
+    STATUS status = SLM_SUCCESS;
+
+    auto start = chrono::system_clock::now();
+    auto end   = chrono::system_clock::now();
+    chrono::duration<double> elapsed_seconds = end - start;
+    chrono::duration<double> qtime = end - start;
+
+    INT maxlen = params.max_len;
+    INT minlen = params.min_len;
+
+    /* The data structure to hold the experimental spectra data */
+    Queries expt_data;
+
+    /* Initialize and process Query Spectra */
+    for (UINT qf = 0; qf < queryfiles.size(); qf++)
+    {
+        start = chrono::system_clock::now();
+#ifdef BENCHMARK
+        duration = omp_get_wtime();
+#endif /* BENCHMARK */
+        /* Initialize Query MS/MS file */
+        status = MSQuery_InitializeQueryFile((CHAR *) queryfiles[qf].c_str());
+
+#ifdef BENCHMARK
+        fileio += omp_get_wtime() - duration;
+#endif /* BENCHMARK */
+        end = chrono::system_clock::now();
+
+        /* Compute Duration */
+        elapsed_seconds = end - start;
+
+        if (params.myid == 0)
+        {
+            cout << "Query File: " << queryfiles[qf] << endl;
+            cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+        }
+
+        UINT spectra = 0;
+        INT rem_spec = 1; // Init to 1 for first loop to run
+
+        /* DSLIM Query Algorithm */
+        if (status == SLM_SUCCESS)
+        {
+            for (;rem_spec > 0;)
+            {
+                start = chrono::system_clock::now();
+#ifdef BENCHMARK
+                duration = omp_get_wtime();
+#endif /* BENCHMARK */
+
+                /* Reset the expt_data structure */
+                expt_data.reset();
+
+                /* Extract a chunk and return the chunksize */
+                status = MSQuery_ExtractQueryChunk(QCHUNK, &expt_data, rem_spec);
+
+                spectra += expt_data.numSpecs;
+
+#ifdef BENCHMARK
+                fileio += omp_get_wtime() - duration;
+#endif /* BENCHMARK */
+                end = chrono::system_clock::now();
+
+                /* Compute Duration */
+                elapsed_seconds = end - start;
+
+                if (params.myid == 0)
+                {
+                    cout << "Extracted Spectra :\t\t" << expt_data.numSpecs << endl;
+                    cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                }
+
+                start = chrono::system_clock::now();
+
+                if (params.myid == 0)
+                {
+                    cout << "Querying: \n" << endl;
+                }
+
+                /* Query the chunk */
+                status = DSLIM_QuerySpectrum(&expt_data, index, (maxlen - minlen + 1));
+
+                end = chrono::system_clock::now();
+
+                /* Compute Duration */
+                qtime += end - start;
+            }
+        }
+
+        /* TODO: Uncomment this thing */
+        //if (params.myid == 0)
+        {
+            /* Compute Duration */
+            cout << "Queried Spectra:\t\t" << spectra << endl;
+            cout << "Query Time: " << qtime.count() << "s" << endl;
+            cout << "Queried with status:\t\t" << status << endl << endl;
+        }
+
+        end = chrono::system_clock::now();
+
+    }
+
+    return status;
+}
 
 /* FUNCTION: DSLIM_QuerySpectrum
  *

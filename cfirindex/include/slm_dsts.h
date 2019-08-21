@@ -440,14 +440,51 @@ typedef struct _queries
     UINT    numPeaks;
     UINT    numSpecs; /* Number of theoretical spectra */
 
-    _queries()
+    void reset()
     {
-        moz = NULL;
-        intensity = NULL;
-        idx = NULL;
-        precurse = NULL;
         numPeaks = 0;
         numSpecs = 0;
+    }
+
+    _queries()
+    {
+        this->idx = new UINT[QCHUNK + 1];
+        this->precurse = new FLOAT[QCHUNK];
+        this->moz = new UINT[QCHUNK * QALEN];
+        this->intensity = new UINT[QCHUNK * QALEN];
+        numPeaks = 0;
+        numSpecs = 0;
+    }
+
+    ~_queries()
+    {
+        numPeaks = 0;
+        numSpecs = 0;
+
+        /* Deallocate the memory */
+        if (this->moz != NULL)
+        {
+            delete[] this->moz;
+            this->moz = NULL;
+        }
+
+        if (this->intensity != NULL)
+        {
+            delete[] this->intensity;
+            this->intensity = NULL;
+        }
+
+        if (this->precurse != NULL)
+        {
+            delete[] this->precurse;
+            this->precurse = NULL;
+        }
+
+        if (this->idx != NULL)
+        {
+            delete[] this->idx;
+            this->idx = NULL;
+        }
     }
 
 } Queries;
@@ -590,6 +627,15 @@ typedef struct _Results
     }
 
 } Results;
+
+typedef struct _partResult
+{
+    INT min;
+    INT max;
+    FLOAT m;
+    FLOAT b;
+    FLOAT hyp[2];
+} partRes;
 
 typedef struct _BYICount
 {

@@ -147,6 +147,8 @@ STATUS DSLIM_DeallocateSC();
 
 STATUS DSLIM_DeallocateSpecArr();
 
+STATUS DSLIM_SearchManager(Index *index);
+
 /* FUNCTION: DSLIM_QuerySpectrum
  *
  * DESCRIPTION: Query the DSLIM for all query peaks

@@ -367,8 +367,7 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, Queries *expSpecs, INT &remaining)
     }
 
     expSpecs->numSpecs = count;
-    expSpecs->idx = new UINT[expSpecs->numSpecs + 1];
-    expSpecs->precurse = new FLOAT[expSpecs->numSpecs];
+
     expSpecs->idx[0] = 0; //Set starting point to zero.
 
     MSReader tempReader;
@@ -399,8 +398,6 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, Queries *expSpecs, INT &remaining)
     if (status == SLM_SUCCESS)
     {
         expSpecs->numPeaks = l_peaks;
-        expSpecs->moz = new UINT[expSpecs->numPeaks];
-        expSpecs->intensity = new UINT[expSpecs->numPeaks];
 
         for (UINT spec = startspec; spec < endspec; spec++)
         {
