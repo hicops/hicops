@@ -22,8 +22,14 @@
 #include "msquery.h"
 #include "dslim.h"
 #include <queue>
+#include <pthread.h>
+#include <semaphore.h>
 
 using namespace std;
+
+/* Typedef pthread and semaphore */
+typedef pthread_t THREAD;
+typedef sem_t     LOCK;
 
 extern gParams   params;
 extern BYICount  *Score;
@@ -40,6 +46,13 @@ extern DOUBLE memory;
 queue <partRes *> workQ;
 queue <partRes *> commQ;
 
+/* MPI Communication thread */
+THREAD commThd;
+
+/* Mutex locks for either queues */
+LOCK work_lock;
+LOCK comm_lock;
+
 /* Global Variables */
 FLOAT *hyperscores = NULL;
 UCHAR *sCArr = NULL;
@@ -47,6 +60,8 @@ UCHAR *sCArr = NULL;
 static VOID DSLIM_BinarySearch(Index *, FLOAT, INT&, INT&);
 static INT DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max);
 static INT DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max);
+
+VOID *Comm_Thread_Entry(VOID *argv);
 
 /* FUNCTION: DSLIM_SearchManager
  *
@@ -74,8 +89,26 @@ STATUS DSLIM_SearchManager(Index *index)
     /* The data structure to hold the experimental spectra data */
     Queries expt_data;
 
+    /* Initialize the computation queue lock */
+    if (status == SLM_SUCCESS)
+    {
+        status = sem_init(&work_lock, 0, 1);
+    }
+
+    /* Initialize the communication queue lock */
+    if (status == SLM_SUCCESS)
+    {
+        status = sem_init(&comm_lock, 0, 1);
+    }
+
+    /* Set up the communication thread here */
+    if (status == SLM_SUCCESS)
+    {
+        status = pthread_create(&commThd, NULL, &Comm_Thread_Entry, NULL);
+    }
+
     /* Initialize and process Query Spectra */
-    for (UINT qf = 0; qf < queryfiles.size(); qf++)
+    for (UINT qf = 0; qf < queryfiles.size() && status == SLM_SUCCESS; qf++)
     {
         start = chrono::system_clock::now();
 #ifdef BENCHMARK
@@ -101,7 +134,7 @@ STATUS DSLIM_SearchManager(Index *index)
         UINT spectra = 0;
         INT rem_spec = 1; // Init to 1 for first loop to run
 
-        /* DSLIM Query Algorithm */
+        /* All set - Run the DSLIM Query Algorithm */
         if (status == SLM_SUCCESS)
         {
             for (;rem_spec > 0;)
@@ -133,15 +166,18 @@ STATUS DSLIM_SearchManager(Index *index)
                     cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
                 }
 
-                start = chrono::system_clock::now();
-
                 if (params.myid == 0)
                 {
                     cout << "Querying: \n" << endl;
                 }
 
-                /* Query the chunk */
-                status = DSLIM_QuerySpectrum(&expt_data, index, (maxlen - minlen + 1));
+                start = chrono::system_clock::now();
+
+                if (status == SLM_SUCCESS)
+                {
+                    /* Query the chunk */
+                    status = DSLIM_QuerySpectrum(&expt_data, index, (maxlen - minlen + 1));
+                }
 
                 end = chrono::system_clock::now();
 
