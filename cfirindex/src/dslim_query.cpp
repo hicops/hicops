@@ -18,12 +18,15 @@
  *
  */
 
+#include <unistd.h>
+#include <queue>
+#include <pthread.h>
+#include <signal.h>
+#include <mutex>
+#include <semaphore.h>
 #include "dslim_fileout.h"
 #include "msquery.h"
 #include "dslim.h"
-#include <queue>
-#include <pthread.h>
-#include <semaphore.h>
 
 using namespace std;
 
@@ -46,9 +49,6 @@ extern DOUBLE memory;
 queue <partRes *> workQ;
 queue <partRes *> commQ;
 
-/* MPI Communication thread */
-THREAD commThd;
-
 /* Mutex locks for either queues */
 LOCK work_lock;
 LOCK comm_lock;
@@ -67,7 +67,6 @@ VOID *Comm_Thread_Entry(VOID *argv);
  *
  * DESCRIPTION: Manages and performs the Peptide Search
  *
- *
  * INPUT:
  * @slm_index : Pointer to the SLM_Index
  *
@@ -85,6 +84,9 @@ STATUS DSLIM_SearchManager(Index *index)
 
     INT maxlen = params.max_len;
     INT minlen = params.min_len;
+
+    /* MPI Communication thread */
+    THREAD commThd;
 
     /* The data structure to hold the experimental spectra data */
     Queries expt_data;
@@ -746,4 +748,87 @@ STATUS DSLIM_ModelSurvivalFunction(Results *resPtr)
     /* Return the status */
     return status;
 
+}
+
+/*
+ * FUNCTION: Comm_Thread_Entry
+ *
+ * DESCRIPTION: Entry function for the MPI
+ *              communication thread
+ *
+ * INPUT:
+ * @argv: Pointer to void arguments
+ *
+ * OUTPUT:
+ * @NULL: Nothing
+ */
+VOID *Comm_Thread_Entry(VOID *argv)
+{
+    STATUS status = SLM_SUCCESS;
+
+    partRes *tupPtr = NULL;
+
+    /* The forever loop */
+    for (;status == SLM_SUCCESS;)
+    {
+        /* Acquire the semaphore */
+        status = sem_wait(&comm_lock);
+
+        if (status == SLM_SUCCESS)
+        {
+            /* If there are any partial results to communicate */
+            if (commQ.size() > 0)
+            {
+                /* Get the pointer to result tuples */
+                tupPtr = commQ.front();
+
+                /* Pop out from the queue */
+                commQ.pop();
+
+                /* Release the semaphore */
+                status = sem_post(&comm_lock);
+
+                /* Transfer the resutls */
+                status = DSLIM_Gather_Results(tupPtr);
+            }
+            else
+            {
+                /* Release the semaphore */
+                status = sem_post(&comm_lock);
+
+                /* Sleep for 10 millisecond */
+                usleep(10 * 1000);
+
+            }
+        }
+    }
+
+    /* Should never reach here */
+    if (status != SLM_SUCCESS)
+    {
+        cout << "Status from Comm Thread: " << status << " on node: " << params.myid << endl;
+        cout << "Aborting..." << endl;
+    }
+
+    return NULL;
+}
+
+/*
+ * FUNCTION: DSLIM_Gather_Results
+ *
+ * DESCRIPTION: Transfer and Receive results
+ *
+ * INPUT:
+ * @tupPtr: Pointer to partial results
+ *
+ * OUTPUT:
+ * @status: Status of execution
+ */
+STATUS DSLIM_Gather_Results(partRes *tupPtr)
+{
+    STATUS status = SLM_SUCCESS;
+
+    /* TOD: Implement this */
+
+    return status;
 }

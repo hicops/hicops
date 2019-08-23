@@ -178,7 +178,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT indexchunks);
  */
 STATUS DSLIM_WriteLIBSVM(STRING path, UINT peplen, UINT chno);
 
-
+STATUS DSLIM_Gather_Results(partRes *tupPtr);
 
 STATUS DSLIM_WriteCSV(STRING path, UINT peplen, UINT chno);
 #endif /* DSLIM_H_ */
