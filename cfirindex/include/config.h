@@ -45,6 +45,12 @@
 /* Maximum hyperscore that is possible */
 #define MAX_HYPERSCORE           100
 
+/* Max partial results in RX buffer */
+#define RX_BUFFER_SIZE           4000000
+
+/* Max number of RX instances before buffer flush */
+#define MAX_RX_INST              500
+
 /* Enable DSLIM Mods construction                 */
 #define VMODS
 

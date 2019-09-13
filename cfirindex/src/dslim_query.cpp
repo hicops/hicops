@@ -1,6 +1,6 @@
 /*
  * This file is part of PCDSFrame software
- * Copyright (C) 2019  Muhammad Haseeb, Fahad Saeed
+ * Copyright (C) 2019  Muhammad Haseeb, and Fahad Saeed
  * Florida International University, Miami, FL
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,26 +17,52 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
-
-#include <unistd.h>
-#include <queue>
 #include <pthread.h>
-#include <signal.h>
-#include <mutex>
 #include <semaphore.h>
+#include <unistd.h>
 #include "dslim_fileout.h"
 #include "msquery.h"
 #include "dslim.h"
+#include "dslim_comm.h"
 
 using namespace std;
 
-/* Typedef pthread and semaphore */
 typedef pthread_t THREAD;
-typedef sem_t     LOCK;
 
 extern gParams   params;
 extern BYICount  *Score;
 extern vector<STRING> queryfiles;
+
+/* Global variables */
+FLOAT *hyperscores = NULL;
+UCHAR *sCArr = NULL;
+BOOL ExitSignal = false;
+
+DSLIM_Comm *CommHandle = NULL;
+
+LOCK io_rqst;
+LOCK io_done;
+
+UINT spectra = 0;
+
+/* The data structure instance to hold
+ * the experimental spectra data */
+Queries expt_data;
+Queries also_expt_data;
+
+Queries *qPtrs[2] = {&expt_data, &also_expt_data};
+Queries *ioPtr = qPtrs[1];
+Queries *workPtr = qPtrs[1];
+
+static Queries *UpdatePtr(Queries *currPtr)
+{
+    if (currPtr == qPtrs[0])
+        return qPtrs[1];
+    else if (currPtr == qPtrs[1] || currPtr == NULL)
+        return qPtrs[0];
+    else
+        return NULL;
+}
 
 #ifdef BENCHMARK
 static DOUBLE duration = 0;
@@ -45,23 +71,17 @@ extern DOUBLE fileio;
 extern DOUBLE memory;
 #endif /* BENCHMARK */
 
-/* Global variables */
-queue <partRes *> workQ;
-queue <partRes *> commQ;
-
-/* Mutex locks for either queues */
-LOCK work_lock;
-LOCK comm_lock;
-
-/* Global Variables */
-FLOAT *hyperscores = NULL;
-UCHAR *sCArr = NULL;
+#ifdef DISTMEM
+INT  batchnum;
+VOID *DSLIM_Comm_Thread_Entry(VOID *argv);
+VOID *DSLIM_IO_Thread_Entry(VOID *argv);
+#endif /* DISTMEM */
 
 static VOID DSLIM_BinarySearch(Index *, FLOAT, INT&, INT&);
-static INT DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max);
-static INT DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max);
-
-VOID *Comm_Thread_Entry(VOID *argv);
+static INT  DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max);
+static INT  DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max);
+static inline STATUS DSLIM_Request_IO();
+static inline STATUS DSLIM_WaitFor_IO();
 
 /* FUNCTION: DSLIM_SearchManager
  *
@@ -82,113 +102,144 @@ STATUS DSLIM_SearchManager(Index *index)
     chrono::duration<double> elapsed_seconds = end - start;
     chrono::duration<double> qtime = end - start;
 
+    /* I/O Thread */
+    THREAD ioThd;
+
     INT maxlen = params.max_len;
     INT minlen = params.min_len;
 
+    VOID *ptr = NULL;
+
+#ifdef DISTMEM
     /* MPI Communication thread */
     THREAD commThd;
 
-    /* The data structure to hold the experimental spectra data */
-    Queries expt_data;
-
-    /* Initialize the computation queue lock */
-    if (status == SLM_SUCCESS)
+    /* Only required if nodes > 1 */
+    if (params.nodes > 1)
     {
-        status = sem_init(&work_lock, 0, 1);
-    }
+        /* Initialize the batch number to -1 */
+        batchnum = 0;
 
-    /* Initialize the communication queue lock */
-    if (status == SLM_SUCCESS)
-    {
-        status = sem_init(&comm_lock, 0, 1);
-    }
-
-    /* Set up the communication thread here */
-    if (status == SLM_SUCCESS)
-    {
-        status = pthread_create(&commThd, NULL, &Comm_Thread_Entry, NULL);
-    }
-
-    /* Initialize and process Query Spectra */
-    for (UINT qf = 0; qf < queryfiles.size() && status == SLM_SUCCESS; qf++)
-    {
-        start = chrono::system_clock::now();
-#ifdef BENCHMARK
-        duration = omp_get_wtime();
-#endif /* BENCHMARK */
-        /* Initialize Query MS/MS file */
-        status = MSQuery_InitializeQueryFile((CHAR *) queryfiles[qf].c_str());
-
-#ifdef BENCHMARK
-        fileio += omp_get_wtime() - duration;
-#endif /* BENCHMARK */
-        end = chrono::system_clock::now();
-
-        /* Compute Duration */
-        elapsed_seconds = end - start;
-
-        if (params.myid == 0)
-        {
-            cout << "Query File: " << queryfiles[qf] << endl;
-            cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
-        }
-
-        UINT spectra = 0;
-        INT rem_spec = 1; // Init to 1 for first loop to run
-
-        /* All set - Run the DSLIM Query Algorithm */
+        /* Allocate a new DSLIM Comm handle */
         if (status == SLM_SUCCESS)
         {
-            for (;rem_spec > 0;)
+            CommHandle = new DSLIM_Comm;
+
+            if (CommHandle == NULL)
             {
-                start = chrono::system_clock::now();
-#ifdef BENCHMARK
-                duration = omp_get_wtime();
-#endif /* BENCHMARK */
-
-                /* Reset the expt_data structure */
-                expt_data.reset();
-
-                /* Extract a chunk and return the chunksize */
-                status = MSQuery_ExtractQueryChunk(QCHUNK, &expt_data, rem_spec);
-
-                spectra += expt_data.numSpecs;
-
-#ifdef BENCHMARK
-                fileio += omp_get_wtime() - duration;
-#endif /* BENCHMARK */
-                end = chrono::system_clock::now();
-
-                /* Compute Duration */
-                elapsed_seconds = end - start;
-
-                if (params.myid == 0)
-                {
-                    cout << "Extracted Spectra :\t\t" << expt_data.numSpecs << endl;
-                    cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
-                }
-
-                if (params.myid == 0)
-                {
-                    cout << "Querying: \n" << endl;
-                }
-
-                start = chrono::system_clock::now();
-
-                if (status == SLM_SUCCESS)
-                {
-                    /* Query the chunk */
-                    status = DSLIM_QuerySpectrum(&expt_data, index, (maxlen - minlen + 1));
-                }
-
-                end = chrono::system_clock::now();
-
-                /* Compute Duration */
-                qtime += end - start;
+                status = ERR_BAD_MEM_ALLOC;
             }
         }
 
-        /* TODO: Uncomment this thing */
+        /* Set up the communication thread here */
+        if (status == SLM_SUCCESS)
+        {
+            status = pthread_create(&commThd, NULL, &DSLIM_Comm_Thread_Entry, NULL);
+        }
+    }
+
+#endif /* DISTMEM */
+
+    if (status == SLM_SUCCESS)
+    {
+        status = pthread_create(&ioThd, NULL, &DSLIM_IO_Thread_Entry, NULL);
+    }
+
+    if (status == SLM_SUCCESS)
+    {
+        status = sem_init(&io_done, 0, 0);
+    }
+
+    if (status == SLM_SUCCESS)
+    {
+        status = sem_init(&io_rqst, 0, 0);
+    }
+
+    /* Initialize the data structure */
+    expt_data.init();
+    also_expt_data.init();
+
+    /* Request Twice for I/O */
+    status = DSLIM_Request_IO();
+    status = DSLIM_Request_IO();
+
+    if (status == SLM_SUCCESS)
+    {
+        status = DFile_InitFiles();
+    }
+
+    while (status == SLM_SUCCESS)
+    {
+        status = DSLIM_WaitFor_IO();
+
+        workPtr = UpdatePtr(workPtr);
+
+        if (workPtr->numSpecs < 0)
+        {
+            workPtr = UpdatePtr(workPtr);
+
+            workPtr->deinit();
+
+            break;
+        }
+
+#ifdef DISTMEM
+        if (params.nodes > 1)
+        {
+            /* Generate a new batch number for tag */
+            batchnum--;
+
+            /* Generate a new batch number for chunk and
+             * Set up the Rx buffers for expected incoming data */
+//FIXME            status = CommHandle->Rx(workPtr->numSpecs, batchnum);
+        }
+#endif /* DISTMEM */
+
+        if (params.myid == 0)
+        {
+            cout << "Querying: \n" << endl;
+        }
+
+        start = chrono::system_clock::now();
+
+        if (status == SLM_SUCCESS)
+        {
+            /* Query the chunk */
+            status = DSLIM_QuerySpectrum(workPtr, index, (maxlen - minlen + 1));
+        }
+
+#ifdef DISTMEM
+        if (status == SLM_SUCCESS)
+        {
+            /* Signal the thread about the Tx array */
+            status = CommHandle->SignalTx();
+        }
+#endif /* DISTMEM */
+
+        /* Request next I/O chunk */
+        status = DSLIM_Request_IO();
+
+        /* Transfer my partial results to others */
+#ifdef DISTMEM
+
+        if (status == SLM_SUCCESS)
+        {
+//FIXME            status = CommHandle->WaitFor_RxData();
+        }
+
+#endif /* DISTMEM */
+
+        if (status == SLM_SUCCESS)
+        {
+            status = DSLIM_Process_RxData();
+        }
+
+        end = chrono::system_clock::now();
+
+        /* Compute Duration */
+        qtime += end - start;
+
+        /* FIXME: Uncomment this thing */
         //if (params.myid == 0)
         {
             /* Compute Duration */
@@ -198,8 +249,25 @@ STATUS DSLIM_SearchManager(Index *index)
         }
 
         end = chrono::system_clock::now();
-
     }
+
+
+#ifdef DISTMEM
+    if (params.nodes > 1)
+    {
+        /* All done - Post the exit signal */
+        CommHandle->SignalExit(ExitSignal);
+
+        /* Delete the instance of CommHandle */
+        delete CommHandle;
+
+        /* Wait for communication thread to complete */
+        status = pthread_join(commThd, &ptr);
+    }
+#endif /* DISTMEM */
+
+    /* Wait for I/O thread to complete */
+    status = pthread_join(ioThd, &ptr);
 
     return status;
 }
@@ -227,14 +295,11 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
     UINT scale = params.scale;
     DOUBLE maxmass = params.max_mass;
 
+    //FIXME partRes *txArray = CommHandle->getCurr_WorkArr();
+
     if (Score == NULL)
     {
         status = ERR_INVLD_MEMORY;
-    }
-
-    if (status == SLM_SUCCESS)
-    {
-        status = DFile_InitFiles();
     }
 
 #ifdef BENCHMARK
@@ -256,7 +321,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
 #endif /* _OPENMP */
-         for (UINT queries = 0; queries < ss->numSpecs; queries++)
+         for (INT queries = 0; queries < ss->numSpecs; queries++)
          {
 #ifdef BENCHMARK
             DOUBLE stime = omp_get_wtime();
@@ -352,7 +417,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
                                                     ibycPtr[it].ibc *
                                                     ibycPtr[it].iyc);
 
-                            /* Hyperscore < 0 means either no b- or y- ions were matches */
+                            /* hyperscore < 0 means either b- or y- ions were not matched */
                             if (cell.hyperscore > 0)
                             {
                                 cell.idxoffset = ixx;
@@ -383,6 +448,12 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
 
                 hCell psm = resPtr->topK.getMax();
 
+                /* Fill in the Tx array cells */
+//                txArray[queries].b = resPtr->bias;
+//                txArray[queries].m = resPtr->weight;
+//                txArray[queries].min = resPtr->minhypscore;
+//                txArray[queries].max = resPtr->nexthypscore;
+
                 /* Estimate the log (s(x)); x = log(hyperscore) */
                 DOUBLE lgs_x = resPtr->weight * (psm.hyperscore * 10 + 0.5) + resPtr->bias;
 
@@ -395,12 +466,17 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
                 if (e_x < params.expect_max)
                 {
 #ifndef ANALYSIS
+
                     /* Printing the scores in OpenMP mode */
                     status = DFile_PrintScore(index, queries, pmass, &psm, e_x, resPtr->cpsms);
 #else
                     status = DFile_PrintPartials(queries, resPtr);
 #endif /* ANALYSIS */
                 }
+            }
+            else
+            {
+                /* Get the handle to the txArr - Fill it up and move on */
             }
 
             /* Reset the results */
@@ -427,7 +503,15 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
 }
 
 /*
- * DSLIM_DeallocateSC
+ * FUNCTION: DSLIM_DeallocateSC
+ *
+ * DESCRIPTION:
+ *
+ * INPUT:
+ * none
+ *
+ * OUTPUT:
+ * @status: status of execution
  */
 STATUS DSLIM_DeallocateSC()
 {
@@ -456,7 +540,14 @@ STATUS DSLIM_DeallocateSC()
 }
 
 /*
- * The Binary Search Algorithm
+ * FUNCTION: DSLIM_BinarySearch
+ *
+ * DESCRIPTION: The Binary Search Algorithm
+ *
+ * INPUT:
+ *
+ * OUTPUT
+ * none
  */
 static VOID DSLIM_BinarySearch(Index *index, FLOAT precmass, INT &minlimit, INT &maxlimit)
 {
@@ -516,6 +607,7 @@ static VOID DSLIM_BinarySearch(Index *index, FLOAT precmass, INT &minlimit, INT 
 
 }
 
+
 static INT DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max)
 {
     INT half = (min + max)/2;
@@ -556,6 +648,7 @@ static INT DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max)
     return half;
 
 }
+
 
 static INT DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max)
 {
@@ -709,7 +802,7 @@ STATUS DSLIM_ModelSurvivalFunction(Results *resPtr)
      */
     if (resPtr->nexthypscore <= resPtr->minhypscore)
     {
-        resPtr->nexthypscore = resPtr->maxhypscore;
+        resPtr->nexthypscore = resPtr->maxhypscore - 1;
     }
 
     /* Construct s(x) = 1 - CDF in [minhyp, nexthyp] */
@@ -730,13 +823,14 @@ STATUS DSLIM_ModelSurvivalFunction(Results *resPtr)
         histogram[ii] = log10(histogram[ii] / N);
     }
 
-    /* Set the tailPtr, scoreaxis and tailsize */
+    /* Set the tailPtr, score axis and tail size */
     tail     = histogram + resPtr->minhypscore;
     axis     = resPtr->xaxis + resPtr->minhypscore;
     tailsize = resPtr->nexthypscore - resPtr->minhypscore + 1;
 
-    /* Perform linear regression (least sq. error) on
-     * tail curve and find slope (m) and bias (b)
+    /*
+     * Perform linear regression (least sq. error)
+     * on tail curve and find slope (m) and bias (b)
      */
     (VOID) UTILS_LinearRegression(tailsize, axis, tail, slope, bias);
 
@@ -744,11 +838,11 @@ STATUS DSLIM_ModelSurvivalFunction(Results *resPtr)
     resPtr->weight = slope;
     resPtr->bias   =  bias;
 
-
     /* Return the status */
     return status;
-
 }
+
+#ifdef DISTMEM
 
 /*
  * FUNCTION: Comm_Thread_Entry
@@ -762,73 +856,165 @@ STATUS DSLIM_ModelSurvivalFunction(Results *resPtr)
  * OUTPUT:
  * @NULL: Nothing
  */
-VOID *Comm_Thread_Entry(VOID *argv)
+VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
 {
     STATUS status = SLM_SUCCESS;
-
-    partRes *tupPtr = NULL;
 
     /* The forever loop */
     for (;status == SLM_SUCCESS;)
     {
-        /* Acquire the semaphore */
-        status = sem_wait(&comm_lock);
+        /* Wait for an eligible Tx array */
+        status = CommHandle->Waitfor_TxData();
+
+        /* Check if the TxData has the exit signal */
+        if (ExitSignal == true)
+        {
+            break;
+        }
 
         if (status == SLM_SUCCESS)
         {
-            /* If there are any partial results to communicate */
-            if (commQ.size() > 0)
+            /* Transfer the results and replenish Tx array */
+            status = CommHandle->Tx(batchnum);
+
+            /* Check if everything Tx successful */
+            if (status != SLM_SUCCESS)
             {
-                /* Get the pointer to result tuples */
-                tupPtr = commQ.front();
+                /* Should never reach here */
+                cout << "Status from Comm. Thread: " << status << " on node: "
+                        << params.myid << endl;
+                cout << "Aborting..." << endl;
 
-                /* Pop out from the queue */
-                commQ.pop();
-
-                /* Release the semaphore */
-                status = sem_post(&comm_lock);
-
-                /* Transfer the resutls */
-                status = DSLIM_Gather_Results(tupPtr);
-            }
-            else
-            {
-                /* Release the semaphore */
-                status = sem_post(&comm_lock);
-
-                /* Sleep for 10 millisecond */
-                usleep(10 * 1000);
-
+                break;
             }
         }
     }
 
-    /* Should never reach here */
-    if (status != SLM_SUCCESS)
-    {
-        cout << "Status from Comm Thread: " << status << " on node: " << params.myid << endl;
-        cout << "Aborting..." << endl;
-    }
-
+    /* Return NULL */
     return NULL;
 }
 
-/*
- * FUNCTION: DSLIM_Gather_Results
- *
- * DESCRIPTION: Transfer and Receive results
- *
- * INPUT:
- * @tupPtr: Pointer to partial results
- *
- * OUTPUT:
- * @status: Status of execution
- */
-STATUS DSLIM_Gather_Results(partRes *tupPtr)
+VOID *DSLIM_IO_Thread_Entry(VOID *argv)
 {
     STATUS status = SLM_SUCCESS;
+    BOOL fileEnded = false;
+    auto start = chrono::system_clock::now();
+    auto end   = chrono::system_clock::now();
+    chrono::duration<double> elapsed_seconds = end - start;
+    chrono::duration<double> qtime = end - start;
 
-    /* TOD: Implement this */
+    /* Initialize and process Query Spectra */
+    for (UINT qf = 0; status == SLM_SUCCESS && qf < queryfiles.size(); qf++)
+    {
+        start = chrono::system_clock::now();
+#ifdef BENCHMARK
+        duration = omp_get_wtime();
+#endif /* BENCHMARK */
 
-    return status;
+        /* Initialize Query MS/MS file */
+        status = MSQuery_InitializeQueryFile((CHAR *) queryfiles[qf].c_str());
+
+#ifdef BENCHMARK
+        fileio += omp_get_wtime() - duration;
+#endif /* BENCHMARK */
+        end = chrono::system_clock::now();
+
+        /* Compute Duration */
+        elapsed_seconds = end - start;
+
+        if (params.myid == 0)
+        {
+            cout << "Query File: " << queryfiles[qf] << endl;
+            cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+        }
+
+        INT rem_spec = 1; // Init to 1 for first loop to run
+        spectra = 0;
+
+        /* All set - Run the DSLIM Query Algorithm */
+        if (status == SLM_SUCCESS)
+        {
+            for (;rem_spec > 0;)
+            {
+                start = chrono::system_clock::now();
+#ifdef BENCHMARK
+                duration = omp_get_wtime();
+#endif /* BENCHMARK */
+
+                if (fileEnded == false)
+                {
+                    /* Wait for a I/O request */
+                    status = sem_wait(&io_rqst);
+                    ioPtr = UpdatePtr(ioPtr);
+                }
+                else
+                {
+                    fileEnded = false;
+                }
+
+                /* Reset the expt_data structure */
+                ioPtr->reset();
+
+                /* Extract a chunk and return the chunksize */
+                status = MSQuery_ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
+
+                if (ioPtr->numSpecs > 0)
+                {
+                    /* Signal manager of available data */
+                    (VOID)sem_post(&io_done);
+
+                    spectra += ioPtr->numSpecs;
+
+#ifdef BENCHMARK
+                    fileio += omp_get_wtime() - duration;
+#endif /* BENCHMARK */
+                    end = chrono::system_clock::now();
+
+                    /* Compute Duration */
+                    elapsed_seconds = end - start;
+
+                    if (params.myid == 0)
+                    {
+                        cout << "Extracted Spectra :\t\t" << ioPtr->numSpecs << endl;
+                        cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                    }
+                }
+                else
+                {
+                    /* If incomplete request, release the lock for next iteration */
+                    fileEnded = true;
+                }
+            }
+        }
+    }
+
+    /* All files are done - Wait here */
+    status = sem_wait(&io_rqst);
+    ioPtr = UpdatePtr(ioPtr);
+
+    /* De-initialize the Queries structure */
+    ioPtr->deinit();
+
+    /* Signal the io_done */
+    status = sem_post(&io_done);
+
+    return NULL;
+}
+#endif /* DISTMEM */
+
+static inline STATUS DSLIM_WaitFor_IO()
+{
+    return sem_wait(&io_done);
+}
+
+static inline STATUS DSLIM_Request_IO()
+{
+    return sem_post(&io_rqst);
+}
+
+STATUS DSLIM_Process_RxData()
+{
+    //partRes *rxData = CommHandle->getCurr_CommArr();
+
+    return SLM_SUCCESS;
 }

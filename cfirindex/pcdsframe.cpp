@@ -384,6 +384,7 @@ static STATUS ParseParams(CHAR* paramfile)
 
         /* Get the max threads to use */
         getline(pfile, line);
+
 #ifdef _OPENMP
         params.threads = std::atoi(line.c_str());
 #else

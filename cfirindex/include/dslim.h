@@ -165,6 +165,8 @@ STATUS DSLIM_SearchManager(Index *index);
  */
 STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT indexchunks);
 
+STATUS DSLIM_Process_RxData();
+
 /* FUNCTION: DSLIM_WriteLIBSVM
  *
  * DESCRIPTION: Write the MS/MS spectra data in libsvm format
