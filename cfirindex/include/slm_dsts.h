@@ -437,8 +437,8 @@ typedef struct _queries
     UINT  *intensity; /* Stores the intensity values of the experimental spectra */
     UINT        *idx; /* Row ptr. Starting index of each row */
     FLOAT  *precurse; /* Stores the precursor mass of each spectrum. */
-    UINT    numPeaks;
-    UINT    numSpecs; /* Number of theoretical spectra */
+    INT    numPeaks;
+    INT    numSpecs; /* Number of theoretical spectra */
 
     void reset()
     {
@@ -448,12 +448,53 @@ typedef struct _queries
 
     _queries()
     {
-        this->idx = new UINT[QCHUNK + 1];
-        this->precurse = new FLOAT[QCHUNK];
-        this->moz = new UINT[QCHUNK * QALEN];
+        this->idx       = NULL;
+        this->precurse  = NULL;
+        this->moz       = NULL;
+        this->intensity = NULL;
+        numPeaks        = 0;
+        numSpecs        = 0;
+    }
+
+    VOID init()
+    {
+        this->idx       = new UINT[QCHUNK + 1];
+        this->precurse  = new FLOAT[QCHUNK];
+        this->moz       = new UINT[QCHUNK * QALEN];
         this->intensity = new UINT[QCHUNK * QALEN];
-        numPeaks = 0;
-        numSpecs = 0;
+        numPeaks        = 0;
+        numSpecs        = 0;
+    }
+
+    VOID deinit()
+    {
+        numPeaks = -1;
+        numSpecs = -1;
+
+        /* Deallocate the memory */
+        if (this->moz != NULL)
+        {
+            delete[] this->moz;
+            this->moz = NULL;
+        }
+
+        if (this->intensity != NULL)
+        {
+            delete[] this->intensity;
+            this->intensity = NULL;
+        }
+
+        if (this->precurse != NULL)
+        {
+            delete[] this->precurse;
+            this->precurse = NULL;
+        }
+
+        if (this->idx != NULL)
+        {
+            delete[] this->idx;
+            this->idx = NULL;
+        }
     }
 
     ~_queries()
@@ -628,13 +669,24 @@ typedef struct _Results
 
 } Results;
 
+/* Dat structure for partial result Tx/Rx */
 typedef struct _partResult
 {
-    INT min;
-    INT max;
+    FLOAT min;
+    FLOAT max;
     FLOAT m;
     FLOAT b;
-    FLOAT hyp[2];
+    FLOAT hyp;//[2];
+
+    _partResult()
+    {
+        min = 0;
+        max = 0;
+        m = 0;
+        b = 0;
+        hyp = 0;
+    }
+
 } partRes;
 
 typedef struct _BYICount
