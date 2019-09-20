@@ -18,6 +18,7 @@
  *
  */
 
+#include <unistd.h>
 #include "scheduler.h"
 
 extern VOID *DSLIM_IO_Thread_Entry(VOID *argv);
@@ -420,8 +421,30 @@ INT Scheduler::getNumActivThds()
 BOOL Scheduler::checkDecisions()
 {
     sem_wait(&manage);
+
     BOOL ret = stopXtra;
+
     sem_post(&manage);
 
     return ret;
+}
+
+VOID Scheduler::waitForCompletion()
+{
+    while (true)
+    {
+        sem_wait(&manage);
+
+        /* Number of extra threads running */
+        if (nxtra == 0)
+        {
+            sem_post(&manage);
+            break;
+        }
+
+        sem_post(&manage);
+
+        /* Sleep for 0.1s */
+        sleep(0.1);
+    }
 }

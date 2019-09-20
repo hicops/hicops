@@ -85,6 +85,7 @@ public:
     STATUS takeControl(VOID *argv);
     STATUS runManager(DOUBLE yt);
     STATUS runManager(DOUBLE yt, INT qchunk);
+    VOID   waitForCompletion();
 };
 
 #endif /* SCHEDULER_H_ */

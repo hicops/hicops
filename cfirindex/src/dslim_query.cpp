@@ -1085,6 +1085,10 @@ VOID *DSLIM_IO_Thread_Entry(VOID *argv)
     /* Deinit the ioPtr */
     ioPtr->deinit();
 
+    /* Wait for any running extra threads
+     * to complete gracefully */
+    SchedHandle->waitForCompletion();
+
     /* All files are done - Signal */
     qPtrs->lockr_();
 

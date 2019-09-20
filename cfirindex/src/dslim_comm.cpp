@@ -18,7 +18,6 @@
  */
 #include "dslim_comm.h"
 
-
 #ifdef DISTMEM
 
 /* We would need a custom MPI
