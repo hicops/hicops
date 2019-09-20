@@ -180,7 +180,9 @@ STATUS DSLIM_Process_RxData();
  */
 STATUS DSLIM_WriteLIBSVM(STRING path, UINT peplen, UINT chno);
 
+#ifdef DISTMEM
 STATUS DSLIM_Gather_Results(partRes *tupPtr);
+#endif /* DISTMEN */
 
 STATUS DSLIM_WriteCSV(STRING path, UINT peplen, UINT chno);
 #endif /* DSLIM_H_ */

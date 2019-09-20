@@ -27,7 +27,6 @@
 #include <mpi.h>
 #endif /* DISTMEM */
 
-#include <queue>
 #include <semaphore.h>
 #include <unistd.h>
 #include "common.h"
@@ -36,22 +35,25 @@
 #include "utils.h"
 #include "msquery.h"
 #include "config.h"
-
-/* Typedef pthread and semaphore */
-typedef sem_t     LOCK;
+#include "lwqueue.h"
 
 /* Class for DSLIM MPI Communication */
 class DSLIM_Comm
 {
 private:
 
+    /* MPI Communication thread */
+    THREAD commThd;
+
     partRes *rxArr;
 
+#ifdef DISTMEM
     /* Handle for Tx requests */
     MPI_Request *TxRqsts;
 
     /* Handle for Rx requests */
     MPI_Request *RxRqsts;
+#endif /* DISTMEM */
 
     /* Number of allocated work queues */
     UINT    nworkQ;
@@ -86,7 +88,7 @@ public:
     DSLIM_Comm();
 
     /* Destructor */
-    ~DSLIM_Comm();
+    virtual ~DSLIM_Comm();
 
     partRes *getCurr_WorkArr();
 

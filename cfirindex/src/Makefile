@@ -4,7 +4,7 @@ CXXFLAGS += -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DHAVE_EXPAT_CONFIG_H -DG
 
 INCPATHS = -I../include -I../mstoolkit/include
 
-OBJS = dslim_query.o dslim.o lbe_internal.o utils.o mods.o msquery.o dslim_fileout.o
+OBJS = dslim_query.o dslim.o lbe_internal.o utils.o mods.o msquery.o dslim_fileout.o scheduler.o
 LIB = libdslim.a
 OBJDIR = objs
 

@@ -24,14 +24,17 @@
 #include "msquery.h"
 #include "dslim.h"
 #include "dslim_comm.h"
+#include "lwqueue.h"
+#include "lwbuff.h"
+#include "scheduler.h"
 
 using namespace std;
-
-typedef pthread_t THREAD;
 
 extern gParams   params;
 extern BYICount  *Score;
 extern vector<STRING> queryfiles;
+
+UINT spectra = 0;
 
 /* Global variables */
 FLOAT *hyperscores = NULL;
@@ -39,30 +42,18 @@ UCHAR *sCArr = NULL;
 BOOL ExitSignal = false;
 
 DSLIM_Comm *CommHandle = NULL;
+Scheduler *SchedHandle = NULL;
 
-LOCK io_rqst;
-LOCK io_done;
+/* Lock for query file vector and thread manager */
+LOCK qfilelock;
 
-UINT spectra = 0;
+INT qfid = 0;
 
-/* The data structure instance to hold
- * the experimental spectra data */
-Queries expt_data;
-Queries also_expt_data;
+/****************************************************************/
 
-Queries *qPtrs[2] = {&expt_data, &also_expt_data};
-Queries *ioPtr = qPtrs[1];
-Queries *workPtr = qPtrs[1];
-
-static Queries *UpdatePtr(Queries *currPtr)
-{
-    if (currPtr == qPtrs[0])
-        return qPtrs[1];
-    else if (currPtr == qPtrs[1] || currPtr == NULL)
-        return qPtrs[0];
-    else
-        return NULL;
-}
+/* Expt spectra data buffer */
+lwbuff<Queries> *qPtrs = NULL;
+Queries *workPtr = NULL;
 
 #ifdef BENCHMARK
 static DOUBLE duration = 0;
@@ -75,13 +66,54 @@ extern DOUBLE memory;
 INT  batchnum;
 VOID *DSLIM_Comm_Thread_Entry(VOID *argv);
 VOID *DSLIM_IO_Thread_Entry(VOID *argv);
+VOID *DSLIM_ExtraIO_Thread_Entry(VOID *argv);
 #endif /* DISTMEM */
 
 static VOID DSLIM_BinarySearch(Index *, FLOAT, INT&, INT&);
 static INT  DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max);
 static INT  DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max);
-static inline STATUS DSLIM_Request_IO();
 static inline STATUS DSLIM_WaitFor_IO();
+static inline STATUS DSLIM_Deinit_IO();
+
+/* FUNCTION: DSLIM_WaitFor_IO
+ *
+ * DESCRIPTION:
+ *
+ * INPUT:
+ * @none
+ *
+ * OUTPUT:
+ * @status: status of execution
+ *
+ */
+static inline STATUS DSLIM_WaitFor_IO()
+{
+    STATUS status;
+
+    /* Wait for a I/O request */
+    status = qPtrs->lockr_();
+
+    while (qPtrs->isEmptyReadyQ())
+    {
+        status = qPtrs->unlockr_();
+        sleep(0.1);
+        status = qPtrs->lockr_();
+    }
+
+    /* Get the I/O ptr from the wait queue */
+    workPtr = qPtrs->getWorkPtr();
+
+    status = qPtrs->unlockr_();
+
+    return status;
+}
+
+STATUS DSLIM_Process_RxData()
+{
+    //partRes *rxData = CommHandle->getCurr_CommArr();
+
+    return SLM_SUCCESS;
+}
 
 /* FUNCTION: DSLIM_SearchManager
  *
@@ -101,19 +133,42 @@ STATUS DSLIM_SearchManager(Index *index)
     auto end   = chrono::system_clock::now();
     chrono::duration<double> elapsed_seconds = end - start;
     chrono::duration<double> qtime = end - start;
-
-    /* I/O Thread */
-    THREAD ioThd;
-
     INT maxlen = params.max_len;
     INT minlen = params.min_len;
 
-    VOID *ptr = NULL;
+    /* The mutex for queryfile vector */
+    if (status == SLM_SUCCESS)
+    {
+        status = sem_init(&qfilelock, 0, 1);
+    }
+
+    if (status == SLM_SUCCESS)
+    {
+        qPtrs = new lwbuff<Queries>(4);
+    }
+
+    if (status == SLM_SUCCESS)
+    {
+        /* Create new Queries */
+        for (INT wq = 0; wq < qPtrs->len(); wq++)
+        {
+            Queries *nPtr = new Queries;
+
+            /* Initialize the query buffer */
+            nPtr->init();
+
+            /* Add them to the buffer */
+            qPtrs->Add(nPtr);
+        }
+    }
+
+    /* Create a new handle of scheduler */
+    if (status == SLM_SUCCESS)
+    {
+        SchedHandle = new Scheduler;
+    }
 
 #ifdef DISTMEM
-    /* MPI Communication thread */
-    THREAD commThd;
-
     /* Only required if nodes > 1 */
     if (params.nodes > 1)
     {
@@ -130,38 +185,8 @@ STATUS DSLIM_SearchManager(Index *index)
                 status = ERR_BAD_MEM_ALLOC;
             }
         }
-
-        /* Set up the communication thread here */
-        if (status == SLM_SUCCESS)
-        {
-            status = pthread_create(&commThd, NULL, &DSLIM_Comm_Thread_Entry, NULL);
-        }
     }
-
 #endif /* DISTMEM */
-
-    if (status == SLM_SUCCESS)
-    {
-        status = pthread_create(&ioThd, NULL, &DSLIM_IO_Thread_Entry, NULL);
-    }
-
-    if (status == SLM_SUCCESS)
-    {
-        status = sem_init(&io_done, 0, 0);
-    }
-
-    if (status == SLM_SUCCESS)
-    {
-        status = sem_init(&io_rqst, 0, 0);
-    }
-
-    /* Initialize the data structure */
-    expt_data.init();
-    also_expt_data.init();
-
-    /* Request Twice for I/O */
-    status = DSLIM_Request_IO();
-    status = DSLIM_Request_IO();
 
     if (status == SLM_SUCCESS)
     {
@@ -170,16 +195,20 @@ STATUS DSLIM_SearchManager(Index *index)
 
     while (status == SLM_SUCCESS)
     {
+        /* Start computing penalty */
+        auto spen = chrono::system_clock::now();
+
         status = DSLIM_WaitFor_IO();
 
-        workPtr = UpdatePtr(workPtr);
+        /* Compute the penalty */
+        chrono::duration<double> penalty = chrono::system_clock::now() - spen;
+
+        /* Run the Scheduler to manage thread between compute and I/O */
+        SchedHandle->runManager(penalty.count());
 
         if (workPtr->numSpecs < 0)
         {
-            workPtr = UpdatePtr(workPtr);
-
-            workPtr->deinit();
-
+            status = DSLIM_Deinit_IO();
             break;
         }
 
@@ -209,6 +238,7 @@ STATUS DSLIM_SearchManager(Index *index)
         }
 
 #ifdef DISTMEM
+        /* Transfer my partial results to others */
         if (status == SLM_SUCCESS)
         {
             /* Signal the thread about the Tx array */
@@ -216,10 +246,13 @@ STATUS DSLIM_SearchManager(Index *index)
         }
 #endif /* DISTMEM */
 
-        /* Request next I/O chunk */
-        status = DSLIM_Request_IO();
+        status = qPtrs->lockr_();
 
-        /* Transfer my partial results to others */
+        /* Request next I/O chunk */
+        qPtrs->Replenish(workPtr);
+
+        status = qPtrs->unlockr_();
+
 #ifdef DISTMEM
 
         if (status == SLM_SUCCESS)
@@ -243,14 +276,12 @@ STATUS DSLIM_SearchManager(Index *index)
         //if (params.myid == 0)
         {
             /* Compute Duration */
-            cout << "Queried Spectra:\t\t" << spectra << endl;
             cout << "Query Time: " << qtime.count() << "s" << endl;
             cout << "Queried with status:\t\t" << status << endl << endl;
         }
 
         end = chrono::system_clock::now();
     }
-
 
 #ifdef DISTMEM
     if (params.nodes > 1)
@@ -261,13 +292,9 @@ STATUS DSLIM_SearchManager(Index *index)
         /* Delete the instance of CommHandle */
         delete CommHandle;
 
-        /* Wait for communication thread to complete */
-        status = pthread_join(commThd, &ptr);
+        CommHandle = NULL;
     }
 #endif /* DISTMEM */
-
-    /* Wait for I/O thread to complete */
-    status = pthread_join(ioThd, &ptr);
 
     return status;
 }
@@ -291,7 +318,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
     STATUS status = SLM_SUCCESS;
     UINT maxz = params.maxz;
     UINT dF = params.dF;
-    UINT threads = params.threads;
+    UINT threads = params.threads - SchedHandle->getNumActivThds();
     UINT scale = params.scale;
     DOUBLE maxmass = params.max_mass;
 
@@ -321,21 +348,21 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
 #endif /* _OPENMP */
-         for (INT queries = 0; queries < ss->numSpecs; queries++)
-         {
+        for (INT queries = 0; queries < ss->numSpecs; queries++)
+        {
 #ifdef BENCHMARK
             DOUBLE stime = omp_get_wtime();
 #endif
-             /* Pointer to each query spectrum */
-             UINT *QAPtr = ss->moz + ss->idx[queries];
-             FLOAT pmass= ss->precurse[queries];
-             UINT *iPtr = ss->intensity + ss->idx[queries];
-             UINT qspeclen = ss->idx[queries + 1] - ss->idx[queries];
-             UINT thno = omp_get_thread_num();
+            /* Pointer to each query spectrum */
+            UINT *QAPtr = ss->moz + ss->idx[queries];
+            FLOAT pmass = ss->precurse[queries];
+            UINT *iPtr = ss->intensity + ss->idx[queries];
+            UINT qspeclen = ss->idx[queries + 1] - ss->idx[queries];
+            UINT thno = omp_get_thread_num();
 
-             BYC   *bycPtr = Score[thno].byc;
-             iBYC *ibycPtr = Score[thno].ibyc;
-             Results *resPtr = &Score[thno].res;
+            BYC *bycPtr = Score[thno].byc;
+            iBYC *ibycPtr = Score[thno].ibyc;
+            Results *resPtr = &Score[thno].res;
 
             if (thno == 0 && params.myid == 0)
             {
@@ -498,6 +525,8 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
         std::cout << "Thread #: " << thd << "\t" << tcons[thd] << std::endl;
     }
 #endif
+
+    cout << "Queried Spectra:\t\t" << spectra << endl;
 
     return status;
 }
@@ -882,7 +911,8 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
             {
                 /* Should never reach here */
                 cout << "Status from Comm. Thread: " << status << " on node: "
-                        << params.myid << endl;
+                     << params.myid << endl;
+
                 cout << "Aborting..." << endl;
 
                 break;
@@ -893,8 +923,192 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
     /* Return NULL */
     return NULL;
 }
+#endif /* DISTMEM */
 
+/*
+ * FUNCTION: DSLIM_IO_Thread_Entry
+ *
+ * DESCRIPTION: Entry function for the
+ *              main I/O thread
+ *
+ * INPUT:
+ * @argv: Pointer to void arguments
+ *
+ * OUTPUT:
+ * @NULL: Nothing
+ */
 VOID *DSLIM_IO_Thread_Entry(VOID *argv)
+{
+    STATUS status = SLM_SUCCESS;
+    auto start = chrono::system_clock::now();
+    auto end   = chrono::system_clock::now();
+    chrono::duration<double> elapsed_seconds = end - start;
+    chrono::duration<double> qtime = end - start;
+
+    MSQuery Query;
+
+    Queries *ioPtr = NULL;
+
+    /* Initialize and process Query Spectra */
+    for (;;)
+    {
+        start = chrono::system_clock::now();
+#ifdef BENCHMARK
+        duration = omp_get_wtime();
+#endif /* BENCHMARK */
+
+        /* lock the query file */
+        sem_wait(&qfilelock);
+
+        UINT qfid_lcl = qfid;
+
+        /* Check if anymore queryfiles */
+        if (qfid_lcl < queryfiles.size())
+        {
+            qfid++;
+        }
+        else
+        {
+            /* unlock the query file */
+            sem_post(&qfilelock);
+            break;
+        }
+
+        /* unlock the query file */
+        sem_post(&qfilelock);
+
+        /* Initialize Query MS/MS file */
+        status = Query.MSQuery_InitializeQueryFile((CHAR *) queryfiles[qfid_lcl].c_str());
+
+        #ifdef BENCHMARK
+        fileio += omp_get_wtime() - duration;
+#endif /* BENCHMARK */
+
+        end = chrono::system_clock::now();
+
+        /* Compute Duration */
+        elapsed_seconds = end - start;
+
+        if (params.myid == 0)
+        {
+            cout << "Query File: " << queryfiles[qfid_lcl] << endl;
+            cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+        }
+
+        INT rem_spec = 1; // Init to 1 for first loop to run
+        spectra = 0;
+
+        /* All set - Run the DSLIM Query Algorithm */
+        if (status == SLM_SUCCESS)
+        {
+            for (;rem_spec > 0;)
+            {
+                start = chrono::system_clock::now();
+#ifdef BENCHMARK
+                duration = omp_get_wtime();
+#endif /* BENCHMARK */
+
+                /* Wait for a I/O request */
+                status = qPtrs->lockw_();
+
+                while (qPtrs->isEmptyWaitQ())
+                {
+                    status = qPtrs->unlockw_();
+                    sleep(0.1);
+                    status = qPtrs->lockw_();
+                }
+
+                /* Get the I/O ptr from the wait queue */
+                ioPtr = qPtrs->getIOPtr();
+
+                status = qPtrs->unlockw_();
+
+                /* Reset the ioPtr */
+                ioPtr->reset();
+
+                /* Extract a chunk and return the chunksize */
+                status = Query.MSQuery_ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
+
+                if (ioPtr->numSpecs > 0)
+                {
+                    qPtrs->lockr_();
+
+                    /* Add available data to ready queue */
+                    qPtrs->IODone(ioPtr);
+
+                    qPtrs->unlockr_();
+
+                    spectra += ioPtr->numSpecs;
+
+#ifdef BENCHMARK
+                    fileio += omp_get_wtime() - duration;
+#endif /* BENCHMARK */
+                    end = chrono::system_clock::now();
+
+                    /* Compute Duration */
+                    elapsed_seconds = end - start;
+
+                    if (params.myid == 0)
+                    {
+                        cout << "Extracted Spectra :\t\t" << ioPtr->numSpecs << endl;
+                        cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                    }
+                }
+                else
+                {
+                    /* If incomplete request, release the ioPtr
+                     * back to wait queue */
+                    qPtrs->lockw_();
+                    ioPtr = qPtrs->releaseIOPtr(ioPtr);
+                    qPtrs->unlockw_();
+                }
+            }
+        }
+    }
+
+
+    /* Get a new ioPtr */
+    status = qPtrs->lockw_();
+
+    while (qPtrs->isEmptyWaitQ())
+    {
+        status = qPtrs->unlockw_();
+        sleep(0.1);
+        status = qPtrs->lockw_();
+    }
+
+    /* Get the I/O ptr from the wait queue */
+    ioPtr = qPtrs->getIOPtr();
+
+    status = qPtrs->unlockw_();
+
+    /* Deinit the ioPtr */
+    ioPtr->deinit();
+
+    /* All files are done - Signal */
+    qPtrs->lockr_();
+
+    /* Push the deinited ioPtr to ready queue */
+    qPtrs->IODone(ioPtr);
+
+    qPtrs->unlockr_();
+
+    return NULL;
+}
+
+/*
+ * FUNCTION: DSLIM_ExtraIO_Thread_Entry
+ *
+ * DESCRIPTION: Entry function for the
+ *              extra I/O thread(s)
+ *
+ * INPUT:
+ * @argv: Pointer to void arguments
+ *
+ * OUTPUT:
+ * @NULL: Nothing
+ */
+VOID *DSLIM_ExtraIO_Thread_Entry(VOID *argv)
 {
     STATUS status = SLM_SUCCESS;
     BOOL fileEnded = false;
@@ -903,16 +1117,60 @@ VOID *DSLIM_IO_Thread_Entry(VOID *argv)
     chrono::duration<double> elapsed_seconds = end - start;
     chrono::duration<double> qtime = end - start;
 
+    MSQuery Query;
+
+    Queries *ioPtr = NULL;
+
     /* Initialize and process Query Spectra */
-    for (UINT qf = 0; status == SLM_SUCCESS && qf < queryfiles.size(); qf++)
+    for (;;)
     {
         start = chrono::system_clock::now();
 #ifdef BENCHMARK
         duration = omp_get_wtime();
 #endif /* BENCHMARK */
 
+        /* lock the query file */
+        sem_wait(&qfilelock);
+
+        UINT qfid_lcl = qfid;
+
+        if (SchedHandle->checkDecisions())
+        {
+            sem_post(&qfilelock);
+            break;
+        }
+
+        /* Check for break conditions for Extra IO threads */
+        if (qfid_lcl < queryfiles.size())
+        {
+            qPtrs->lockw_();
+
+            if (qPtrs->isEmptyWaitQ())
+            {
+                qPtrs->unlockw_();
+                sem_post(&qfilelock);
+                break;
+            }
+
+            ioPtr = qPtrs->getIOPtr();
+            qfid++;
+            fileEnded = true;
+
+            qPtrs->unlockw_();
+        }
+        else
+        {
+            /* unlock the query file */
+            sem_post(&qfilelock);
+            break;
+        }
+
+        /* unlock the query file */
+        sem_post(&qfilelock);
+
         /* Initialize Query MS/MS file */
-        status = MSQuery_InitializeQueryFile((CHAR *) queryfiles[qf].c_str());
+        status = Query.MSQuery_InitializeQueryFile((CHAR *) queryfiles[qfid_lcl].c_str());
+
 
 #ifdef BENCHMARK
         fileio += omp_get_wtime() - duration;
@@ -924,7 +1182,7 @@ VOID *DSLIM_IO_Thread_Entry(VOID *argv)
 
         if (params.myid == 0)
         {
-            cout << "Query File: " << queryfiles[qf] << endl;
+            cout << "Query File: " << queryfiles[qfid_lcl] << endl;
             cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
         }
 
@@ -944,24 +1202,36 @@ VOID *DSLIM_IO_Thread_Entry(VOID *argv)
                 if (fileEnded == false)
                 {
                     /* Wait for a I/O request */
-                    status = sem_wait(&io_rqst);
-                    ioPtr = UpdatePtr(ioPtr);
+                    status = qPtrs->lockw_();
+
+                    while (qPtrs->isEmptyWaitQ())
+                    {
+                        status = qPtrs->unlockw_();
+                        sleep(0.1);
+                        status = qPtrs->lockw_();
+                    }
+
+                    /* Get the I/O ptr from the wait queue */
+                    ioPtr = qPtrs->getIOPtr();
+
+                    status = qPtrs->unlockw_();
                 }
                 else
                 {
                     fileEnded = false;
                 }
 
-                /* Reset the expt_data structure */
-                ioPtr->reset();
-
                 /* Extract a chunk and return the chunksize */
-                status = MSQuery_ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
+                status = Query.MSQuery_ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
 
                 if (ioPtr->numSpecs > 0)
                 {
-                    /* Signal manager of available data */
-                    (VOID)sem_post(&io_done);
+                    qPtrs->lockr_();
+
+                    /* Add available data to ready queue */
+                    qPtrs->IODone(ioPtr);
+
+                    qPtrs->unlockr_();
 
                     spectra += ioPtr->numSpecs;
 
@@ -988,33 +1258,42 @@ VOID *DSLIM_IO_Thread_Entry(VOID *argv)
         }
     }
 
-    /* All files are done - Wait here */
-    status = sem_wait(&io_rqst);
-    ioPtr = UpdatePtr(ioPtr);
-
-    /* De-initialize the Queries structure */
-    ioPtr->deinit();
-
-    /* Signal the io_done */
-    status = sem_post(&io_done);
+    /* Return the control back to the SchedHandle */
+    SchedHandle->takeControl(argv);
 
     return NULL;
 }
-#endif /* DISTMEM */
 
-static inline STATUS DSLIM_WaitFor_IO()
+static inline STATUS DSLIM_Deinit_IO()
 {
-    return sem_wait(&io_done);
-}
+    STATUS status = SLM_SUCCESS;
 
-static inline STATUS DSLIM_Request_IO()
-{
-    return sem_post(&io_rqst);
-}
+    Queries *ptr = NULL;
 
-STATUS DSLIM_Process_RxData()
-{
-    //partRes *rxData = CommHandle->getCurr_CommArr();
+    while (!qPtrs->isEmptyReadyQ())
+    {
+        ptr = qPtrs->getWorkPtr();
+        delete ptr;
+        ptr = NULL;
+    }
 
-    return SLM_SUCCESS;
+    while (!qPtrs->isEmptyWaitQ())
+    {
+        ptr = qPtrs->getIOPtr();
+        delete ptr;
+        ptr = NULL;
+    }
+
+    /* Delete the qPtrs buffer handle */
+    delete qPtrs;
+
+    qPtrs = NULL;
+
+    /* Deallocate the scheduler module */
+    delete SchedHandle;
+
+    SchedHandle = NULL;
+
+
+    return status;
 }

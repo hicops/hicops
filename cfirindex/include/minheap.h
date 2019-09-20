@@ -74,7 +74,7 @@ public:
         this->array = new T[this->capacity];
     }
 
-    ~minHeap()
+    virtual ~minHeap()
     {
         this->capacity = 0;
         this->size = 0;

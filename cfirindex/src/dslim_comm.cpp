@@ -25,9 +25,11 @@
  * Datatype for Tx/Rx */
 MPI_Datatype resPart;
 
-/* Work and comm queues */
-std::queue <partRes *> workQ;
-std::queue <partRes *> commQ;
+extern VOID *DSLIM_Comm_Thread_Entry(VOID *argv);
+
+/* Work and comm queues - No internal locking required */
+lwqueue <partRes *> workQ = false;
+lwqueue <partRes *> commQ = false;
 
 using namespace std;
 
@@ -72,11 +74,21 @@ DSLIM_Comm::DSLIM_Comm()
     InitComm_DataTypes();
     InitTx();
     InitRx();
+
+    /* Set up the communication thread here */
+
+    pthread_create(&commThd, NULL, &DSLIM_Comm_Thread_Entry, NULL);
+
 }
 
 /* Destructor */
 DSLIM_Comm::~DSLIM_Comm()
 {
+    VOID *ptr = NULL;
+
+    /* Wait for communication thread to complete */
+    pthread_join(commThd, &ptr);
+
     if (rxArr != NULL)
     {
         delete[] rxArr;
@@ -87,7 +99,7 @@ DSLIM_Comm::~DSLIM_Comm()
 
     sem_wait(&work_lock);
 
-    for (UINT ii = 0; ii < workQ.size(); ii++)
+    for (INT ii = 0; ii < workQ.size(); ii++)
     {
         partRes *txArray = workQ.front();
 
@@ -231,7 +243,7 @@ STATUS DSLIM_Comm::Tx(INT batchnum)
     /* Calculate chunk size and last chunk size */
 //    INT csize = (specs / params.nodes);
 //    INT lcsize = specs - (csize * (params.nodes -1));
-    //fixme partRes *head = NULL;
+    //FIXME partRes *head = NULL;
 
     if (commQ.size() < 1)
     {

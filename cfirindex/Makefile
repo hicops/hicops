@@ -20,7 +20,7 @@ PROJECT_ROOT = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SRC = $(PROJECT_ROOT)/src
 MSTOOLKIT = $(PROJECT_ROOT)/mstoolkit
 
-DEPS = src/dslim_query.cpp src/dslim.cpp src/dslim_fileout.cpp src/lbe_internal.cpp src/utils.cpp src/mods.cpp src/msquery.cpp include/common.h include/config.h include/dslim_fileout.h include/keyval.h include/utils.h include/mods.h include/msquery.h include/slm_dsts.h include/dslim.h include/slmerr.h include/lbe.h
+DEPS = src/dslim_query.cpp src/scheduler.cpp include/scheduler.h src/dslim.cpp src/dslim_fileout.cpp src/lbe_internal.cpp src/utils.cpp src/mods.cpp src/msquery.cpp include/common.h include/config.h include/dslim_fileout.h include/keyval.h include/utils.h include/mods.h include/msquery.h include/slm_dsts.h include/dslim.h include/slmerr.h include/lbe.h
 
 LIBS = -ldslim -lmstoolkitlite 
 LIBPATHS = -L$(SRC) -L$(MSTOOLKIT)

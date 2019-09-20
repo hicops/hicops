@@ -42,6 +42,11 @@
 /* How many query spectra per batch */
 #define QCHUNK                   50000
 
+/* Precision to inter-convert between FLOAT and INT
+ * for Tx/Rx purposes
+ */
+#define PRECISION                1000000
+
 /* Maximum hyperscore that is possible */
 #define MAX_HYPERSCORE           100
 

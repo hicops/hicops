@@ -22,19 +22,30 @@
 using namespace std;
 using namespace MSToolkit;
 
-/* Global Variables */
-MSReader     gReader;
-
 extern gParams params;
 
-/* Static global variables */
-static UINT   firstScan = 0;
-static UINT   currScan  = 0;
-static UINT     QAcount = 0;
-static STRING       MS2file;
-static UINT nqchunks    = 0;
-static UINT curr_chunk  = 0;
-static UINT running_count   = 0;
+
+MSQuery::MSQuery()
+{
+    firstScan = 0;
+    currScan = 0;
+    QAcount = 0;
+    MS2file = "";
+    nqchunks = 0;
+    curr_chunk = 0;
+    running_count = 0;
+}
+
+MSQuery::~MSQuery()
+{
+    firstScan = 0;
+    currScan = 0;
+    QAcount = 0;
+    MS2file = "";
+    nqchunks = 0;
+    curr_chunk = 0;
+    running_count = 0;
+}
 
 /*
  * FUNCTION: MSQuery_InitializeQueryFile
@@ -47,7 +58,7 @@ static UINT running_count   = 0;
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS MSQuery_InitializeQueryFile(CHAR *filename)
+STATUS MSQuery::MSQuery_InitializeQueryFile(CHAR *filename)
 {
     UINT start, count;
 
@@ -68,7 +79,7 @@ STATUS MSQuery_InitializeQueryFile(CHAR *filename)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS MSQuery_InitializeQueryFile(UINT& start, UINT& count, CHAR *filename)
+STATUS MSQuery::MSQuery_InitializeQueryFile(UINT& start, UINT& count, CHAR *filename)
 {
     STATUS status = SLM_SUCCESS;
 
@@ -145,7 +156,7 @@ STATUS MSQuery_InitializeQueryFile(UINT& start, UINT& count, CHAR *filename)
  * OUTPUT:
  * @size: Size of the extracted chunk
  */
-INT MSQuery_ExtractQueryChunk(UINT *QA)
+INT MSQuery::MSQuery_ExtractQueryChunk(UINT *QA)
 {
     STATUS status = SLM_SUCCESS;
     UINT *QAPtr = NULL;
@@ -213,7 +224,7 @@ INT MSQuery_ExtractQueryChunk(UINT *QA)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS MSQuery_ExtractQueryChunk(UINT start, UINT count, UINT *QA)
+STATUS MSQuery::MSQuery_ExtractQueryChunk(UINT start, UINT count, UINT *QA)
 {
     STATUS status = SLM_SUCCESS;
     UINT *QAPtr = NULL;
@@ -261,7 +272,7 @@ STATUS MSQuery_ExtractQueryChunk(UINT start, UINT count, UINT *QA)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, UINT *QAPtr)
+STATUS MSQuery::MSQUERY_ProcessQuerySpectrum(CHAR *filename, UINT *QAPtr)
 {
     STATUS status = SLM_SUCCESS;
     Spectrum Spectrum;
@@ -344,7 +355,7 @@ STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, UINT *QAPtr)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS MSQuery_ExtractQueryChunk(UINT count, Queries *expSpecs, INT &remaining)
+STATUS MSQuery::MSQuery_ExtractQueryChunk(UINT count, Queries *expSpecs, INT &remaining)
 {
     STATUS status = SLM_SUCCESS;
 
@@ -383,7 +394,7 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, Queries *expSpecs, INT &remaining)
     {
         UINT l_count = 0;
 
-        while (spectrum.getScanNumber() != 0 && l_count < count)
+        while (l_count < count && spectrum.getScanNumber() != 0)
         {
             expSpecs->precurse[l_count] = spectrum.atZ(0).mh;
 
@@ -430,11 +441,11 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, Queries *expSpecs, INT &remaining)
  * @status: Status of execution
  */
 
-STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, Queries *expSpecs, UINT where)
+STATUS MSQuery::MSQUERY_ProcessQuerySpectrum(CHAR *filename, Queries *expSpecs, UINT where)
 {
     STATUS status = SLM_SUCCESS;
     Spectrum Spectrum;
-    UINT threads = params.threads;
+//    UINT threads = params.threads;
 
 #ifndef _OPENMP
     LBE_UNUSED_PARAM(threads);
@@ -457,7 +468,7 @@ STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, Queries *expSpecs, UINT wher
 
 #ifdef _OPENMP
         /* Sort m/z based on Intensities */
-        KeyVal_Parallel<UINT, UINT>(dIntArr, mzArray, SpectrumSize, threads);
+        KeyVal_Parallel<UINT, UINT>(dIntArr, mzArray, SpectrumSize, 1);
 #else
         KeyVal_Serial<UINT, UINT>(dIntArr, mzArray, (UINT)SpectrumSize);
 #endif /* _OPENMP */
@@ -518,41 +529,4 @@ STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, Queries *expSpecs, UINT wher
 
     return status;
 
-}
-
-//Author: Usman
-//needs fixing
-UINT* UTILS_ExtractSpectra(CHAR *filename, UINT len)
-{
-    UINT *QA = new UINT[len];
-
-    STATUS status = SLM_SUCCESS;
-
-    //for (UINT qf = 0; qf < queryfiles.size(); qf++)
-    {
-        std::cout << std::endl << "Query File: " << filename << std::endl;
-
-        /* Initialize Query MS/MS file */
-        status = MSQuery_InitializeQueryFile(filename);
-
-        /* DSLIM Query Algorithm */
-        if (status == SLM_SUCCESS)
-        {
-            /* Extract a chunk of MS/MS spectra and
-             * query against DSLIM Index */
-            //for (; QA != NULL;)
-            {
-                /* Extract a chunk and return the chunksize */
-                UINT ms2specs = MSQuery_ExtractQueryChunk(QA);
-
-                /* If the chunksize is zero, all done */
-                if (ms2specs <= 0)
-                {
-                    //break;
-                }
-            }
-        }
-    }
-
-    return QA;
 }
