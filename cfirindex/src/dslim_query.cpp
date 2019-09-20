@@ -34,8 +34,6 @@ extern gParams   params;
 extern BYICount  *Score;
 extern vector<STRING> queryfiles;
 
-UINT spectra = 0;
-
 /* Global variables */
 FLOAT *hyperscores = NULL;
 UCHAR *sCArr = NULL;
@@ -526,7 +524,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
     }
 #endif
 
-    cout << "Queried Spectra:\t\t" << spectra << endl;
+    cout << "Queried Spectra:\t\t" << workPtr->numSpecs << endl;
 
     return status;
 }
@@ -996,7 +994,6 @@ VOID *DSLIM_IO_Thread_Entry(VOID *argv)
         }
 
         INT rem_spec = 1; // Init to 1 for first loop to run
-        spectra = 0;
 
         /* All set - Run the DSLIM Query Algorithm */
         if (status == SLM_SUCCESS)
@@ -1037,8 +1034,6 @@ VOID *DSLIM_IO_Thread_Entry(VOID *argv)
                     qPtrs->IODone(ioPtr);
 
                     qPtrs->unlockr_();
-
-                    spectra += ioPtr->numSpecs;
 
 #ifdef BENCHMARK
                     fileio += omp_get_wtime() - duration;
@@ -1191,7 +1186,6 @@ VOID *DSLIM_ExtraIO_Thread_Entry(VOID *argv)
         }
 
         INT rem_spec = 1; // Init to 1 for first loop to run
-        spectra = 0;
 
         /* All set - Run the DSLIM Query Algorithm */
         if (status == SLM_SUCCESS)
@@ -1236,8 +1230,6 @@ VOID *DSLIM_ExtraIO_Thread_Entry(VOID *argv)
                     qPtrs->IODone(ioPtr);
 
                     qPtrs->unlockr_();
-
-                    spectra += ioPtr->numSpecs;
 
 #ifdef BENCHMARK
                     fileio += omp_get_wtime() - duration;
