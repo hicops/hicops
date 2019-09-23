@@ -21,110 +21,44 @@
 #ifndef MSQUERY_H_
 #define MSQUERY_H_
 
+#include <string>
 #include "common.h"
 #include "utils.h"
-#include "MSToolkitTypes.h"
-#include "MSReader.h"
-#include "MSObject.h"
-#include "Spectrum.h"
 
-using namespace MSToolkit;
+/* Spectrum */
+typedef struct _Spectrum
+{
+    UINT *mz;
+    UINT *intn;
+    UINT SpectrumSize;
+    DOUBLE prec_mz;
+} Spectrum;
 
 class MSQuery
 {
 private:
     /* Global Variables */
-    MSReader gReader;
+    UINT currPtr;
+    UINT QAcount;
+    UINT nqchunks;
+    UINT curr_chunk;
+    UINT running_count;
+    std::ifstream *qfile;
+    STRING *MS2file;
+    Spectrum spectrum;
 
-    /* Static global variables */
-    UINT firstScan = 0;
-    UINT currScan = 0;
-    UINT QAcount = 0;
-    STRING MS2file;
-    UINT nqchunks = 0;
-    UINT curr_chunk = 0;
-    UINT running_count = 0;
+    VOID ReadSpectrum();
+    STATUS ProcessQuerySpectrum(Queries *);
 
 public:
 
     MSQuery();
     virtual ~MSQuery();
-    /*
-     * FUNCTION: MSQuery_InitializeQueryFile
-     *
-     * DESCRIPTION: Initialize structures using the query file
-     *
-     * INPUT:
-     * @filename : Path to query file
-     *
-     * OUTPUT:
-     * @status: Status of execution
-     */
-    STATUS MSQuery_InitializeQueryFile(CHAR *filename);
 
-    /*
-     * FUNCTION: MSQuery_InitializeQueryFile
-     *
-     * DESCRIPTION: Initialize structures using only
-     *              "count" spectra from file
-     *
-     * INPUT:
-     * @start   : Start index of spectra in the query file
-     * @count   : Number of spectra to use for initializing
-     * @filename: Path to query file
-     *
-     * OUTPUT:
-     * @status: Status of execution
-     */
-    STATUS MSQuery_InitializeQueryFile(UINT& start, UINT& count, CHAR *filename);
+    STATUS InitQueryFile(CHAR *filename);
+    STATUS ExtractQueryChunk(UINT count, Queries *expSpecs, INT &rem);
+    STATUS DeinitQueryFile();
 
-    /*
-     * FUNCTION: MSQuery_InitializeQueryFile
-     *
-     * DESCRIPTION: Extract a chunk of spectra from query file
-     *
-     * INPUT:
-     * @QA      : Pointer to Query Array
-     * @threads : Number of parallel threads
-     *
-     * OUTPUT:
-     * @size: Size of the extracted chunk
-     */
-    INT MSQuery_ExtractQueryChunk(UINT *QA);
-
-    /*
-     * FUNCTION: MSQuery_InitializeQueryFile
-     *
-     * DESCRIPTION: Extract a specific chunk of spectra from query file
-     *
-     * INPUT:
-     * @start   : Start index of first spectrum to extract
-     * @count   : Number of spectra to extract
-     * @QA      : Pointer to Query Array
-     * @threads : Number of parallel threads
-     *
-     * OUTPUT:
-     * @status: Status of execution
-     */
-    STATUS MSQuery_ExtractQueryChunk(UINT start, UINT count, UINT *QA);
-
-    STATUS MSQuery_ExtractQueryChunk(UINT count, Queries *expSpecs, INT &rem);
-    /*
-     * FUNCTION: MSQUERY_ProcessQuerySpectrum
-     *
-     * DESCRIPTION: Process a Query Spectrum and extract peaks
-     *
-     * INPUT:
-     * @filename : Path to query file
-     * @QAPtr    : Pointer to Query Array (dst)
-     * @threads  : Number of parallel threads
-     *
-     * OUTPUT:
-     * @status: Status of execution
-     */
-    STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, UINT *QAPtr);
-
-    STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, Queries *expSpecs, UINT offset);
 };
 
 #endif /* MSQUERY_H_ */

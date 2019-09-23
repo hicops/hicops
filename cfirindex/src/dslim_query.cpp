@@ -981,7 +981,7 @@ VOID *DSLIM_IO_Thread_Entry(VOID *argv)
         sem_post(&qfilelock);
 
         /* Initialize Query MS/MS file */
-        status = Query.MSQuery_InitializeQueryFile((CHAR *) queryfiles[qfid_lcl].c_str());
+        status = Query.InitQueryFile((CHAR *) queryfiles[qfid_lcl].c_str());
 
         #ifdef BENCHMARK
         fileio += omp_get_wtime() - duration;
@@ -1029,7 +1029,7 @@ VOID *DSLIM_IO_Thread_Entry(VOID *argv)
                 ioPtr->reset();
 
                 /* Extract a chunk and return the chunksize */
-                status = Query.MSQuery_ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
+                status = Query.ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
 
                 if (ioPtr->numSpecs > 0)
                 {
@@ -1173,7 +1173,7 @@ VOID *DSLIM_ExtraIO_Thread_Entry(VOID *argv)
         sem_post(&qfilelock);
 
         /* Initialize Query MS/MS file */
-        status = Query.MSQuery_InitializeQueryFile((CHAR *) queryfiles[qfid_lcl].c_str());
+        status = Query.InitQueryFile((CHAR *) queryfiles[qfid_lcl].c_str());
 
 
 #ifdef BENCHMARK
@@ -1225,7 +1225,7 @@ VOID *DSLIM_ExtraIO_Thread_Entry(VOID *argv)
                 }
 
                 /* Extract a chunk and return the chunksize */
-                status = Query.MSQuery_ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
+                status = Query.ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
 
                 if (ioPtr->numSpecs > 0)
                 {

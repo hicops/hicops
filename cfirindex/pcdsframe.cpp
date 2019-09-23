@@ -71,7 +71,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     chrono::duration<double> elapsed_seconds = end - start;
     chrono::duration<double> qtime = end - start;
 
-    STRING patt[3] = {".ms2", ".mzML", ".mzXML"};
+    STRING patt = {".ms2"};
     CHAR extension[] = ".peps";
 
     if (argc < 2)
@@ -115,10 +115,12 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
             STRING cfile(pdir->d_name);
 
             /* Add the matching files */
-            if (cfile.find(patt[0]) != std::string::npos)
+            if (cfile.find(patt/* patt[0] */) != std::string::npos)
             {
                 queryfiles.push_back(params.datapath + '/' + pdir->d_name);
             }
+
+#ifdef FUTURE
             if (cfile.find(patt[1]) != std::string::npos)
             {
                 queryfiles.push_back(params.datapath + '/' + pdir->d_name);
@@ -127,6 +129,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
             {
                 queryfiles.push_back(params.datapath + '/' + pdir->d_name);
             }
+#endif /* FUTURE */
         }
     }
 
