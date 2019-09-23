@@ -94,12 +94,17 @@ static inline STATUS DSLIM_WaitFor_IO()
     while (qPtrs->isEmptyReadyQ())
     {
         status = qPtrs->unlockr_();
-        sleep(0.1);
+        sleep(0.5);
         status = qPtrs->lockr_();
     }
 
     /* Get the I/O ptr from the wait queue */
     workPtr = qPtrs->getWorkPtr();
+
+    if (workPtr == NULL)
+    {
+        status = ERR_INVLD_PTR;
+    }
 
     status = qPtrs->unlockr_();
 
@@ -244,12 +249,12 @@ STATUS DSLIM_SearchManager(Index *index)
         }
 #endif /* DISTMEM */
 
-        status = qPtrs->lockr_();
+        status = qPtrs->lockw_();
 
         /* Request next I/O chunk */
         qPtrs->Replenish(workPtr);
 
-        status = qPtrs->unlockr_();
+        status = qPtrs->unlockw_();
 
 #ifdef DISTMEM
 
@@ -1269,15 +1274,23 @@ static inline STATUS DSLIM_Deinit_IO()
     while (!qPtrs->isEmptyReadyQ())
     {
         ptr = qPtrs->getWorkPtr();
-        delete ptr;
-        ptr = NULL;
+
+        if (ptr != NULL)
+        {
+            delete ptr;
+            ptr = NULL;
+        }
     }
 
     while (!qPtrs->isEmptyWaitQ())
     {
         ptr = qPtrs->getIOPtr();
-        delete ptr;
-        ptr = NULL;
+
+        if (ptr != NULL)
+        {
+            delete ptr;
+            ptr = NULL;
+        }
     }
 
     /* Delete the qPtrs buffer handle */
@@ -1289,7 +1302,6 @@ static inline STATUS DSLIM_Deinit_IO()
     delete SchedHandle;
 
     SchedHandle = NULL;
-
 
     return status;
 }

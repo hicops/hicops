@@ -248,9 +248,17 @@ BOOL Scheduler::makeDecisions(DOUBLE yt)
 
     waitSincelast += yt;
 
-    if (t <= 2)
+    if (t <= 1)
     {
-        decision = false;
+        if ((waitSincelast + Ftplus1) >= maxpenalty)
+        {
+            decision = true;
+
+            if (stopXtra)
+            {
+                stopXtra -=1;
+            }
+        }
     }
     else
     {
@@ -316,10 +324,12 @@ STATUS Scheduler::dispatchThread()
         {
             /* Pass the reference to thread block as argument */
             status = pthread_create(ptr, NULL, &DSLIM_ExtraIO_Thread_Entry, (VOID *) ptr);
+            ptr = NULL;
         }
         else
         {
             status = ERR_BAD_MEM_ALLOC;
+            delete ptr;
         }
     }
 
@@ -354,8 +364,6 @@ STATUS Scheduler::takeControl(VOID *argv)
     sem_post(&manage);
 
     sem_post(&dumpQ);
-
-
 
     return status;
 }

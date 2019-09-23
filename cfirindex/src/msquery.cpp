@@ -104,7 +104,6 @@ STATUS MSQuery::MSQuery_InitializeQueryFile(UINT& start, UINT& count, CHAR *file
     /* Read the file */
     if (tempReader.readFile(filename, Spectrum))
     {
-
         while (Spectrum.getScanNumber() != 0)
         {
             /* Store the first scan number
@@ -117,6 +116,7 @@ STATUS MSQuery::MSQuery_InitializeQueryFile(UINT& start, UINT& count, CHAR *file
             {
                 (VOID) Spectrum.getScanNumber();
             }
+
             count++;
 
             tempReader.readFile(NULL, Spectrum);
