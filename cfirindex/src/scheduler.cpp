@@ -268,9 +268,9 @@ BOOL Scheduler::makeDecisions(DOUBLE yt)
     }
     else
     {
-        /* High rate or too much accumulated */
+        /* Increasing very fast or too much accumulated */
         /* FIXME: maxpenalty needs to be normalized according to the resources in use */
-        if (rate >= minrate && (waitSincelast + Ftplus1) >= maxpenalty)
+        if (rate >= maxrate || (waitSincelast + Ftplus1) >= maxpenalty)
         {
             decision = true;
 
@@ -291,19 +291,10 @@ BOOL Scheduler::makeDecisions(DOUBLE yt)
             }
 
         }
-        /* Very fast */
-        else if (rate >= maxrate)
-        {
-            decision = true;
-
-            if (stopXtra)
-            {
-                stopXtra -=1;
-            }
-        }
         else
         {
-            /* Should never come here though */
+            /* Nominal rate and not too much accumulated,
+             * Keep the state and don't stop any threads */
             decision = false;
         }
     }
@@ -313,7 +304,6 @@ BOOL Scheduler::makeDecisions(DOUBLE yt)
 
     return decision;
 }
-
 
 STATUS Scheduler::dispatchThread()
 {
@@ -377,6 +367,11 @@ STATUS Scheduler::takeControl(VOID *argv)
 STATUS Scheduler::runManager(DOUBLE yt)
 {
     STATUS status = SLM_SUCCESS;
+
+    /* The new value of signal is yt + yt -1
+     * since input yt is only difference from
+     * the last value */
+    yt = yt + ytminus1;
 
     /* Use double exponential smoothing forecasting
      * (LASP) to predict future */

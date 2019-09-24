@@ -18,12 +18,11 @@ PROFILE = NO
 
 PROJECT_ROOT = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SRC = $(PROJECT_ROOT)/src
-MSTOOLKIT = $(PROJECT_ROOT)/mstoolkit
 
 DEPS = src/dslim_query.cpp src/dslim_comm.cpp include/dslim_comm.h src/scheduler.cpp include/scheduler.h src/dslim.cpp src/dslim_fileout.cpp src/lbe_internal.cpp src/utils.cpp src/mods.cpp src/msquery.cpp include/common.h include/config.h include/dslim_fileout.h include/keyval.h include/utils.h include/mods.h include/msquery.h include/slm_dsts.h include/dslim.h include/slmerr.h include/lbe.h
 
-LIBS = -ldslim -lmstoolkitlite 
-LIBPATHS = -L$(SRC) -L$(MSTOOLKIT)
+LIBS = -ldslim
+LIBPATHS = -L$(SRC)
 EXECUTEABLE = cfir.exe
 
 ifeq ($(PROFILE),YES)
@@ -67,7 +66,7 @@ mstoolkit:
 
 lbe: $(DEPS)
 	$(MAKE) -j$(JOBS) -C $(SRC)
-	$(CXX) -c -I./include -I./mstoolkit/include $(CXXFLAGS) -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DHAVE_EXPAT_CONFIG_H -DGCC -D_NOTHERMORAW -D_NOSQLITE ./pcdsframe.cpp -o pcdsframe.o
+	$(CXX) -c -I./include -I./mstoolkit/include $(CXXFLAGS) -DGCC ./pcdsframe.cpp -o pcdsframe.o
 
 clean:
 	$(MAKE) -C $(SRC) clean
