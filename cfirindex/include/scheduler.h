@@ -43,7 +43,6 @@ private:
     INT stopXtra;
 
     DOUBLE maxpenalty;
-    DOUBLE maxrate;
     DOUBLE minrate;
 
     DOUBLE waitSincelast;

@@ -61,9 +61,6 @@ export CXX
 all: mstoolkit lbe
 	$(CXX) $(LNKFLAGS) $(LIBPATHS) -Wl,--start-group  $(LIBS) ./pcdsframe.o -Wl,--end-group -o $(EXECUTEABLE) -Wl,-Map=$(EXECUTEABLE).map
 
-mstoolkit:
-	$(MAKE) -j$(JOBS) -C $(MSTOOLKIT)
-
 lbe: $(DEPS)
 	$(MAKE) -j$(JOBS) -C $(SRC)
 	$(CXX) -c -I./include -I./mstoolkit/include $(CXXFLAGS) -DGCC ./pcdsframe.cpp -o pcdsframe.o
@@ -72,9 +69,4 @@ clean:
 	$(MAKE) -C $(SRC) clean
 	rm -rf $(EXECUTEABLE) $(EXECUTEABLE).map pcdsframe.o
 
-allclean:
-	$(MAKE) -C $(SRC) clean
-	rm -rf $(EXECUTEABLE) $(EXECUTEABLE).map pcdsframe.o
-	$(MAKE) -C $(MSTOOLKIT) clean
-
-.PHONY: all mstoolkit lbe clean allclean
+.PHONY: all lbe clean

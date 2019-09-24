@@ -360,7 +360,7 @@ STATUS DSLIM_Comm::Waitfor_TxData()
 
 STATUS DSLIM_Comm::WaitFor_RxData()
 {
-    STATUS status;
+    STATUS status = MPI_SUCCESS;
 
     for (UINT loop = 0; loop < params.nodes - 1; loop++)
     {

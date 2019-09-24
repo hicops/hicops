@@ -350,6 +350,8 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
 
     if (status == SLM_SUCCESS)
     {
+        cout << "Using Cores: " << threads << endl;
+
         /* Process all the queries in the chunk */
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads) schedule(dynamic, 1)

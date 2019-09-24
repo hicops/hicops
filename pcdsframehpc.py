@@ -300,10 +300,10 @@ if __name__ == '__main__':
 	pparams = ''
 # ##################################################################################
 
-	print ('\n************************************\n')
-	print   ('*  HPC MS/MS Proteomics Pipeline   *\n')
-	print   ('*  Copyrights PCDS Lab, SCIS, FIU  *\n')
-	print   ('************************************\n\n')
+	print ('\n************************************')
+	print   ('*  HPC MS/MS Proteomics Pipeline   *')
+	print   ('*  Copyrights PCDS Lab, SCIS, FIU  *')
+	print   ('************************************\n')
 
 	# Parse the params file
 	with open(paramfile) as params:

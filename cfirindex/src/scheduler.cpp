@@ -40,9 +40,8 @@ Scheduler::Scheduler()
 
     /* Thresholds */
     maxpenalty = 10;
-    maxrate = 0.75;
     stopXtra = 0;
-    minrate = 0.25;
+    minrate = 0.45;
     waitSincelast = 0;
 
     Ftplus1 = 0;   /* Forecast  */
@@ -69,7 +68,7 @@ Scheduler::Scheduler(INT maxio, INT dumpsize)
     xtraIO = maxio;
     nxtra = 0;
     stopXtra = 0;
-    minrate = 0.25;
+    minrate = 0.45;
     dump = new lwqueue <THREAD *> (dumpsize, false);
 
     /* Lock for above queues */
@@ -78,7 +77,6 @@ Scheduler::Scheduler(INT maxio, INT dumpsize)
 
     /* Thresholds */
     maxpenalty = 10;
-    maxrate = 0.75;
     waitSincelast = 0;
 
     Ftplus1 = 0;   /* Forecast  */
@@ -103,7 +101,6 @@ Scheduler::~Scheduler()
 {
     /* Thresholds */
     maxpenalty = 0;
-    maxrate = 0;
     xtraIO = 0;
     nxtra = 0;
     waitSincelast = 0;
@@ -270,7 +267,7 @@ BOOL Scheduler::makeDecisions(DOUBLE yt)
     {
         /* Increasing very fast or too much accumulated */
         /* FIXME: maxpenalty needs to be normalized according to the resources in use */
-        if (rate >= maxrate || (waitSincelast + Ftplus1) >= maxpenalty)
+        if (rate >= minrate && (waitSincelast + Ftplus1) >= maxpenalty)
         {
             decision = true;
 

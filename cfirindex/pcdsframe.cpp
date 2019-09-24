@@ -284,6 +284,12 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         status = DSLIM_InitializeScorecard(slm_index, (maxlen - minlen + 1));
     }
 
+    if (status == SLM_SUCCESS && params.myid == 0)
+    {
+        elapsed_seconds = chrono::system_clock::now() - start;
+        cout << "Indexing Time: " << elapsed_seconds.count() << "s" << endl;
+    }
+
     /* Query the index */
     if (status == SLM_SUCCESS)
     {
