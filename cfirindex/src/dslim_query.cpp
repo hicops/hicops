@@ -206,6 +206,8 @@ STATUS DSLIM_SearchManager(Index *index)
         /* Compute the penalty */
         chrono::duration<double> penalty = chrono::system_clock::now() - spen;
 
+        cout << "PENALTY: " << penalty.count() << endl;
+
         /* Run the Scheduler to manage thread between compute and I/O */
         SchedHandle->runManager(penalty.count());
 

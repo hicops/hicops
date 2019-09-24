@@ -812,7 +812,7 @@ if __name__ == '__main__':
 		
 		# Optimize based on the index size (in spectra) per MPI
 		# If partition size > 10 million, then increase number of partitions
-		min_threads = 2
+		min_threads = 6
 		max_mpi_per_node = cores / min_threads
 
 		if (indexsize/(mpi_per_node * nodes) > 10E6):

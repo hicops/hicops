@@ -272,8 +272,8 @@ VOID MSQuery::ReadSpectrum()
 
                 CHAR *mz1 = strtok((CHAR *) line.c_str(), " ");
                 CHAR *intn1 = strtok(NULL, " ");
-                STRING mz = "0.0";
-                STRING intn = "0.0";
+                STRING mz = "0.01";
+                STRING intn = "0.01";
 
                 if (mz1 != NULL)
                 {
