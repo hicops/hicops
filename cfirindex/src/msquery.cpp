@@ -37,6 +37,7 @@ MSQuery::MSQuery()
     spectrum.mz = NULL;
     spectrum.SpectrumSize = 0;
     spectrum.prec_mz = 0;
+    spectrum.Z = 0;
 }
 
 MSQuery::~MSQuery()
@@ -74,6 +75,7 @@ MSQuery::~MSQuery()
 
     spectrum.SpectrumSize = 0;
     spectrum.prec_mz = 0;
+    spectrum.Z = 0;
 }
 
 /*
@@ -248,9 +250,30 @@ VOID MSQuery::ReadSpectrum()
 
             /* Empty line */
             if (line.empty() || line[0] == 'H' || line[0] == 'I' ||
-                line[0] == 'D' || line[0] == 'Z')
+                line[0] == 'D')
             {
                 continue;
+            }
+            else if ( line[0] == 'Z')
+            {
+                CHAR *mh = strtok((CHAR *) line.c_str(), " \t");
+                mh = strtok(NULL, " \t");
+                STRING val = "1";
+
+                if (mh != NULL)
+                {
+                    val = STRING(mh);
+                    spectrum.Z = std::atoi(val.c_str());
+                }
+
+                val = "0.01";
+                mh = strtok(NULL, " \t");
+
+                if (mh != NULL)
+                {
+                    val = STRING(mh);
+                    spectrum.prec_mz = (DOUBLE)std::atof(val.c_str());
+                }
             }
             else if (line[0] == 'S')
             {
@@ -302,9 +325,30 @@ VOID MSQuery::ReadSpectrum()
 
             /* Empty line */
             if (line.empty() || line[0] == 'H' || line[0] == 'I' ||
-                line[0] == 'D' || line[0] == 'Z')
+                line[0] == 'D')
             {
                 continue;
+            }
+            else if ( line[0] == 'Z')
+            {
+                CHAR *mh = strtok((CHAR *) line.c_str(), " \t");
+                mh = strtok(NULL, " \t");
+                STRING val = "1";
+
+                if (mh != NULL)
+                {
+                    val = STRING(mh);
+                    spectrum.Z = std::atoi(val.c_str());
+                }
+
+                val = "0.01";
+                mh = strtok(NULL, " \t");
+
+                if (mh != NULL)
+                {
+                    val = STRING(mh);
+                    spectrum.prec_mz = (DOUBLE)std::atof(val.c_str());
+                }
             }
             else if (line[0] == 'S')
             {

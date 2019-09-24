@@ -32,6 +32,7 @@ typedef struct _Spectrum
     UINT *intn;
     UINT SpectrumSize;
     DOUBLE prec_mz;
+    UINT Z;
 } Spectrum;
 
 class MSQuery
