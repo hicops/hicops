@@ -324,7 +324,10 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
     STATUS status = SLM_SUCCESS;
     UINT maxz = params.maxz;
     UINT dF = params.dF;
-    UINT threads = params.threads - SchedHandle->getNumActivThds();
+
+    /* We know that 1 main IO thread is always running in background */
+    UINT threads = params.threads - 1 - SchedHandle->getNumActivThds();
+
     UINT scale = params.scale;
     DOUBLE maxmass = params.max_mass;
 
@@ -1092,9 +1095,8 @@ VOID *DSLIM_IO_Thread_Entry(VOID *argv)
     /* Deinit the ioPtr */
     ioPtr->deinit();
 
-    /* Wait for any running extra threads
-     * to complete gracefully */
-    SchedHandle->waitForCompletion();
+    /* Deinit the ioPtr */
+    ioPtr->deinit();
 
     /* All files are done - Signal */
     qPtrs->lockr_();
@@ -1103,6 +1105,10 @@ VOID *DSLIM_IO_Thread_Entry(VOID *argv)
     qPtrs->IODone(ioPtr);
 
     qPtrs->unlockr_();
+
+    /* Wait for any running extra threads
+     * to complete gracefully */
+    SchedHandle->waitForCompletion();
 
     return NULL;
 }

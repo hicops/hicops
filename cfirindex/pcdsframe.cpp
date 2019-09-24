@@ -286,7 +286,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 
     if (status == SLM_SUCCESS && params.myid == 0)
     {
-        elapsed_seconds = chrono::system_clock::now() - start;
+        elapsed_seconds = chrono::system_clock::now() - start_tim;
         cout << "Indexing Time: " << elapsed_seconds.count() << "s" << endl;
     }
 
