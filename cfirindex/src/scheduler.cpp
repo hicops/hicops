@@ -125,6 +125,12 @@ Scheduler::~Scheduler()
     /* The two main threads */
     waitForThread(&ioThread);
 
+    /* Wait for any active threads */
+    while (getNumActivThds() != 0)
+    {
+        sleep(0.1);
+    }
+
     flushDumpQueue();
 
     sem_destroy(&manage);

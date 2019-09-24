@@ -43,6 +43,7 @@ private:
     UINT nqchunks;
     UINT curr_chunk;
     UINT running_count;
+    UINT maxslen;
     std::ifstream *qfile;
     STRING *MS2file;
     Spectrum spectrum;
@@ -55,7 +56,7 @@ public:
     MSQuery();
     virtual ~MSQuery();
 
-    STATUS InitQueryFile(CHAR *filename);
+    STATUS InitQueryFile(STRING *filename);
     STATUS ExtractQueryChunk(UINT count, Queries *expSpecs, INT &rem);
     STATUS DeinitQueryFile();
 

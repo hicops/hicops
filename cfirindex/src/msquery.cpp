@@ -28,6 +28,7 @@ MSQuery::MSQuery()
     qfile = NULL;
     currPtr = 0;
     QAcount = 0;
+    maxslen = 0;
     MS2file = new STRING;
     nqchunks = 0;
     curr_chunk = 0;
@@ -45,18 +46,31 @@ MSQuery::~MSQuery()
     nqchunks = 0;
     curr_chunk = 0;
     running_count = 0;
+    maxslen = 0;
 
-    delete MS2file;
-    MS2file = NULL;
+    if (MS2file != NULL)
+    {
+        delete MS2file;
+        MS2file = NULL;
+    }
 
-    delete qfile;
-    qfile = NULL;
+    if (qfile != NULL)
+    {
+        delete qfile;
+        qfile = NULL;
+    }
 
-    delete[] spectrum.intn;
-    spectrum.intn = NULL;
+    if (spectrum.intn != NULL)
+    {
+        delete[] spectrum.intn;
+        spectrum.intn = NULL;
+    }
 
-    delete[] spectrum.mz;
-    spectrum.mz = NULL;
+    if (spectrum.mz != NULL)
+    {
+        delete[] spectrum.mz;
+        spectrum.mz = NULL;
+    }
 
     spectrum.SpectrumSize = 0;
     spectrum.prec_mz = 0;
@@ -73,12 +87,12 @@ MSQuery::~MSQuery()
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS MSQuery::InitQueryFile(CHAR *filename)
+STATUS MSQuery::InitQueryFile(STRING *filename)
 {
     STATUS status = SLM_SUCCESS;
 
     /* Get a new ifstream object and open file */
-    ifstream *qqfile = new ifstream(filename);
+    ifstream *qqfile = new ifstream(*filename);
 
     INT largestspec = 0;
     INT count = 0;
@@ -109,9 +123,11 @@ STATUS MSQuery::InitQueryFile(CHAR *filename)
             /* Scan: (S) */
             else if (line[0] == 'S')
             {
+
                 count++;
                 largestspec = max(specsize, largestspec);
                 specsize = 0;
+
             }
             /* Header: (H) */
             else if (line[0] == 'H' || line[0] == 'I' || line[0] == 'D' || line[0] == 'Z')
@@ -132,23 +148,27 @@ STATUS MSQuery::InitQueryFile(CHAR *filename)
             status = ERR_INVLD_SIZE;
         }
 
-        /* Initialize the file realted params */
+        /* Initialize the file related params */
         if (status == SLM_SUCCESS)
         {
             currPtr  = 0;
             QAcount = count;
-            *MS2file = STRING(filename);
+            *MS2file = *filename;
             curr_chunk = 0;
             running_count = 0;
             nqchunks = std::ceil(((double) QAcount / QCHUNK));
 
+            maxslen = largestspec;
+
             /* Initialize to largest spectrum in file */
-            spectrum.intn = new UINT[largestspec];
-            spectrum.mz = new UINT[largestspec];
+            spectrum.intn = new UINT[largestspec + 1];
+            spectrum.mz = new UINT[largestspec + 1];
         }
 
         /* Close the file */
         qqfile->close();
+
+        delete qqfile;
     }
 
     /* Return the status */
@@ -250,11 +270,23 @@ VOID MSQuery::ReadSpectrum()
                 /* Split line into two DOUBLEs
                  * using space as delimiter */
 
-                STRING mz = strtok((CHAR *)line.c_str(), " ");
-                STRING intn = strtok(NULL, " ");
+                CHAR *mz1 = strtok((CHAR *) line.c_str(), " ");
+                CHAR *intn1 = strtok(NULL, " ");
+                STRING mz = "0.0";
+                STRING intn = "0.0";
 
-                spectrum.mz[speclen] = std::atof(mz.c_str()) * params.scale;
-                spectrum.intn[speclen] = std::atof(intn.c_str()) * 1000;
+                if (mz1 != NULL)
+                {
+                    mz = STRING(mz1);
+                }
+
+                if (intn1 != NULL)
+                {
+                    intn = STRING(intn1);
+                }
+
+                spectrum.mz[speclen] = (UINT)((DOUBLE)std::atof(mz.c_str()) * params.scale);
+                spectrum.intn[speclen] = (UINT)((DOUBLE)std::atof(intn.c_str()) * 1000);
 
                 speclen++;
             }
@@ -284,12 +316,23 @@ VOID MSQuery::ReadSpectrum()
             {
                 /* Split line into two DOUBLEs
                  * using space as delimiter */
+                CHAR *mz1 = strtok((CHAR *) line.c_str(), " ");
+                CHAR *intn1 = strtok(NULL, " ");
 
-                STRING mz = strtok((CHAR *)line.c_str(), " ");
-                STRING intn = strtok(NULL, " ");
+                STRING mz = "0.0";
+                STRING intn = "0.0";
 
-                spectrum.mz[speclen] = std::atof(mz.c_str()) * params.scale;
-                spectrum.intn[speclen] = std::atof(intn.c_str()) * 1000;
+                if (mz1 != NULL)
+                {
+                    mz = STRING(mz1);
+                }
+                if (intn1 != NULL)
+                {
+                    intn = STRING(intn1);
+                }
+
+                spectrum.mz[speclen] = (UINT)((DOUBLE)std::atof(mz.c_str()) * params.scale);
+                spectrum.intn[speclen] = (UINT)((DOUBLE)std::atof(intn.c_str()) * 1000);
 
                 speclen++;
             }
@@ -305,22 +348,28 @@ STATUS MSQuery::ProcessQuerySpectrum(Queries *expSpecs)
 
     expSpecs->precurse[currPtr] = spectrum.prec_mz;
 
-    KeyVal_Serial<UINT, UINT>(dIntArr, mzArray, (UINT)SpectrumSize);
+    KeyVal_Parallel<UINT, UINT>(dIntArr, mzArray, (UINT)SpectrumSize, 1);
 
-    DOUBLE factor = ((DOUBLE)params.base_int/dIntArr[SpectrumSize - 1]);
+    UINT speclen = 0;
+    DOUBLE factor = 0;
 
-    /* Set the highest peak to base intensity */
-    dIntArr[SpectrumSize - 1] = params.base_int;
-    UINT speclen = 1;
-
-    /* Scale the rest of the peaks to the base peak */
-    for (INT j = SpectrumSize - 2; j >= (SpectrumSize - QALEN) && j >= 0; j--)
+    if (SpectrumSize > 0)
     {
-        dIntArr[j] *= factor;
+        factor = ((DOUBLE) params.base_int / dIntArr[SpectrumSize - 1]);
 
-        if (dIntArr[j] >= (UINT)params.min_int)
+        /* Set the highest peak to base intensity */
+        dIntArr[SpectrumSize - 1] = params.base_int;
+        speclen = 1;
+
+        /* Scale the rest of the peaks to the base peak */
+        for (INT j = SpectrumSize - 2; j >= (SpectrumSize - QALEN) && j >= 0; j--)
         {
-            speclen++;
+            dIntArr[j] *= factor;
+
+            if (dIntArr[j] >= (UINT) params.min_int)
+            {
+                speclen++;
+            }
         }
     }
 
@@ -343,6 +392,41 @@ STATUS MSQuery::ProcessQuerySpectrum(Queries *expSpecs)
     }
 
     currPtr += 1;
+
+    return SLM_SUCCESS;
+}
+
+STATUS MSQuery::DeinitQueryFile()
+{
+    currPtr = 0;
+    QAcount = 0;
+    nqchunks = 0;
+    curr_chunk = 0;
+    running_count = 0;
+    maxslen = 0;
+
+    if (qfile != NULL)
+    {
+        qfile->close();
+
+        delete qfile;
+        qfile = NULL;
+    }
+
+    if (spectrum.intn != NULL)
+    {
+        delete[] spectrum.intn;
+        spectrum.intn = NULL;
+    }
+
+    if (spectrum.mz != NULL)
+    {
+        delete[] spectrum.mz;
+        spectrum.mz = NULL;
+    }
+
+    spectrum.SpectrumSize = 0;
+    spectrum.prec_mz = 0;
 
     return SLM_SUCCESS;
 }

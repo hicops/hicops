@@ -211,7 +211,6 @@ STATUS DSLIM_SearchManager(Index *index)
 
         if (workPtr->numSpecs < 0)
         {
-            status = DSLIM_Deinit_IO();
             break;
         }
 
@@ -298,6 +297,8 @@ STATUS DSLIM_SearchManager(Index *index)
         CommHandle = NULL;
     }
 #endif /* DISTMEM */
+
+    status = DSLIM_Deinit_IO();
 
     return status;
 }
@@ -981,7 +982,7 @@ VOID *DSLIM_IO_Thread_Entry(VOID *argv)
         sem_post(&qfilelock);
 
         /* Initialize Query MS/MS file */
-        status = Query.InitQueryFile((CHAR *) queryfiles[qfid_lcl].c_str());
+        status = Query.InitQueryFile(&queryfiles[qfid_lcl]);
 
         #ifdef BENCHMARK
         fileio += omp_get_wtime() - duration;
@@ -1063,6 +1064,8 @@ VOID *DSLIM_IO_Thread_Entry(VOID *argv)
                     qPtrs->unlockw_();
                 }
             }
+
+            status = Query.DeinitQueryFile();
         }
     }
 
@@ -1173,7 +1176,7 @@ VOID *DSLIM_ExtraIO_Thread_Entry(VOID *argv)
         sem_post(&qfilelock);
 
         /* Initialize Query MS/MS file */
-        status = Query.InitQueryFile((CHAR *) queryfiles[qfid_lcl].c_str());
+        status = Query.InitQueryFile(&queryfiles[qfid_lcl]);
 
 
 #ifdef BENCHMARK
@@ -1256,6 +1259,8 @@ VOID *DSLIM_ExtraIO_Thread_Entry(VOID *argv)
                     fileEnded = true;
                 }
             }
+
+            status = Query.DeinitQueryFile();
         }
     }
 
