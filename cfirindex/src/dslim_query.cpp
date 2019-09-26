@@ -324,10 +324,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
     STATUS status = SLM_SUCCESS;
     UINT maxz = params.maxz;
     UINT dF = params.dF;
-
-    /* We know that 1 main IO thread is always running in background */
-    UINT threads = params.threads - 1 - SchedHandle->getNumActivThds();
-
+    UINT threads = params.threads - SchedHandle->getNumActivThds();
     UINT scale = params.scale;
     DOUBLE maxmass = params.max_mass;
 
@@ -353,8 +350,6 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
 
     if (status == SLM_SUCCESS)
     {
-        cout << "Using Cores: " << threads << endl;
-
         /* Process all the queries in the chunk */
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
@@ -1076,7 +1071,6 @@ VOID *DSLIM_IO_Thread_Entry(VOID *argv)
         }
     }
 
-
     /* Get a new ioPtr */
     status = qPtrs->lockw_();
 
@@ -1095,8 +1089,12 @@ VOID *DSLIM_IO_Thread_Entry(VOID *argv)
     /* Deinit the ioPtr */
     ioPtr->deinit();
 
-    /* Deinit the ioPtr */
-    ioPtr->deinit();
+    /* Free the main IO thread */
+    SchedHandle->ioComplete();
+
+    /* Wait for any running extra threads
+     * to complete gracefully */
+    SchedHandle->waitForCompletion();
 
     /* All files are done - Signal */
     qPtrs->lockr_();
@@ -1105,10 +1103,6 @@ VOID *DSLIM_IO_Thread_Entry(VOID *argv)
     qPtrs->IODone(ioPtr);
 
     qPtrs->unlockr_();
-
-    /* Wait for any running extra threads
-     * to complete gracefully */
-    SchedHandle->waitForCompletion();
 
     return NULL;
 }

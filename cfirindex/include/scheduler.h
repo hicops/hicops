@@ -29,6 +29,7 @@ class Scheduler
 private:
     /* The two main threads */
     THREAD ioThread;
+    INT ioThd;
 
     /* Queues to track threads */
     lwqueue <THREAD *> *dump;
@@ -79,6 +80,7 @@ public:
     Scheduler(INT, INT);
     virtual ~Scheduler();
 
+    VOID ioComplete();
     INT    getNumActivThds();
     BOOL   checkDecisions();
     STATUS takeControl(VOID *argv);

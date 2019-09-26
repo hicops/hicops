@@ -58,7 +58,8 @@ Scheduler::Scheduler()
     alpha = alpha1 = 0.5;
     gamma = gamma1 = 0.8;
 
-    /* The two main threads */
+    /* The main IO thread */
+    ioThd = 1;
     pthread_create(&ioThread, NULL, &DSLIM_IO_Thread_Entry, NULL);
 }
 
@@ -93,7 +94,8 @@ Scheduler::Scheduler(INT maxio, INT dumpsize)
     alpha = alpha1 = 0.5;
     gamma = gamma1 = 0.8;
 
-    /* The two main threads */
+    /* The main IO thread */
+    ioThd = 1;
     pthread_create(&ioThread, NULL, &DSLIM_IO_Thread_Entry, NULL);
 }
 
@@ -361,6 +363,17 @@ STATUS Scheduler::takeControl(VOID *argv)
     return status;
 }
 
+VOID Scheduler::ioComplete()
+{
+    sem_wait(&manage);
+
+    ioThd = 0;
+
+    sem_post(&manage);
+
+    return;
+}
+
 STATUS Scheduler::runManager(DOUBLE yt)
 {
     STATUS status = SLM_SUCCESS;
@@ -417,7 +430,7 @@ INT Scheduler::getNumActivThds()
 {
     sem_wait(&manage);
 
-    INT val = nxtra;
+    INT val = nxtra + ioThd;
 
     sem_post(&manage);
 
