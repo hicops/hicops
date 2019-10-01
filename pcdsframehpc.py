@@ -811,11 +811,11 @@ if __name__ == '__main__':
 			bp = 'scatter'
 		
 		# Optimize based on the index size (in spectra) per MPI
-		# If partition size > 10 million, then increase number of partitions
+		# If partition size > 25 million, then increase number of partitions
 		min_threads = 6
 		max_mpi_per_node = cores / min_threads
 
-		if (indexsize/(mpi_per_node * nodes) > 10E6):
+		if (indexsize/(mpi_per_node * nodes) > 25E6):
 			
 			# Get set of factors
 			possible = factors(threads)
@@ -823,7 +823,7 @@ if __name__ == '__main__':
 
 			for cc in possible:
 
-				if (indexsize/(mpi_per_node * nodes) <= 10E6 or cc < min_threads or mpi_per_node > max_mpi_per_node):
+				if (indexsize/(mpi_per_node * nodes) <= 25E6 or cc < min_threads or mpi_per_node > max_mpi_per_node):
 					break
 				else:
 					threads = cc
