@@ -147,7 +147,7 @@ STATUS DSLIM_SearchManager(Index *index)
 
     if (status == SLM_SUCCESS)
     {
-        qPtrs = new lwbuff<Queries>(4);
+        qPtrs = new lwbuff<Queries>(20);
     }
 
     if (status == SLM_SUCCESS)
@@ -232,6 +232,7 @@ STATUS DSLIM_SearchManager(Index *index)
         {
             cout << "Querying: \n" << endl;
         }
+
 
         start = chrono::system_clock::now();
 
