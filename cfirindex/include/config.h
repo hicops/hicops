@@ -40,7 +40,7 @@
 #define QALEN                    100
 
 /* How many query spectra per batch */
-#define QCHUNK                   50000
+#define QCHUNK                   10000
 
 /* Precision to inter-convert between FLOAT and INT
  * for Tx/Rx purposes

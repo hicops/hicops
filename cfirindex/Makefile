@@ -1,9 +1,9 @@
 BUILD_MODE = RELEASE
 OPENMP = YES
 MPI = YES
-JOBS=4
-CXXFLAGS = -Wall -fmessage-length=0 -std=gnu++0x
-LNKFLAGS = -Wl,--wrap,memcpy
+JOBS=22
+CXXFLAGS = -Wall -fmessage-length=0 -std=c++11
+#LNKFLAGS = -Wl,--wrap,memcpy
 
 # Change CXX to MPIC++ when MPI enabled
 ifeq ($(MPI),YES)
@@ -58,7 +58,7 @@ export JOBS
 export CXXFLAGS
 export CXX
 
-all: mstoolkit lbe
+all: lbe
 	$(CXX) $(LNKFLAGS) $(LIBPATHS) -Wl,--start-group  $(LIBS) ./pcdsframe.o -Wl,--end-group -o $(EXECUTEABLE) -Wl,-Map=$(EXECUTEABLE).map
 
 lbe: $(DEPS)
