@@ -202,13 +202,16 @@ STATUS MSQuery::ExtractQueryChunk(UINT count, Queries *expSpecs, INT &rem)
     expSpecs->numSpecs = count;
     expSpecs->idx[0] = 0; //Set starting point to zero.
 
-    /* Get a new ifstream object and open file */
-    qfile = new ifstream(*MS2file);
-
-    /* Check allocation */
-    if (qfile == NULL)
+    if (qfile == NULL || qfile->is_open() == false)
     {
-        status = ERR_INVLD_PARAM;
+        /* Get a new ifstream object and open file */
+        qfile = new ifstream(*MS2file);
+
+        /* Check allocation */
+        if (qfile == NULL)
+        {
+            status = ERR_INVLD_PARAM;
+        }
     }
 
     /* Check if file opened */
@@ -390,7 +393,7 @@ STATUS MSQuery::ProcessQuerySpectrum(Queries *expSpecs)
     UINT *mzArray = spectrum.mz;
     INT SpectrumSize = spectrum.SpectrumSize;
 
-    expSpecs->precurse[currPtr] = spectrum.prec_mz;
+    expSpecs->precurse[currPtr - running_count] = spectrum.prec_mz;
 
     KeyVal_Parallel<UINT, UINT>(dIntArr, mzArray, (UINT)SpectrumSize, 1);
 

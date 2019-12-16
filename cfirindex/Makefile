@@ -1,9 +1,9 @@
 BUILD_MODE = RELEASE
 OPENMP = YES
 MPI = YES
-JOBS=4
+JOBS=22
 CXXFLAGS = -Wall -fmessage-length=0 -std=c++11
-LNKFLAGS = -Wl,--wrap,memcpy
+#LNKFLAGS = -Wl,--wrap,memcpy
 
 # Change CXX to MPIC++ when MPI enabled
 ifeq ($(MPI),YES)
