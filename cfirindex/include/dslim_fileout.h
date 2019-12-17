@@ -20,13 +20,13 @@
 #ifndef INCLUDE_DSLIM_FILEOUT_H_
 #define INCLUDE_DSLIM_FILEOUT_H_
 
-/* Most beautiful includes I've ever seen */
 #include <sstream>
 #include "common.h"
 #include "slm_dsts.h"
 #include "slmerr.h"
 
 /* Function Definitions */
+STATUS    DFile_PrintPartials(UINT specid, Results *resPtr);
 STATUS    DFile_PrintScore(Index *index, UINT specid, FLOAT pmass,
                            hCell* psm, DOUBLE e_x, UINT npsms);
 STATUS    DFile_InitFiles();

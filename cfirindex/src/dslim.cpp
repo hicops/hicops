@@ -283,12 +283,12 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
 
 #ifdef _OPENMP
     /* SA ptr for each thread */
-    UINT *SAPtrs[threads] = {NULL};
+    UINT *SAPtrs[threads];
 
     /* Temporary Array needed for Theoretical Spectra */
     UINT *Spectra = new UINT[threads * speclen];
 
-    UINT *BAPtrs[threads] = {NULL};
+    UINT *BAPtrs[threads];
     UINT *bA = new UINT[(INT)(threads * scale * maxmass)];
 
     /* Initialize SAPtrs for each thread */
@@ -549,8 +549,8 @@ STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs)
                 Score[thd].res.xaxis[k] = k;
             }
 
-            /* Initialize the heap */
-            Score[thd].res.topK.heap_init(1 << num);
+            /* Initialize the heap with size = pow(2, num) - 1 */
+            Score[thd].res.topK.heap_init((1 << num) - 1);
         }
     }
     else

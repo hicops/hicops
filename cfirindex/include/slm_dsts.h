@@ -27,6 +27,7 @@
 
 /* Types of modifications allowed by SLM_Mods     */
 #define MAX_MOD_TYPES                        15
+#define MAX_SEQ_LEN                          60
 
 /************************* Common DSTs ************************/
 
@@ -389,6 +390,7 @@ typedef struct _globalParams
 
     DOUBLE dM;
     DOUBLE res;
+    DOUBLE expect_max;
 
     DOUBLE *perf;
 
@@ -409,6 +411,7 @@ typedef struct _globalParams
         maxz = 3;
         topmatches = 10;
         scale = 100;
+        expect_max = 20;
         min_shp = 4;
         min_cpsm = 4;
         base_int = 100000;
@@ -434,18 +437,97 @@ typedef struct _queries
     UINT  *intensity; /* Stores the intensity values of the experimental spectra */
     UINT        *idx; /* Row ptr. Starting index of each row */
     FLOAT  *precurse; /* Stores the precursor mass of each spectrum. */
-    UINT    numPeaks;
-    UINT    numSpecs; /* Number of theoretical spectra */
+    INT    numPeaks;
+    INT    numSpecs; /* Number of theoretical spectra */
 
-    _queries()
+    void reset()
     {
-        moz = NULL;
-        intensity = NULL;
-        idx = NULL;
-        precurse = NULL;
         numPeaks = 0;
         numSpecs = 0;
     }
+
+    _queries()
+    {
+        this->idx       = NULL;
+        this->precurse  = NULL;
+        this->moz       = NULL;
+        this->intensity = NULL;
+        numPeaks        = 0;
+        numSpecs        = 0;
+    }
+
+    VOID init()
+    {
+        this->idx       = new UINT[QCHUNK + 1];
+        this->precurse  = new FLOAT[QCHUNK];
+        this->moz       = new UINT[QCHUNK * QALEN];
+        this->intensity = new UINT[QCHUNK * QALEN];
+        numPeaks        = 0;
+        numSpecs        = 0;
+    }
+
+    VOID deinit()
+    {
+        numPeaks = -1;
+        numSpecs = -1;
+
+        /* Deallocate the memory */
+        if (this->moz != NULL)
+        {
+            delete[] this->moz;
+            this->moz = NULL;
+        }
+
+        if (this->intensity != NULL)
+        {
+            delete[] this->intensity;
+            this->intensity = NULL;
+        }
+
+        if (this->precurse != NULL)
+        {
+            delete[] this->precurse;
+            this->precurse = NULL;
+        }
+
+        if (this->idx != NULL)
+        {
+            delete[] this->idx;
+            this->idx = NULL;
+        }
+    }
+
+    ~_queries()
+    {
+        numPeaks = 0;
+        numSpecs = 0;
+
+        /* Deallocate the memory */
+        if (this->moz != NULL)
+        {
+            delete[] this->moz;
+            this->moz = NULL;
+        }
+
+        if (this->intensity != NULL)
+        {
+            delete[] this->intensity;
+            this->intensity = NULL;
+        }
+
+        if (this->precurse != NULL)
+        {
+            delete[] this->precurse;
+            this->precurse = NULL;
+        }
+
+        if (this->idx != NULL)
+        {
+            delete[] this->idx;
+            this->idx = NULL;
+        }
+    }
+
 } Queries;
 
 /* Score entry that goes into the heap */
@@ -469,11 +551,21 @@ typedef struct _heapEntry
     /* Constructor */
     _heapEntry()
     {
-        idxoffset = 0;
-        psid = 0;
+        idxoffset  = 0;
+        psid       = 0;
         hyperscore = 0;
         sharedions = 0;
-        totalions = 0;
+        totalions  = 0;
+    }
+
+    /* Copy constructor */
+    _heapEntry(const _heapEntry &obj)
+    {
+        idxoffset  = obj.idxoffset;
+        psid       = obj.psid;
+        hyperscore = obj.hyperscore;
+        sharedions = obj.sharedions;
+        totalions  = obj.totalions;
     }
 
     /* Overload = operator */
@@ -482,11 +574,11 @@ typedef struct _heapEntry
         /* Check for self assignment */
         if (this != &rhs)
         {
-            this->idxoffset = rhs.idxoffset;
-            this->psid = rhs.psid;
+            this->idxoffset  = rhs.idxoffset;
+            this->psid       = rhs.psid;
             this->hyperscore = rhs.hyperscore;
             this->sharedions = rhs.sharedions;
-            this->totalions = rhs.totalions;
+            this->totalions  = rhs.totalions;
         }
 
         return *this;
@@ -576,6 +668,26 @@ typedef struct _Results
     }
 
 } Results;
+
+/* Dat structure for partial result Tx/Rx */
+typedef struct _partResult
+{
+    FLOAT min;
+    FLOAT max;
+    FLOAT m;
+    FLOAT b;
+    FLOAT hyp;//[2];
+
+    _partResult()
+    {
+        min = 0;
+        max = 0;
+        m = 0;
+        b = 0;
+        hyp = 0;
+    }
+
+} partRes;
 
 typedef struct _BYICount
 {

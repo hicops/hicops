@@ -1,0 +1,12 @@
+#!/bin/bash
+
+#SBATCH --job-name="cfir"
+#SBATCH --output="./cfir.%j.%N.out"
+#SBATCH --partition=compute
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=24
+#SBATCH -t 00:30:00
+
+export OMP_NUM_THREADS   12
+
+ibrun --npernode 2 -bl socket -bp scatter ../../cfirindex/cfir.exe  ../../workspace/uparams.txt

@@ -30,6 +30,8 @@
 #include <string>
 #include <cstdlib>
 #include <iomanip>
+#include <pthread.h>
+#include <semaphore.h>
 
 #include "config.h"
 #include "slmerr.h"
@@ -76,5 +78,8 @@ typedef char  AA;         // Amino Acid
 typedef double PEAK;      // m/z of a fragement (peak)
 typedef double INTENSITY; // Intensity of a fragment (peak)
 typedef double* SPECTRUM; // Theoretical Spectrum
+
+typedef pthread_t THREAD;
+typedef sem_t     LOCK;
 
 #endif /* INCLUDE_COMMON_H_ */

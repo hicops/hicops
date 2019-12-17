@@ -20,21 +20,63 @@
 #include "msquery.h"
 
 using namespace std;
-using namespace MSToolkit;
-
-/* Global Variables */
-MSReader     gReader;
 
 extern gParams params;
 
-/* Static global variables */
-static UINT   firstScan = 0;
-static UINT   currScan  = 0;
-static UINT     QAcount = 0;
-static STRING       MS2file;
-static UINT nqchunks    = 0;
-static UINT curr_chunk  = 0;
-static UINT running_count   = 0;
+MSQuery::MSQuery()
+{
+    qfile = NULL;
+    currPtr = 0;
+    QAcount = 0;
+    maxslen = 0;
+    MS2file = new STRING;
+    nqchunks = 0;
+    curr_chunk = 0;
+    running_count = 0;
+    spectrum.intn = NULL;
+    spectrum.mz = NULL;
+    spectrum.SpectrumSize = 0;
+    spectrum.prec_mz = 0;
+    spectrum.Z = 0;
+}
+
+MSQuery::~MSQuery()
+{
+    currPtr = 0;
+    QAcount = 0;
+    nqchunks = 0;
+    curr_chunk = 0;
+    running_count = 0;
+    maxslen = 0;
+
+    if (MS2file != NULL)
+    {
+        delete MS2file;
+        MS2file = NULL;
+    }
+
+    if (qfile != NULL)
+    {
+        delete qfile;
+        qfile = NULL;
+    }
+
+    if (spectrum.intn != NULL)
+    {
+        delete[] spectrum.intn;
+        spectrum.intn = NULL;
+    }
+
+    if (spectrum.mz != NULL)
+    {
+        delete[] spectrum.mz;
+        spectrum.mz = NULL;
+    }
+
+    spectrum.SpectrumSize = 0;
+    spectrum.prec_mz = 0;
+    spectrum.Z = 0;
+}
 
 /*
  * FUNCTION: MSQuery_InitializeQueryFile
@@ -47,307 +89,97 @@ static UINT running_count   = 0;
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS MSQuery_InitializeQueryFile(CHAR *filename)
-{
-    UINT start, count;
-
-    return MSQuery_InitializeQueryFile(start, count, filename);
-}
-
-/*
- * FUNCTION: MSQuery_InitializeQueryFile
- *
- * DESCRIPTION: Initialize structures using only
- *              @count spectra from file
- *
- * INPUT:
- * @start   : Start index of spectra in the query file
- * @count   : Number of spectra to use for initializing
- * @filename: Path to query file
- *
- * OUTPUT:
- * @status: Status of execution
- */
-STATUS MSQuery_InitializeQueryFile(UINT& start, UINT& count, CHAR *filename)
+STATUS MSQuery::InitQueryFile(STRING *filename)
 {
     STATUS status = SLM_SUCCESS;
 
-    /* Read into local variables only */
-    Spectrum Spectrum;
-    MSReader tempReader;
+    /* Get a new ifstream object and open file */
+    ifstream *qqfile = new ifstream(*filename);
 
-    /* Initialize the variables */
-    count = 0;
-    start = 0;
+    INT largestspec = 0;
+    INT count = 0;
+    INT specsize = 0;
 
-    /* Add filters */
-    gReader.setFilter(MS1);
-    gReader.addFilter(MS2);
-    gReader.addFilter(MSX);
-
-    /* Add same filters for tempReader */
-    tempReader.setFilter(MS1);
-    tempReader.addFilter(MS2);
-    tempReader.addFilter(MSX);
-
-    /* Read the file */
-    if (tempReader.readFile(filename, Spectrum))
+    /* Check allocation */
+    if (qqfile == NULL)
     {
+        status = ERR_INVLD_PARAM;
+    }
 
-        while (Spectrum.getScanNumber() != 0)
+    /* Check if file opened */
+    if (qqfile->is_open() && status == SLM_SUCCESS)
+    {
+        STRING line;
+
+        /* While we still have lines in MS2 file */
+        while (!qqfile->eof())
         {
-            /* Store the first scan number
-             * into start */
-            if (start == 0)
+            /* Read one line */
+            getline(*qqfile, line);
+
+            /* Empty line */
+            if (line.empty())
             {
-                start = Spectrum.getScanNumber();
+                continue;
             }
+            /* Scan: (S) */
+            else if (line[0] == 'S')
+            {
+
+                count++;
+                largestspec = max(specsize, largestspec);
+                specsize = 0;
+
+            }
+            /* Header: (H) */
+            else if (line[0] == 'H' || line[0] == 'I' || line[0] == 'D' || line[0] == 'Z')
+            {
+                /* TODO: Decide what to do with header */
+                continue;
+            }
+            /* MS/MS data: [m/z] [int] */
             else
             {
-                (VOID) Spectrum.getScanNumber();
+                specsize++;
             }
-            count++;
-
-            tempReader.readFile(NULL, Spectrum);
         }
-    }
-    else
-    {
-        status = ERR_INVLD_PARAM;
-        count = 0;
-        start = 0;
-    }
 
-    if (status == SLM_SUCCESS)
-    {
-        /* Set the Global Variables */
-        firstScan = start;
-        currScan  = firstScan;
-        QAcount = count;
-        MS2file = filename;
-        curr_chunk = 0;
-        running_count = 0;
-        nqchunks = std::ceil(((double) count / QCHUNK));
-    }
-
-    return status;
-}
-
-/*
- * FUNCTION: MSQuery_InitializeQueryFile
- *
- * DESCRIPTION: Extract a chunk of spectra from query file
- *
- * INPUT:
- * @QA      : Pointer to Query Array
- * @threads : Number of parallel threads
- *
- * OUTPUT:
- * @size: Size of the extracted chunk
- */
-INT MSQuery_ExtractQueryChunk(UINT *QA)
-{
-    STATUS status = SLM_SUCCESS;
-    UINT *QAPtr = NULL;
-    INT chunksize = 0;
-    UINT spec = 0;
-    UINT startspec = (curr_chunk * QCHUNK);
-    UINT endspec = (curr_chunk + 1) * QCHUNK;
-
-    /* Sanity checks */
-    if (startspec >= QAcount)
-    {
-        chunksize = 0;
-        status = ERR_INVLD_SIZE;
-    }
-
-    /* Query spectra available */
-    if (status == SLM_SUCCESS)
-    {
-        if (endspec > QAcount)
+        /* Check the largestspecsize */
+        if (largestspec < 1)
         {
-            endspec = QAcount;
+            status = ERR_INVLD_SIZE;
         }
 
-        for (spec = startspec; spec < endspec && status == SLM_SUCCESS; spec++)
-        {
-            /* Set the QAPtr */
-            QAPtr = QA + ((spec - startspec) * QALEN);
-
-            /* Process the Query Spectrum */
-            status = MSQUERY_ProcessQuerySpectrum((CHAR *) MS2file.c_str(),
-                                                  QAPtr);
-        }
-
+        /* Initialize the file related params */
         if (status == SLM_SUCCESS)
         {
-            /* Set the chunksize that was processed */
-            chunksize = (spec - startspec);
-            /* Increment the current chunk number */
-            curr_chunk++;
+            currPtr  = 0;
+            QAcount = count;
+            *MS2file = *filename;
+            curr_chunk = 0;
+            running_count = 0;
+            nqchunks = std::ceil(((double) QAcount / QCHUNK));
 
+            maxslen = largestspec;
+
+            /* Initialize to largest spectrum in file */
+            spectrum.intn = new UINT[largestspec + 1];
+            spectrum.mz = new UINT[largestspec + 1];
         }
-#ifdef DEBUG
-        else
-        {
-            std::cout << "\nFATAL: There was an error processing MS2 spectra"<< endl
-                      << "Chunk:\t" << curr_chunk << "\tSpec:\t" << spec << endl;
-        }
-#endif /* DEBUG */
+
+        /* Close the file */
+        qqfile->close();
+
+        delete qqfile;
     }
 
-    return chunksize;
-}
-
-/*
- * FUNCTION: MSQuery_InitializeQueryFile
- *
- * DESCRIPTION: Extract a specific chunk of spectra from query file
- *
- * INPUT:
- * @start   : Start index of first spectrum to extract
- * @count   : Number of spectra to extract
- * @QA      : Pointer to Query Array
- * @threads : Number of parallel threads
- *
- * OUTPUT:
- * @status: Status of execution
- */
-STATUS MSQuery_ExtractQueryChunk(UINT start, UINT count, UINT *QA)
-{
-    STATUS status = SLM_SUCCESS;
-    UINT *QAPtr = NULL;
-    UINT startspec = start;
-    UINT endspec = start + count;
-
-    if (startspec >= QAcount)
-    {
-        status = ERR_INVLD_SIZE;
-    }
-
-    if (status == SLM_SUCCESS)
-    {
-        if (endspec > QAcount)
-        {
-            endspec = QAcount;
-        }
-
-#ifdef _OPENMP
-#pragma omp parallel for num_threads(params.threads) schedule(static)
-#endif /* _OPENMP */
-        for (UINT spec = startspec; spec < endspec; spec++)
-        {
-            QAPtr = QA + ((spec - startspec) * QALEN);
-
-            status = MSQUERY_ProcessQuerySpectrum((CHAR *) MS2file.c_str(),
-                                                 QAPtr);
-
-        }
-    }
-
+    /* Return the status */
     return status;
 }
 
-/*
- * FUNCTION: MSQUERY_ProcessQuerySpectrum
- *
- * DESCRIPTION: Process a Query Spectrum and extract peaks
- *
- * INPUT:
- * @filename : Path to query file
- * @QAPtr    : Pointer to Query Array (dst)
- * @threads  : Number of parallel threads
- *
- * OUTPUT:
- * @status: Status of execution
- */
-STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, UINT *QAPtr)
+STATUS MSQuery::ExtractQueryChunk(UINT count, Queries *expSpecs, INT &rem)
 {
     STATUS status = SLM_SUCCESS;
-    Spectrum Spectrum;
-    UINT threads = params.threads;
-
-#ifndef _OPENMP
-    LBE_UNUSED_PARAM(threads);
-#endif
-
-    /* TODO: FUTURE: There can be multiple spectra with different Z
-     * in one MS/MS (MS2) file. How to deal/separate those
-     */
-
-    if (gReader.readFile(filename, Spectrum, currScan) && status == SLM_SUCCESS)
-    {
-        UINT SpectrumSize = Spectrum.size();
-        UINT dIntArr[SpectrumSize];
-        UINT  mzArray[SpectrumSize];
-
-        for (UINT j = 0; j < SpectrumSize; j++)
-        {
-            mzArray[j] = (UINT)(Spectrum.at(j).mz * params.scale);
-            dIntArr[j] = (UINT)(Spectrum.at(j).intensity * 1000);
-        }
-
-#ifdef _OPENMP
-        /* Sort m/z based on Intensities */
-        KeyVal_Parallel<UINT, UINT>(dIntArr, mzArray, SpectrumSize, threads);
-#else
-        KeyVal_Serial<UINT, UINT>(dIntArr, mzArray, SpectrumSize);
-#endif /* _OPENMP */
-
-        /* Check the size of spectrum */
-        if (SpectrumSize >= QALEN)
-        {
-            /* Copy the last QALEN elements to QAPtr */
-            std::memcpy(QAPtr, (mzArray + SpectrumSize - QALEN), (QALEN * sizeof(UINT)));
-        }
-        else
-        {
-            /* Fill in zeros which are not treated as trivial queries */
-            std::memset(QAPtr, 0x0, ((QALEN - SpectrumSize) * sizeof(UINT)));
-
-            /* Fill in rest of the spectrum */
-            std::memcpy(QAPtr + (QALEN - SpectrumSize), mzArray, (SpectrumSize * sizeof(UINT)));
-        }
-
-#ifdef DEBUG
-        for (UINT test = 0; test < QALEN; test++)
-        {
-            /* Test for integrity of QA */
-            while (QAPtr[test] > params.max_mass * params.scale);
-        }
-#endif /* DEBUG */
-
-        if(gReader.nextSpectrum(Spectrum))
-        {
-            currScan = (UINT)Spectrum.getScanNumber();
-        }
-    }
-    else
-    {
-        status = ERR_INVLD_PARAM;
-    }
-
-    return status;
-
-}
-
-/*
- * FUNCTION: MSQuery_ExtractQueryChunk
- *
- * DESCRIPTION: Extract a specific chunk of spectra from query file
- *
- * INPUT:
- * @count   : Number of spectra to extract starting from the last spectrum read
- * @*expSpecs      : Pointer to experimental spectra struct
- * @threads : Number of parallel threads
- *
- * OUTPUT:
- * @status: Status of execution
- */
-STATUS MSQuery_ExtractQueryChunk(UINT count, Queries &expSpecs)
-{
-    STATUS status = SLM_SUCCESS;
-    //UINT *QAPtr = NULL;
 
     /* half open interval [startspec, endspec) */
     UINT startspec = running_count;
@@ -367,192 +199,281 @@ STATUS MSQuery_ExtractQueryChunk(UINT count, Queries &expSpecs)
         }
     }
 
-    expSpecs.numSpecs = count;
-    expSpecs.idx = new UINT[expSpecs.numSpecs + 1];
-    expSpecs.precurse = new FLOAT[expSpecs.numSpecs];
-    expSpecs.idx[0] = 0; //Set starting point to zero.
+    expSpecs->numSpecs = count;
+    expSpecs->idx[0] = 0; //Set starting point to zero.
 
-    MSReader tempReader;
-    Spectrum spectrum;
-    UINT l_peaks = 0;
-
-    /* Add same filters for tempReader */
-    tempReader.setFilter(MS1);
-    tempReader.addFilter(MS2);
-    tempReader.addFilter(MSX);
-
-    if (tempReader.readFile(MS2file.c_str(), spectrum, currScan))
+    if (qfile == NULL || qfile->is_open() == false)
     {
-        UINT l_count = 0;
+        /* Get a new ifstream object and open file */
+        qfile = new ifstream(*MS2file);
 
-        while (spectrum.getScanNumber() != 0 && l_count < count)
+        /* Check allocation */
+        if (qfile == NULL)
         {
-            expSpecs.precurse[l_count] = spectrum.atZ(0).mh;
+            status = ERR_INVLD_PARAM;
+        }
+    }
 
-            l_peaks += spectrum.size() < QALEN? spectrum.size() : QALEN;
-            l_count++;
-//          expSpecs.idx[l_count] = l_peaks;
-
-            tempReader.nextSpectrum(spectrum);
+    /* Check if file opened */
+    if (qfile->is_open() && status == SLM_SUCCESS)
+    {
+        for (UINT spec = startspec; spec < endspec; spec++)
+        {
+            ReadSpectrum();
+            status = ProcessQuerySpectrum(expSpecs);
         }
     }
 
     if (status == SLM_SUCCESS)
     {
-        expSpecs.numPeaks = l_peaks;
-        expSpecs.moz = new UINT[expSpecs.numPeaks];
-        expSpecs.intensity = new UINT[expSpecs.numPeaks];
+        /* Update the runnning count */
+        running_count += count;
 
-        for (UINT spec = startspec; spec < endspec; spec++)
-        {
-            UINT index = spec - startspec; //0, 1, 2, ...., count
-
-            status = MSQUERY_ProcessQuerySpectrum((CHAR *) MS2file.c_str(), expSpecs, index);
-        }
+        /* Set the number of remaining spectra count */
+        rem = QAcount - running_count;
     }
-
-    running_count += count;
 
     return status;
 }
 
-/*
- * FUNCTION: MSQUERY_ProcessQuerySpectrum
- *
- * DESCRIPTION: Process a Query Spectrum and extract peaks
- *
- * INPUT:
- * @filename : Path to query file
- * @QAPtr    : Pointer to Query Array (dst)
- * @threads  : Number of parallel threads
- *
- * OUTPUT:
- * @status: Status of execution
- */
-
-STATUS MSQUERY_ProcessQuerySpectrum(CHAR *filename, Queries &expSpecs, UINT where)
+VOID MSQuery::ReadSpectrum()
 {
-    STATUS status = SLM_SUCCESS;
-    Spectrum Spectrum;
-    UINT threads = params.threads;
+    STRING line;
+    UINT speclen = 0;
 
-#ifndef _OPENMP
-    LBE_UNUSED_PARAM(threads);
-#endif
-    /* TODO: FUTURE: There can be multiple spectra with different Z
-     * in one MS/MS (MS2) file. How to deal/separate those
-     */
-
-    if (gReader.readFile(filename, Spectrum, currScan) && status == SLM_SUCCESS)
+    /* Check if this is the first spectrum in file */
+    if (currPtr == 0)
     {
-        INT SpectrumSize = Spectrum.size();
-        UINT dIntArr[SpectrumSize];
-        UINT mzArray[SpectrumSize];
+        BOOL scan = false;
 
-        for (INT j = 0; j < SpectrumSize; j++)
+        while (!qfile->eof())
         {
-            mzArray[j] = (UINT)(Spectrum.at(j).mz * params.scale);
-            dIntArr[j] = (UINT)(Spectrum.at(j).intensity * 1000);
+            /* Read one line */
+            getline(*qfile, line);
+
+            /* Empty line */
+            if (line.empty() || line[0] == 'H' || line[0] == 'I' ||
+                line[0] == 'D')
+            {
+                continue;
+            }
+            else if ( line[0] == 'Z')
+            {
+                CHAR *mh = strtok((CHAR *) line.c_str(), " \t");
+                mh = strtok(NULL, " \t");
+                STRING val = "1";
+
+                if (mh != NULL)
+                {
+                    val = STRING(mh);
+                    spectrum.Z = std::atoi(val.c_str());
+                }
+
+                val = "0.01";
+                mh = strtok(NULL, " \t");
+
+                if (mh != NULL)
+                {
+                    val = STRING(mh);
+                    spectrum.prec_mz = (DOUBLE)std::atof(val.c_str());
+                }
+            }
+            else if (line[0] == 'S')
+            {
+                if (scan == true)
+                {
+                    spectrum.SpectrumSize = speclen;
+                    break;
+                }
+                else
+                {
+                    scan = true;
+                }
+            }
+            /* Values */
+            else
+            {
+                /* Split line into two DOUBLEs
+                 * using space as delimiter */
+
+                CHAR *mz1 = strtok((CHAR *) line.c_str(), " ");
+                CHAR *intn1 = strtok(NULL, " ");
+                STRING mz = "0.01";
+                STRING intn = "0.01";
+
+                if (mz1 != NULL)
+                {
+                    mz = STRING(mz1);
+                }
+
+                if (intn1 != NULL)
+                {
+                    intn = STRING(intn1);
+                }
+
+                spectrum.mz[speclen] = (UINT)((DOUBLE)std::atof(mz.c_str()) * params.scale);
+                spectrum.intn[speclen] = (UINT)((DOUBLE)std::atof(intn.c_str()) * 1000);
+
+                speclen++;
+            }
         }
+    }
+    /* Not the first spectrum in file */
+    else
+    {
+        while (!qfile->eof())
+        {
+            /* Read one line */
+            getline(*qfile, line);
 
-#ifdef _OPENMP
-        /* Sort m/z based on Intensities */
-        KeyVal_Parallel<UINT, UINT>(dIntArr, mzArray, SpectrumSize, threads);
-#else
-        KeyVal_Serial<UINT, UINT>(dIntArr, mzArray, (UINT)SpectrumSize);
-#endif /* _OPENMP */
+            /* Empty line */
+            if (line.empty() || line[0] == 'H' || line[0] == 'I' ||
+                line[0] == 'D')
+            {
+                continue;
+            }
+            else if ( line[0] == 'Z')
+            {
+                CHAR *mh = strtok((CHAR *) line.c_str(), " \t");
+                mh = strtok(NULL, " \t");
+                STRING val = "1";
 
+                if (mh != NULL)
+                {
+                    val = STRING(mh);
+                    spectrum.Z = std::atoi(val.c_str());
+                }
 
-        DOUBLE factor = ((DOUBLE)params.base_int/dIntArr[SpectrumSize - 1]);
+                val = "0.01";
+                mh = strtok(NULL, " \t");
+
+                if (mh != NULL)
+                {
+                    val = STRING(mh);
+                    spectrum.prec_mz = (DOUBLE)std::atof(val.c_str());
+                }
+            }
+            else if (line[0] == 'S')
+            {
+                spectrum.SpectrumSize = speclen;
+                break;
+            }
+            /* Values */
+            else
+            {
+                /* Split line into two DOUBLEs
+                 * using space as delimiter */
+                CHAR *mz1 = strtok((CHAR *) line.c_str(), " ");
+                CHAR *intn1 = strtok(NULL, " ");
+
+                STRING mz = "0.0";
+                STRING intn = "0.0";
+
+                if (mz1 != NULL)
+                {
+                    mz = STRING(mz1);
+                }
+                if (intn1 != NULL)
+                {
+                    intn = STRING(intn1);
+                }
+
+                spectrum.mz[speclen] = (UINT)((DOUBLE)std::atof(mz.c_str()) * params.scale);
+                spectrum.intn[speclen] = (UINT)((DOUBLE)std::atof(intn.c_str()) * 1000);
+
+                speclen++;
+            }
+        }
+    }
+}
+
+STATUS MSQuery::ProcessQuerySpectrum(Queries *expSpecs)
+{
+    UINT *dIntArr = spectrum.intn;
+    UINT *mzArray = spectrum.mz;
+    INT SpectrumSize = spectrum.SpectrumSize;
+
+    expSpecs->precurse[currPtr - running_count] = spectrum.prec_mz;
+
+    KeyVal_Parallel<UINT, UINT>(dIntArr, mzArray, (UINT)SpectrumSize, 1);
+
+    UINT speclen = 0;
+    DOUBLE factor = 0;
+
+    if (SpectrumSize > 0)
+    {
+        factor = ((DOUBLE) params.base_int / dIntArr[SpectrumSize - 1]);
 
         /* Set the highest peak to base intensity */
         dIntArr[SpectrumSize - 1] = params.base_int;
-        UINT speclen = 1;
+        speclen = 1;
 
         /* Scale the rest of the peaks to the base peak */
         for (INT j = SpectrumSize - 2; j >= (SpectrumSize - QALEN) && j >= 0; j--)
         {
             dIntArr[j] *= factor;
 
-            if (dIntArr[j] >= (UINT)params.min_int)
+            if (dIntArr[j] >= (UINT) params.min_int)
             {
                 speclen++;
             }
         }
+    }
 
-        /* Update the indices */
-        UINT offset = expSpecs.idx[where];
-        expSpecs.idx[where + 1] = expSpecs.idx[where] + speclen;
+    /* Update the indices */
+    UINT offset = expSpecs->idx[currPtr - running_count];
+    expSpecs->idx[currPtr - running_count + 1] = expSpecs->idx[currPtr - running_count] + speclen;
 
-        /* Check the size of spectrum */
-        if (speclen >= QALEN)
-        {
-            /* Copy the last QALEN elements to QAPtr */
-            std::memcpy(&expSpecs.moz[offset], (mzArray + SpectrumSize - QALEN), (QALEN * sizeof(UINT)));
-            std::memcpy(&expSpecs.intensity[offset], (dIntArr + SpectrumSize - QALEN), (QALEN * sizeof(UINT)));
-        }
-        else
-        {
-            /* Fill in zeros which are treated as trivial queries */
-            std::memcpy(&expSpecs.moz[offset], (mzArray + SpectrumSize - speclen), (speclen * sizeof(UINT)));
-            std::memcpy(&expSpecs.intensity[offset], (dIntArr + SpectrumSize - speclen), (speclen * sizeof(UINT)));
-        }
-
-#ifdef DEBUG
-        for (UINT test = 0; test < QALEN; test++)
-        {
-            /* Test for integrity of QA */
-            while (expSpecs->moz[test] > MAX_MASS * SCALE);
-        }
-#endif /* DEBUG */
-
-        if(gReader.nextSpectrum(Spectrum))
-        {
-            currScan = (UINT)Spectrum.getScanNumber();
-        }
+    /* Check the size of spectrum */
+    if (speclen >= QALEN)
+    {
+        /* Copy the last QALEN elements to expSpecs */
+        std::memcpy(&expSpecs->moz[offset], (mzArray + SpectrumSize - QALEN), (QALEN * sizeof(UINT)));
+        std::memcpy(&expSpecs->intensity[offset], (dIntArr + SpectrumSize - QALEN), (QALEN * sizeof(UINT)));
     }
     else
     {
-        status = ERR_INVLD_PARAM;
+        /* Copy the last speclen items to expSpecs */
+        std::memcpy(&expSpecs->moz[offset], (mzArray + SpectrumSize - speclen), (speclen * sizeof(UINT)));
+        std::memcpy(&expSpecs->intensity[offset], (dIntArr + SpectrumSize - speclen), (speclen * sizeof(UINT)));
     }
 
-    return status;
+    currPtr += 1;
 
+    return SLM_SUCCESS;
 }
 
-//Author: Usman
-//needs fixing
-UINT* UTILS_ExtractSpectra(CHAR *filename, UINT len)
+STATUS MSQuery::DeinitQueryFile()
 {
-    UINT *QA = new UINT[len];
+    currPtr = 0;
+    QAcount = 0;
+    nqchunks = 0;
+    curr_chunk = 0;
+    running_count = 0;
+    maxslen = 0;
 
-    STATUS status = SLM_SUCCESS;
-
-    //for (UINT qf = 0; qf < queryfiles.size(); qf++)
+    if (qfile != NULL)
     {
-        std::cout << std::endl << "Query File: " << filename << std::endl;
+        qfile->close();
 
-        /* Initialize Query MS/MS file */
-        status = MSQuery_InitializeQueryFile(filename);
-
-        /* DSLIM Query Algorithm */
-        if (status == SLM_SUCCESS)
-        {
-            /* Extract a chunk of MS/MS spectra and
-             * query against DSLIM Index */
-            //for (; QA != NULL;)
-            {
-                /* Extract a chunk and return the chunksize */
-                UINT ms2specs = MSQuery_ExtractQueryChunk(QA);
-
-                /* If the chunksize is zero, all done */
-                if (ms2specs <= 0)
-                {
-                    //break;
-                }
-            }
-        }
+        delete qfile;
+        qfile = NULL;
     }
 
-    return QA;
+    if (spectrum.intn != NULL)
+    {
+        delete[] spectrum.intn;
+        spectrum.intn = NULL;
+    }
+
+    if (spectrum.mz != NULL)
+    {
+        delete[] spectrum.mz;
+        spectrum.mz = NULL;
+    }
+
+    spectrum.SpectrumSize = 0;
+    spectrum.prec_mz = 0;
+
+    return SLM_SUCCESS;
 }

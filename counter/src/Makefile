@@ -1,10 +1,10 @@
 SRC_ROOT = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
-CXXFLAGS +=-DGCC
+CXXFLAGS +=
 
 INCPATHS = -I../include -I../mstoolkit/include
 
-OBJS = dslim_query.o dslim.o lbe_internal.o utils.o mods.o msquery.o dslim_fileout.o scheduler.o dslim_comm.o
+OBJS = lbe_internal.o utils.o mods.o
 LIB = libdslim.a
 OBJDIR = objs
 

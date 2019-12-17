@@ -1,20 +1,20 @@
 /*
- * This file is part of PCDSFrame software
- * Copyright (C) 2019  Muhammad Haseeb, Fahad Saeed
- * Florida International University, Miami, FL
+ *  This file is part of SLM-Transform
+ *  Copyright (C) 2019  Muhammad Haseeb, Fahad Saeed
+ *  Florida International University, Miami, FL
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
 
@@ -23,38 +23,28 @@
 
 /************** Developer Mode options: Danger Area *****************/
 
+
 /* Contains MACROS that configure SLM Index build */
 
 /* Manually switch _OPENMP */
 //#undef _OPENMP
 
 /* Manually switch MPI */
-//#undef DISTMEM
+#define DISTMEM
 
 /* Switch the benchmarking */
-//#define BENCHMARK
+#define BENCHMARK
 
 #define MAX_SEQ_LEN              60
 
 /* Number of fragments (peaks) per query spectrum */
 #define QALEN                    100
 
-/* How many query spectra per batch */
-#define QCHUNK                   10000
+/* How many query spectra per chunk */
+#define QCHUNK                   50000
 
-/* Precision to inter-convert between FLOAT and INT
- * for Tx/Rx purposes
- */
-#define PRECISION                1000000
-
-/* Maximum hyperscore that is possible */
-#define MAX_HYPERSCORE           100
-
-/* Max partial results in RX buffer */
-#define RX_BUFFER_SIZE           4000000
-
-/* Max number of RX instances before buffer flush */
-#define MAX_RX_INST              500
+/* How many top matches required at max */
+#define MAXMATCHES               99999
 
 /* Enable DSLIM Mods construction                 */
 #define VMODS
@@ -65,12 +55,15 @@
 /* Enable debug checkpoints                       */
 #undef DEBUG
 
-/* Define to analyze the distributed partial results
- * instead of dumping them into file
- */
-#undef ANALYSIS
+/* Recycle and reuse the already allocated memory
+ * instead of new allocations when possible       */
+#undef RECYCLE
 
-/* FUTURE:  Only b- and y-ions used in current
+/* Future: Define if the peak intensities
+ * are required for the query spectra             */
+#undef REQUIRE_INTENSITY
+
+/* TODO:  Only b- and -y-ions used in current
  *               implementation                   */
 
 /* Define the Ion Series and add it to iSERIES    */
@@ -83,7 +76,7 @@
 #define NLOSS                     0
 #define IMMONIUM                  0
 
-/* Number of ion series generated per spectrum  */
+/* Number of ion series to generate per spectrum  */
 #define iSERIES                   (aIONS + \
                                    bIONS + \
                                    cIONS + \

@@ -1,5 +1,12 @@
-# pcdsframe
-PCDSFrame: A comprehensive and open-source software framework for identification of peptides from LC-MS/MS data
+# PCDSFrame
+PCDSFrame: A comprehensive software framework for identification of peptides from DDA LC-MS/MS data using an HPC system (specifically optmized for XSEDE COMET HPC Cluster)
 
 # Authors:
-Muhammad Haseeb, Muhammad Usman Tariq, Fahad Saeed
+Muhammad Haseeb, Fahad Saeed
+
+# Introduction
+
+# References
+
+# Contact us
+Please reach us at {mhaseeb, fsaeed}@fiu.edu should you face any bugs in the software.

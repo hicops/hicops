@@ -1,0 +1,11 @@
+#!/bin/bash
+
+#SBATCH --job-name="counter"
+#SBATCH --output="./counter.out"
+#SBATCH --partition=compute
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=24
+#SBATCH -t 00:15:00
+
+export OMP_NUM_THREADS    24
+../../counter/counter.exe ../../workspace3/autogen/pparams.txt

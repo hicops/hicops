@@ -71,7 +71,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     chrono::duration<double> elapsed_seconds = end - start;
     chrono::duration<double> qtime = end - start;
 
-    STRING patt[3] = {".ms2", ".mzML", "mzXML"};
+    STRING patt = {".ms2"};
     CHAR extension[] = ".peps";
 
     if (argc < 2)
@@ -115,10 +115,12 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
             STRING cfile(pdir->d_name);
 
             /* Add the matching files */
-            if (cfile.find(patt[0]) != std::string::npos)
+            if (cfile.find(patt/* patt[0] */) != std::string::npos)
             {
                 queryfiles.push_back(params.datapath + '/' + pdir->d_name);
             }
+
+#ifdef FUTURE
             if (cfile.find(patt[1]) != std::string::npos)
             {
                 queryfiles.push_back(params.datapath + '/' + pdir->d_name);
@@ -127,9 +129,12 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
             {
                 queryfiles.push_back(params.datapath + '/' + pdir->d_name);
             }
+#endif /* FUTURE */
         }
     }
-    else
+
+    /* No file to query - Abort */
+    if (queryfiles.size() < 1)
     {
         status = ERR_FILE_NOT_FOUND;
     }
@@ -138,8 +143,13 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     UINT minlen = params.min_len;
     UINT maxlen = params.max_len;
 
-    slm_index = new Index[maxlen - minlen + 1];
+    /* Create (max - min + 1) instances of SLM_Index */
+    if (status == SLM_SUCCESS)
+    {
+        slm_index = new Index[maxlen - minlen + 1];
+    }
 
+    /* Check if successful memory allocation */
     if (slm_index == NULL)
     {
         status = ERR_INVLD_MEMORY;
@@ -274,119 +284,16 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         status = DSLIM_InitializeScorecard(slm_index, (maxlen - minlen + 1));
     }
 
+    if (status == SLM_SUCCESS && params.myid == 0)
+    {
+        elapsed_seconds = chrono::system_clock::now() - start_tim;
+        cout << "Indexing Time: " << elapsed_seconds.count() << "s" << endl;
+    }
+
     /* Query the index */
     if (status == SLM_SUCCESS)
     {
-        /* Initialize and process Query Spectra */
-        for (UINT qf = 0; qf < queryfiles.size(); qf++)
-        {
-            start = chrono::system_clock::now();
-#ifdef BENCHMARK
-            duration = omp_get_wtime();
-#endif
-            /* Initialize Query MS/MS file */
-            status = MSQuery_InitializeQueryFile((CHAR *) queryfiles[qf].c_str());
-
-#ifdef BENCHMARK
-            fileio += omp_get_wtime() - duration;
-#endif
-            end = chrono::system_clock::now();
-
-            /* Compute Duration */
-            elapsed_seconds = end - start;
-
-            if (params.myid == 0)
-            {
-                cout << "Query File: " << queryfiles[qf] << endl;
-                cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
-            }
-
-            Queries ss;
-
-            UINT spectra = 0;
-
-            /* DSLIM Query Algorithm */
-            if (status == SLM_SUCCESS)
-            {
-                start = chrono::system_clock::now();
-#ifdef BENCHMARK
-                duration = omp_get_wtime();
-#endif
-                /* Extract a chunk and return the chunksize */
-                status = MSQuery_ExtractQueryChunk(QCHUNK, ss);
-
-#ifdef BENCHMARK
-                fileio += omp_get_wtime() - duration;
-#endif
-                end = chrono::system_clock::now();
-
-                /* Compute Duration */
-                elapsed_seconds = end - start;
-
-                if (params.myid == 0)
-                {
-                    cout << "Extracted Spectra :\t\t" << ss.numSpecs << endl;
-                    cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
-                }
-
-                UINT ms2specs = ss.numSpecs;
-
-                /* If the chunksize is zero, all done */
-                if (ms2specs <= 0)
-                {
-                    break;
-                }
-
-                spectra += ms2specs;
-
-                start = chrono::system_clock::now();
-
-                if (params.myid == 0)
-                {
-                    cout << "Querying: \n" << endl;
-                }
-
-                /* Query the chunk */
-                status = DSLIM_QuerySpectrum(ss, ms2specs, slm_index, (maxlen - minlen + 1));
-
-                end = chrono::system_clock::now();
-
-                /* Compute Duration */
-                qtime += end - start;
-
-            }
-
-            /* TODO: Uncomment this thing */
-            //if (params.myid == 0)
-            {
-                /* Compute Duration */
-                cout << "Queried Spectra:\t\t" << spectra << endl;
-                cout << "Query Time: " << qtime.count() << "s" << endl;
-                cout << "Queried with status:\t\t" << status << endl << endl;
-            }
-
-            end = chrono::system_clock::now();
-
-            if (ss.moz != NULL)
-            {
-                delete[] ss.moz;
-            }
-
-            if (ss.intensity != NULL)
-            {
-                delete[] ss.intensity;
-            }
-
-            if (ss.precurse != NULL)
-            {
-                delete[] ss.precurse;
-            }
-
-            if (ss.idx != NULL)
-            {
-                delete[] ss.idx;
-            }
-        }
+        status = DSLIM_SearchManager(slm_index);
     }
 
     for (UINT peplen = minlen; peplen <= maxlen; peplen++)
@@ -486,6 +393,7 @@ static STATUS ParseParams(CHAR* paramfile)
 
         /* Get the max threads to use */
         getline(pfile, line);
+
 #ifdef _OPENMP
         params.threads = std::atoi(line.c_str());
 #else
@@ -531,6 +439,10 @@ static STATUS ParseParams(CHAR* paramfile)
         /* Get the top matches to report */
         getline(pfile, line);
         params.topmatches = std::atoi(line.c_str());
+
+        /* Get the max expect score to report */
+        getline(pfile, line);
+        params.expect_max = std::atof(line.c_str());
 
         /* Get the shp threshold */
         getline(pfile, line);

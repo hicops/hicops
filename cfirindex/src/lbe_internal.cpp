@@ -541,7 +541,7 @@ VOID LBE_PrintHeader()
 {
     cout << "\n"
             "*********************************\n"
-            "  The MS/MS Proteomics Pipeline  \n"
+            "  The HPC MS/MS Proteomics Pipe  \n"
             "Florida International University \n"
             "        Miami, FL, USA           \n"
             "*********************************\n"

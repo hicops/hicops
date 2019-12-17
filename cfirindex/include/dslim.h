@@ -147,6 +147,8 @@ STATUS DSLIM_DeallocateSC();
 
 STATUS DSLIM_DeallocateSpecArr();
 
+STATUS DSLIM_SearchManager(Index *index);
+
 /* FUNCTION: DSLIM_QuerySpectrum
  *
  * DESCRIPTION: Query the DSLIM for all query peaks
@@ -161,7 +163,9 @@ STATUS DSLIM_DeallocateSpecArr();
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_QuerySpectrum(Queries &ss, UINT len, Index *index, UINT indexchunks);
+STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT indexchunks);
+
+STATUS DSLIM_Process_RxData();
 
 /* FUNCTION: DSLIM_WriteLIBSVM
  *
@@ -176,7 +180,9 @@ STATUS DSLIM_QuerySpectrum(Queries &ss, UINT len, Index *index, UINT indexchunks
  */
 STATUS DSLIM_WriteLIBSVM(STRING path, UINT peplen, UINT chno);
 
-
+#ifdef DISTMEM
+STATUS DSLIM_Gather_Results(partRes *tupPtr);
+#endif /* DISTMEN */
 
 STATUS DSLIM_WriteCSV(STRING path, UINT peplen, UINT chno);
 #endif /* DSLIM_H_ */
