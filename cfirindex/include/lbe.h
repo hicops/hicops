@@ -104,7 +104,7 @@ STATUS LBE_Distribute(Index *index);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_CountPeps(CHAR *filename, Index *index);
+STATUS LBE_CountPeps(CHAR *filename, Index *index, UINT explen);
 
 STATUS LBE_CreatePartitions(Index *index);
 

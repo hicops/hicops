@@ -414,7 +414,7 @@ STATUS LBE_CreatePartitions(Index *index)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_CountPeps(CHAR *filename, Index *index)
+STATUS LBE_CountPeps(CHAR *filename, Index *index, UINT explen)
 {
     STATUS status = SLM_SUCCESS;
     STRING line;
@@ -453,6 +453,13 @@ STATUS LBE_CountPeps(CHAR *filename, Index *index)
 
                 /* Transform to all upper case letters */
                 std::transform(line.begin(), line.end(), line.begin(), ::toupper);
+
+                /* Check the integrity of the peptide sequence being entered */
+                if (line.length() != explen)
+                {
+                    status = ERR_INVLD_SIZE;
+                    break;
+                }
 
                 /* Calculate mass of peptide */
                 pepmass = UTILS_CalculatePepMass((AA *)line.c_str(), line.length());
@@ -502,7 +509,7 @@ STATUS LBE_CountPeps(CHAR *filename, Index *index)
 #endif /* VMODS */
 
     /* Check if any errors occurred in MODS_ModCounter */
-    if (index->modCount == (UINT)(-1))
+    if (index->modCount == (UINT)(-1) || index->pepIndex.AAs != index->pepCount * explen)
     {
         status = ERR_INVLD_SIZE;
     }
@@ -540,11 +547,12 @@ STATUS LBE_CountPeps(CHAR *filename, Index *index)
 VOID LBE_PrintHeader()
 {
     cout << "\n"
-            "*********************************\n"
-            "  The HPC MS/MS Proteomics Pipe  \n"
-            "Florida International University \n"
-            "        Miami, FL, USA           \n"
-            "*********************************\n"
+            "***************************************\n"
+            "* HiCOPS: HPC Database Peptide Search *\n"
+            "* School of Computing & Info Sciences *\n"
+            "*   Florida International University  *\n"
+            "*         Miami, Florida, USA         *\n"
+            "***************************************\n"
           << endl << endl;
 
     return;

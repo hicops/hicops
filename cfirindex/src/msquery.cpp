@@ -477,3 +477,24 @@ STATUS MSQuery::DeinitQueryFile()
 
     return SLM_SUCCESS;
 }
+
+BOOL MSQuery::isDeInit()
+{
+    return ((qfile == NULL) && (QAcount == 0));
+}
+
+/* Operator Overload - To copy to and from the work queue */
+MSQuery& MSQuery::operator=(const MSQuery &rhs)
+{
+    this->MS2file = rhs.MS2file;
+    this->QAcount = rhs.QAcount;
+    this->currPtr = rhs.currPtr;
+    this->curr_chunk = rhs.curr_chunk;
+    this->maxslen = rhs.maxslen;
+    this->nqchunks = rhs.nqchunks;
+    this->qfile = rhs.qfile;
+    this->running_count = rhs.running_count;
+    this->spectrum = rhs.spectrum;
+
+    return *this;
+}

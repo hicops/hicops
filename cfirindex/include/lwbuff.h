@@ -27,7 +27,7 @@
 
 using namespace std;
 
-#define DEF_SIZE                    4
+#define DEF_SIZE                    20
 
 template <class T>
 class lwbuff
@@ -35,6 +35,7 @@ class lwbuff
 private:
 
     INT cap;
+    INT threshold;
     sem_t lockr;
     sem_t lockw;
 
@@ -48,6 +49,9 @@ public:
     lwbuff()
     {
         cap = DEF_SIZE;
+
+        threshold = cap/3;
+
         readyQ = new lwqueue<T *>(DEF_SIZE + 1, false);
         waitQ = new lwqueue<T *>(DEF_SIZE, false);
 
@@ -55,9 +59,10 @@ public:
         sem_init(&lockw, 0, 1);
     }
 
-    lwbuff(INT dcap)
+    lwbuff(INT dcap, INT thr)
     {
         cap = dcap;
+        threshold = thr;
         readyQ = new lwqueue<T*>(dcap + 1, false);
         waitQ = new lwqueue<T*>(dcap, false);
 
@@ -68,6 +73,7 @@ public:
     virtual ~lwbuff()
     {
         cap = 0;
+        threshold = 0;
 
         vEmpty();
 
@@ -142,6 +148,9 @@ public:
         return rtn;
     }
 
+
+
+
     INT len()
     {
         return cap;
@@ -166,6 +175,12 @@ public:
     {
         return waitQ->isFull();
     }
+
+    BOOL isUnderWaitQ()
+    {
+        return (waitQ->size() < threshold);
+    }
+
 
     inline INT addOne(INT idd)
     {
