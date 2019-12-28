@@ -27,9 +27,12 @@
 class Scheduler
 {
 private:
-    /* The two main threads */
-    THREAD ioThread;
-    INT ioThd;
+
+    /* Number of IO threads */
+    INT nIOThds;
+    INT maxIOThds;
+
+    BOOL eSignal;
 
     /* Queues to track threads */
     lwqueue <THREAD *> *dump;
@@ -39,13 +42,9 @@ private:
     LOCK dumpQ;
 
     /* Thresholds */
-    INT xtraIO;
-    INT nxtra;
-    INT stopXtra;
-
+    BOOL stopXtra;
     DOUBLE maxpenalty;
     DOUBLE minrate;
-
     DOUBLE waitSincelast;
 
     /* Variables for forecasting penalties  */
@@ -73,20 +72,21 @@ private:
     DOUBLE forecastLASP(DOUBLE yt);
     DOUBLE forecastLASP(DOUBLE yt, DOUBLE deltaS);
     STATUS dispatchThread();
-    BOOL   makeDecisions(DOUBLE yt);
+    BOOL   makeDecisions(DOUBLE yt, INT decisions);
 
 public:
     Scheduler();
     Scheduler(INT, INT);
     virtual ~Scheduler();
 
-    VOID ioComplete();
+    VOID   ioComplete();
     INT    getNumActivThds();
-    BOOL   checkDecisions();
+    BOOL   checkPreempt();
     STATUS takeControl(VOID *argv);
-    STATUS runManager(DOUBLE yt);
-    STATUS runManager(DOUBLE yt, INT qchunk);
+    STATUS runManager(DOUBLE yt, INT dec);
+    //STATUS runManager(DOUBLE yt, INT qchunk);
     VOID   waitForCompletion();
+    BOOL   checkSignal();
 };
 
 #endif /* SCHEDULER_H_ */

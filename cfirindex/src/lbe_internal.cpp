@@ -454,7 +454,8 @@ STATUS LBE_CountPeps(CHAR *filename, Index *index, UINT explen)
                 /* Transform to all upper case letters */
                 std::transform(line.begin(), line.end(), line.begin(), ::toupper);
 
-                /* Check the integrity of the peptide sequence being entered */
+                /* Check the integrity of the peptide
+                 * sequence being read */
                 if (line.length() != explen)
                 {
                     status = ERR_INVLD_SIZE;

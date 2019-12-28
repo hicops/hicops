@@ -498,3 +498,9 @@ MSQuery& MSQuery::operator=(const MSQuery &rhs)
 
     return *this;
 }
+
+
+UINT MSQuery::getQAcount()
+{
+    return QAcount;
+}

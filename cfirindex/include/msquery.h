@@ -68,7 +68,7 @@ public:
 
     MSQuery();
     virtual ~MSQuery();
-
+    UINT getQAcount();
     STATUS InitQueryFile(STRING *filename);
     STATUS ExtractQueryChunk(UINT count, Queries *expSpecs, INT &rem);
     STATUS DeinitQueryFile();
