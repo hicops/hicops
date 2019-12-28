@@ -54,7 +54,7 @@ lwbuff<Queries> *qPtrs = NULL;
 Queries *workPtr = NULL;
 
 /* A queue containing I/O thread state when preempted */
-lwqueue<MSQuery> *ioQ = NULL;
+lwqueue<MSQuery *> *ioQ = NULL;
 LOCK ioQlock;
 /****************************************************************/
 
@@ -188,7 +188,8 @@ STATUS DSLIM_SearchManager(Index *index)
     {
         /* Let's do a queue of 10 MSQuery elements -
          * should be more than enough */
-        ioQ = new lwqueue<MSQuery>(10);
+
+        ioQ = new lwqueue<MSQuery*>(10);
 
         /* Check for correct allocation */
         if (ioQ == NULL)
@@ -1003,7 +1004,8 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 
     /* local object is fine since it will be copied
      * to the queue object at the time of preemption */
-    MSQuery Query;
+    MSQuery *Query = NULL;
+
     INT rem_spec = 0;
 
     /* Initialize and process Query Spectra */
@@ -1014,7 +1016,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 #endif /* BENCHMARK */
 
         /* Check if the Query object is not initialized */
-        if (Query.isDeInit())
+        if (Query == NULL || Query->isDeInit())
         {
             /* Try getting the Query object from queue if present */
             status = sem_wait(&ioQlock);
@@ -1026,13 +1028,11 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
             }
 
             status = sem_post(&ioQlock);
+        }
 
-            /* If we got the query object from the queue */
-            if (!Query.isDeInit())
-            {
-                break;
-            }
-
+        /* If the queue is empty */
+        if (Query == NULL || Query->isDeInit())
+        {
             /* Otherwise, initialize the object from a file */
             start = chrono::system_clock::now();
 
@@ -1053,41 +1053,45 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 
                 /* Raise the exit signal */
                 eSignal = true;
-
-                break;
             }
 
-            /* Unlock the query file */
-            sem_post(&qfilelock);
-
-            /* Initialize Query MS/MS file */
-            status = Query.InitQueryFile(&queryfiles[qfid_lcl]);
-
-            if (params.myid == 0)
+            if (eSignal == false)
             {
-                cout << "Query File: " << queryfiles[qfid_lcl] << endl;
-                cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
-            }
+                /* Unlock the query file */
+                sem_post(&qfilelock);
 
-            rem_spec = Query.getQAcount(); // Init to 1 for first loop to run
-            end = chrono::system_clock::now();
+                /* We need a new Query object here */
+                Query = new MSQuery;
 
-            /* Compute Duration */
-            elapsed_seconds = end - start;
+                /* Initialize Query MS/MS file */
+                status = Query->InitQueryFile(&queryfiles[qfid_lcl]);
+
+                if (params.myid == 0)
+                {
+                    cout << "Query File: " << queryfiles[qfid_lcl] << endl;
+                    cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                }
+
+                rem_spec = Query->getQAcount(); // Init to 1 for first loop to run
+                end = chrono::system_clock::now();
+
+                /* Compute Duration */
+                elapsed_seconds = end - start;
 
 #ifdef BENCHMARK
-        fileio += omp_get_wtime() - duration;
+                fileio += omp_get_wtime() - duration;
 #endif /* BENCHMARK */
+            }
         }
 
         /* If no more files, then break the inf loop */
-        if (Query.isDeInit())
+        if (eSignal == true)
         {
             break;
         }
 
         /*********************************************
-         * At this point, we have a file initialized *
+         * At this point, we have the data ready     *
          *********************************************/
 
         /* All set - Run the DSLIM Query Algorithm */
@@ -1134,7 +1138,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
             ioPtr->reset();
 
             /* Extract a chunk and return the chunksize */
-            status = Query.ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
+            status = Query->ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
 
             qPtrs->lockr_();
 
@@ -1160,7 +1164,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
             /* If no more remaining spectra, then Deinit */
             if (rem_spec < 1)
             {
-                status = Query.DeinitQueryFile();
+                status = Query->DeinitQueryFile();
             }
         }
     }
@@ -1168,6 +1172,12 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
     /* Check if we ran out of files */
     if (eSignal == true)
     {
+        if (Query != NULL)
+        {
+            delete Query;
+            Query = NULL;
+        }
+
         /* Free the main IO thread */
         SchedHandle->ioComplete();
     }
