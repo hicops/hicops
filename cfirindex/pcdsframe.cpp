@@ -180,7 +180,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         {
             start = chrono::system_clock::now();
 
-            status = LBE_CountPeps((CHAR *) dbfile.c_str(), (slm_index + peplen-minlen));
+            status = LBE_CountPeps((CHAR *) dbfile.c_str(), (slm_index + peplen-minlen), peplen);
 
             end = chrono::system_clock::now();
 

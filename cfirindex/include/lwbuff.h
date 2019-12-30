@@ -27,7 +27,7 @@
 
 using namespace std;
 
-#define DEF_SIZE                    4
+#define DEF_SIZE                    20
 
 template <class T>
 class lwbuff
@@ -35,6 +35,8 @@ class lwbuff
 private:
 
     INT cap;
+    INT thr_low;
+    INT thr_high;
     sem_t lockr;
     sem_t lockw;
 
@@ -48,6 +50,10 @@ public:
     lwbuff()
     {
         cap = DEF_SIZE;
+
+        thr_low = cap/4;
+        thr_high = cap - thr_low;
+
         readyQ = new lwqueue<T *>(DEF_SIZE + 1, false);
         waitQ = new lwqueue<T *>(DEF_SIZE, false);
 
@@ -55,9 +61,12 @@ public:
         sem_init(&lockw, 0, 1);
     }
 
-    lwbuff(INT dcap)
+    lwbuff(INT dcap, INT lo, INT hi)
     {
         cap = dcap;
+        thr_low = lo;
+        thr_high = hi;
+
         readyQ = new lwqueue<T*>(dcap + 1, false);
         waitQ = new lwqueue<T*>(dcap, false);
 
@@ -68,6 +77,8 @@ public:
     virtual ~lwbuff()
     {
         cap = 0;
+        thr_low = 0;
+        thr_high = 0;
 
         vEmpty();
 
@@ -165,6 +176,22 @@ public:
     BOOL isFullWaitQ()
     {
         return waitQ->isFull();
+    }
+
+    INT readyQStatus()
+    {
+        INT sz = readyQ->size();
+
+        if (sz < thr_low)
+        {
+            return -1;
+        }
+        else if (sz > thr_low && sz <= thr_high)
+        {
+            return 0;
+        }
+
+        return 1;
     }
 
     inline INT addOne(INT idd)

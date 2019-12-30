@@ -33,6 +33,18 @@ typedef struct _Spectrum
     UINT SpectrumSize;
     DOUBLE prec_mz;
     UINT Z;
+
+    /* Overload the = operator - Required by MSQuery */
+    _Spectrum &operator=(const _Spectrum &rhs)
+    {
+        this->mz = rhs.mz;
+        this->intn = rhs.intn;
+        this->SpectrumSize = rhs.SpectrumSize;
+        this->prec_mz = rhs.prec_mz;
+        this->Z = rhs.Z;
+
+        return *this;
+    }
 } Spectrum;
 
 class MSQuery
@@ -56,10 +68,13 @@ public:
 
     MSQuery();
     virtual ~MSQuery();
-
+    UINT getQAcount();
     STATUS InitQueryFile(STRING *filename);
     STATUS ExtractQueryChunk(UINT count, Queries *expSpecs, INT &rem);
     STATUS DeinitQueryFile();
+    BOOL isDeInit();
+
+    MSQuery &operator=(const MSQuery &rhs);
 
 };
 

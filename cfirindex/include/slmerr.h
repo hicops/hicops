@@ -43,4 +43,7 @@
 #define ERR_INVLD_NODE_RANK      (SLM_ERROR_BASE - 11)
 #define ERR_NOT_ENOUGH_DATA      (SLM_ERROR_BASE - 12)
 
+
+#define ENDSIGNAL                (SLM_ERROR_BASE - 100)
+
 #endif /* INCLUDE_SLMERR_H_ */
