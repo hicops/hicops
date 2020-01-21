@@ -29,7 +29,7 @@
 //#undef _OPENMP
 
 /* Manually switch MPI */
-//#undef DISTMEM
+#define DISTMEM
 
 /* Switch the benchmarking */
 //#define BENCHMARK
@@ -47,11 +47,11 @@
  */
 #define PRECISION                1000000
 
+/* Max RX buffer size = 512MB */
+#define  RXBUFFERSIZE              (512 * 1024 * 1024)
+
 /* Maximum hyperscore that is possible */
 #define MAX_HYPERSCORE           100
-
-/* Max partial results in RX buffer */
-#define RX_BUFFER_SIZE           4000000
 
 /* Max number of RX instances before buffer flush */
 #define MAX_RX_INST              500

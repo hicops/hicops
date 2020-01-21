@@ -669,14 +669,14 @@ typedef struct _Results
 
 } Results;
 
-/* Dat structure for partial result Tx/Rx */
+/* Data structure for partial result Tx/Rx */
 typedef struct _partResult
 {
     FLOAT min;
     FLOAT max;
     FLOAT m;
     FLOAT b;
-    FLOAT hyp;//[2];
+    FLOAT hyp;
 
     _partResult()
     {
@@ -693,7 +693,7 @@ typedef struct _BYICount
 {
     BYC     *byc;       /* Both counts */
     iBYC   *ibyc;       /* Sum of b/y ion intensities */
-    Results        res;
+    Results  res;
 
     _BYICount()
     {

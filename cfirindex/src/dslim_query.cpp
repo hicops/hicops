@@ -67,10 +67,11 @@ extern DOUBLE memory;
 #endif /* BENCHMARK */
 
 #ifdef DISTMEM
-INT  batchnum;
+INT  btag;
 VOID *DSLIM_Comm_Thread_Entry(VOID *argv);
-VOID *DSLIM_IO_Threads_Entry(VOID *argv);
 #endif /* DISTMEM */
+
+VOID *DSLIM_IO_Threads_Entry(VOID *argv);
 
 static VOID DSLIM_BinarySearch(Index *, FLOAT, INT&, INT&);
 static INT  DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max);
@@ -164,11 +165,14 @@ STATUS DSLIM_SearchManager(Index *index)
         status = sem_init(&qfilelock, 0, 1);
     }
 
+    /* Initialize the lw double buffer queues with
+     * capacity, min and max thresholds */
     if (status == SLM_SUCCESS)
     {
         qPtrs = new lwbuff<Queries>(20, 5, 15); // cap, th1, th2
     }
 
+    /* Create queries buffers and push them to the lwbuff */
     if (status == SLM_SUCCESS)
     {
         /* Create new Queries */
@@ -201,7 +205,7 @@ STATUS DSLIM_SearchManager(Index *index)
         status = sem_init(&ioQlock, 0, 1);
     }
 
-    /* Create a new handle of scheduler */
+    /* Create a new Scheduler handle */
     if (status == SLM_SUCCESS)
     {
         SchedHandle = new Scheduler;
@@ -213,12 +217,20 @@ STATUS DSLIM_SearchManager(Index *index)
         }
     }
 
+    /* Initialize the file handles */
+    if (status == SLM_SUCCESS)
+    {
+        status = DFile_InitFiles();
+    }
+
+    /* Initialize the Comm module */
 #ifdef DISTMEM
+
     /* Only required if nodes > 1 */
     if (params.nodes > 1)
     {
-        /* Initialize the batch number to -1 */
-        batchnum = 0;
+        /* Initialize the batch tag to -1 */
+        btag = 0;
 
         /* Allocate a new DSLIM Comm handle */
         if (status == SLM_SUCCESS)
@@ -233,11 +245,8 @@ STATUS DSLIM_SearchManager(Index *index)
     }
 #endif /* DISTMEM */
 
-    if (status == SLM_SUCCESS)
-    {
-        status = DFile_InitFiles();
-    }
-
+    /**************************************************************************/
+    /* The main query loop starts here */
     while (status == SLM_SUCCESS)
     {
         /* Start computing penalty */
@@ -268,7 +277,7 @@ STATUS DSLIM_SearchManager(Index *index)
         if (params.nodes > 1)
         {
             /* Generate a new batch number for tag */
-            batchnum--;
+            btag--;
 
             /* Generate a new batch number for chunk and
              * Set up the Rx buffers for expected incoming data */
@@ -958,7 +967,7 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
         if (status == SLM_SUCCESS)
         {
             /* Transfer the results and replenish Tx array */
-            status = CommHandle->Tx(batchnum);
+            status = CommHandle->Tx(btag);
 
             /* Check if everything Tx successful */
             if (status != SLM_SUCCESS)

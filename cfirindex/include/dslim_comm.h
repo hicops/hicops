@@ -37,32 +37,53 @@
 #include "config.h"
 #include "lwqueue.h"
 
+#define TXARRAYS                   2
+
 /* Class for DSLIM MPI Communication */
 class DSLIM_Comm
 {
 private:
 
+    /* Number of data batches processed (either Tx or Rx'ed) */
+    UINT    nBatches;
+
+    /* RX buffer size in terms of
+     * how many partRes it can contain */
+    INT rxbuffsize;
+
     /* MPI Communication thread */
     THREAD commThd;
 
+    /* Rx array */
     partRes *rxArr;
 
+    /* Semaphore for Rx array */
+    LOCK rxLock;
+
+    /* currRxOffset */
+    INT currRxOffset;
+
+    /* 2 Tx arrays */
+    partRes *txArr[TXARRAYS];
+
+    /* 2 txArr locks */
+    LOCK txLock[TXARRAYS];
+
+    /* Current TxArray in use pointer */
+    INT currTxPtr;
+
+    /* Exit Signal */
+    BOOL exitSignal;
+
 #ifdef DISTMEM
-    /* Handle for Tx requests */
-    MPI_Request *TxRqsts;
 
-    /* Handle for Rx requests */
+    /* Handle for Rx request(S) */
     MPI_Request *RxRqsts;
+
+    /* Handle for the Tx request */
+    MPI_Request *TxRqst;
+
 #endif /* DISTMEM */
-
-    /* Number of allocated work queues */
-    UINT    nworkQ;
-
-    /* Semaphores for both queues */
-    LOCK work_lock;
-    LOCK comm_lock;
-
-    INT rxbuffsize;
 
     VOID Init_Locks();
 
@@ -71,8 +92,6 @@ private:
     VOID InitRx();
 
     VOID Destroy_Locks();
-
-    STATUS Addto_workQ();
 
     STATUS FlushRxBuffer();
 
@@ -90,17 +109,13 @@ public:
     /* Destructor */
     virtual ~DSLIM_Comm();
 
-    partRes *getCurr_WorkArr();
+    partRes *getCurrTxArr();
 
-    partRes *getCurr_CommArr();
-
-    STATUS Sendto_workQ();
-
-    STATUS Sendto_commQ();
+    partRes *getCurrRxArr();
 
     STATUS Tx(INT batchnum);
 
-    STATUS Rx(UINT specs, INT batchnum);
+    STATUS Rx(UINT specs, INT batchtag);
 
     STATUS ComputeResults();
 
