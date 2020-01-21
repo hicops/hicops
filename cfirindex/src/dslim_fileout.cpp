@@ -125,9 +125,12 @@ STATUS DFile_PrintScore(Index *index, UINT specid, FLOAT pmass, hCell* psm, DOUB
     /* The size is peplen + 1 to add the \0 character at the end */
     CHAR pepseq[peplen + 1];
 
-    /* Adds the string followed by the \0 character into the buffer */
-    snprintf((CHAR *)&(pepseq[0]), peplen + 1, lclindex->pepIndex.seqs +
-             (lclindex->pepEntries[psm->psid].seqID * peplen));
+    /* Write the \0 character to the last position of pepseq buffer */
+    pepseq[peplen] = '\0';
+
+    /* Copy the rest of the string to the pepseq buffer */
+    strncpy((CHAR *)&(pepseq[0]), lclindex->pepIndex.seqs +
+             (lclindex->pepEntries[psm->psid].seqID * peplen), peplen);
 
     /* Make a string from the char [] */
     STRING pep = pepseq;

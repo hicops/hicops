@@ -53,6 +53,10 @@ INT qfid = 0;
 lwbuff<Queries> *qPtrs = NULL;
 Queries *workPtr = NULL;
 
+#ifdef DISTMEM
+VOID *DSLIM_Comm_Thread_Entry(VOID *argv);
+#endif
+
 /* A queue containing I/O thread state when preempted */
 lwqueue<MSQuery *> *ioQ = NULL;
 LOCK ioQlock;
@@ -67,7 +71,6 @@ extern DOUBLE memory;
 #endif /* BENCHMARK */
 
 #ifdef DISTMEM
-INT  btag;
 VOID *DSLIM_Comm_Thread_Entry(VOID *argv);
 #endif /* DISTMEM */
 
@@ -229,9 +232,6 @@ STATUS DSLIM_SearchManager(Index *index)
     /* Only required if nodes > 1 */
     if (params.nodes > 1)
     {
-        /* Initialize the batch tag to -1 */
-        btag = 0;
-
         /* Allocate a new DSLIM Comm handle */
         if (status == SLM_SUCCESS)
         {
@@ -276,12 +276,10 @@ STATUS DSLIM_SearchManager(Index *index)
 #ifdef DISTMEM
         if (params.nodes > 1)
         {
-            /* Generate a new batch number for tag */
-            btag--;
+            /* TODO: Get the Tx Buffer and start Rx if required */
 
-            /* Generate a new batch number for chunk and
-             * Set up the Rx buffers for expected incoming data */
-//FIXME            status = CommHandle->Rx(workPtr->numSpecs, batchnum);
+            /* Signal Wakeup */
+            CommHandle->SignalWakeup();
         }
 #endif /* DISTMEM */
 
@@ -303,7 +301,7 @@ STATUS DSLIM_SearchManager(Index *index)
         if (status == SLM_SUCCESS)
         {
             /* Signal the thread about the Tx array */
-            status = CommHandle->SignalTx();
+            status = CommHandle->SignalWakeup();
         }
 #endif /* DISTMEM */
 
@@ -344,11 +342,14 @@ STATUS DSLIM_SearchManager(Index *index)
         end = chrono::system_clock::now();
     }
 
+    /* Post the exit signal to Comm Handle */
 #ifdef DISTMEM
     if (params.nodes > 1)
     {
         /* All done - Post the exit signal */
-        CommHandle->SignalExit(ExitSignal);
+        CommHandle->SignalExit();
+
+        /* TODO: Wait for CommHandle to complete its work */
 
         /* Delete the instance of CommHandle */
         delete CommHandle;
@@ -948,28 +949,76 @@ STATUS DSLIM_ModelSurvivalFunction(Results *resPtr)
  * OUTPUT:
  * @NULL: Nothing
  */
+/*
+ * FUNCTION: Comm_Thread_Entry
+ *
+ * DESCRIPTION: Entry function for the MPI
+ *              communication thread
+ *
+ * INPUT:
+ * @argv: Pointer to void arguments
+ *
+ * OUTPUT:
+ * @NULL: Nothing
+ */
 VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
 {
+    INT btag = 0;
+
     STATUS status = SLM_SUCCESS;
 
     /* The forever loop */
     for (;status == SLM_SUCCESS;)
     {
         /* Wait for an eligible Tx array */
-        status = CommHandle->Waitfor_TxData();
+        status = CommHandle->Wait4Event();
 
         /* Check if the TxData has the exit signal */
-        if (ExitSignal == true)
+        if (CommHandle->checkExitSignal() == true)
         {
             break;
         }
 
-        if (status == SLM_SUCCESS)
+        /* Check if Wakeup Signal came from an IO Thread */
+        if (CommHandle->checkWakeup())
         {
-            /* Transfer the results and replenish Tx array */
-            status = CommHandle->Tx(btag);
+            /* Check if mismatch exists and if Rx is not ready */
+            if (CommHandle->getRxReadyPermission())
+            {
+                status = CommHandle->RxReady();
+            }
+            else
+            {
+                cout << "COMM THD: Something went wrong on node: "
+                     << params.myid << endl;
+            }
+        }
+        /* Wakeup came from Scheduler */
+        else
+        {
+            /* Check if its a Tx or Rx */
+            if (btag % (params.nodes) != params.myid)
+            {
+                /* TODO Tx the results */
+                //status = CommHandle->Tx(btag);
+            }
+            else
+            {
+                /* TODO Rx the results */
+                //status = CommHandle->Rx(btag);
 
-            /* Check if everything Tx successful */
+                /* Check if next Rx is available */
+                if (CommHandle->checkMismatch())
+                {
+                    /* Initialize the next Rx */
+                    status = CommHandle->RxReady();
+                }
+            }
+
+            /* Update the batch tag */
+            btag++;
+
+            /* Check if everything is successful */
             if (status != SLM_SUCCESS)
             {
                 /* Should never reach here */
@@ -1149,11 +1198,18 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
             /* Extract a chunk and return the chunksize */
             status = Query->ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
 
+            /* Add an entry of the added buffer to the CommHandle */
+            status = CommHandle->AddBufferEntry();
+
+            /* Lock the ready queue */
             qPtrs->lockr_();
 
-            /* Add available data to ready queue */
+            /*************************************
+             * Add available data to ready queue *
+             *************************************/
             qPtrs->IODone(ioPtr);
 
+            /* Unlock the ready queue */
             qPtrs->unlockr_();
 
 #ifdef BENCHMARK

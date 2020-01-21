@@ -72,8 +72,23 @@ private:
     /* Current TxArray in use pointer */
     INT currTxPtr;
 
+    /* Lock for control variables */
+    LOCK control;
+
     /* Exit Signal */
     BOOL exitSignal;
+
+    /* Wake up event */
+    LOCK wakeup;
+
+    /* Wake4mIO Signal*/
+    BOOL Wake4mIO;
+
+    /* Signal for Rx ready */
+    BOOL isRxready;
+
+    /* Mismatch counter */
+    INT mismatch;
 
 #ifdef DISTMEM
 
@@ -101,6 +116,8 @@ private:
 
     STATUS FreeComm_DataTypes();
 
+    VOID * Thread_Entry(VOID *argv);
+
 public:
 
     /* Default constructor */
@@ -113,21 +130,31 @@ public:
 
     partRes *getCurrRxArr();
 
-    STATUS Tx(INT batchnum);
+    STATUS Tx(INT batchtag);
 
     STATUS Rx(UINT specs, INT batchtag);
 
+    STATUS RxReady();
+
     STATUS ComputeResults();
 
-    STATUS Waitfor_TxData();
+    STATUS Wait4Event();
 
     STATUS WaitFor_RxData();
 
-    STATUS SignalExit(BOOL &signal);
+    STATUS SignalExit();
 
-    STATUS SignalTx();
+    STATUS SignalWakeup();
 
+    BOOL checkExitSignal();
 
+    BOOL checkWakeup();
+
+    BOOL getRxReadyPermission();
+
+    BOOL checkMismatch();
+
+    STATUS AddBufferEntry();
 
 };
 
