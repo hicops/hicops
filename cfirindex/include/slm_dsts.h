@@ -674,17 +674,37 @@ typedef struct _partResult
 {
     FLOAT min;
     FLOAT max;
-    FLOAT m;
-    FLOAT b;
-    FLOAT hyp;
+    FLOAT med;
+    FLOAT m1;
+    FLOAT b1;
+    FLOAT m2;
+    FLOAT b2;
+    FLOAT N;
 
+    /* Default contructor */
     _partResult()
     {
         min = 0;
         max = 0;
-        m = 0;
-        b = 0;
-        hyp = 0;
+        med = 0;
+        m1 = 0;
+        b1 = 0;
+        m2 = 0;
+        b2 = 0;
+        N  = 0;
+    }
+
+    /* Destructor */
+    ~_partResult()
+    {
+        min = 0;
+        max = 0;
+        med = 0;
+        m1 = 0;
+        b1 = 0;
+        m2 = 0;
+        b2 = 0;
+        N  = 0;
     }
 
 } partRes;

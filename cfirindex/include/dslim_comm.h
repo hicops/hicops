@@ -66,11 +66,14 @@ private:
     /* 2 Tx arrays */
     partRes *txArr[TXARRAYS];
 
-    /* 2 txArr locks */
-    LOCK txLock[TXARRAYS];
+    /* Synchronous count */
+    LOCK txLock;
 
     /* Current TxArray in use pointer */
     INT currTxPtr;
+
+    /* Last Tx'ed buffer number */
+    INT lastTxPtr;
 
     /* Lock for control variables */
     LOCK control;
@@ -96,7 +99,7 @@ private:
     MPI_Request *RxRqsts;
 
     /* Handle for the Tx request */
-    MPI_Request *TxRqst;
+    MPI_Request *TxRqsts;
 
 #endif /* DISTMEM */
 
@@ -118,6 +121,10 @@ private:
 
     VOID * Thread_Entry(VOID *argv);
 
+    partRes *getCurrTxArr();
+
+    partRes *getCurrRxArr();
+
 public:
 
     /* Default constructor */
@@ -126,13 +133,11 @@ public:
     /* Destructor */
     virtual ~DSLIM_Comm();
 
-    partRes *getCurrTxArr();
+    partRes *getTxBuffer(INT batchtag, INT batchsize);
 
-    partRes *getCurrRxArr();
+    STATUS Tx(INT batchtag, INT batchsize);
 
-    STATUS Tx(INT batchtag);
-
-    STATUS Rx(UINT specs, INT batchtag);
+    STATUS Rx(INT batchtag, INT batchsize);
 
     STATUS RxReady();
 
@@ -140,7 +145,9 @@ public:
 
     STATUS Wait4Event();
 
-    STATUS WaitFor_RxData();
+    STATUS Wait4Rx();
+
+    STATUS Test4Rx();
 
     STATUS SignalExit();
 

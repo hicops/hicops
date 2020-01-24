@@ -208,24 +208,6 @@ STATUS DSLIM_SearchManager(Index *index)
         status = sem_init(&ioQlock, 0, 1);
     }
 
-    /* Create a new Scheduler handle */
-    if (status == SLM_SUCCESS)
-    {
-        SchedHandle = new Scheduler;
-
-        /* Check for correct allocation */
-        if (SchedHandle == NULL)
-        {
-            status = ERR_BAD_MEM_ALLOC;
-        }
-    }
-
-    /* Initialize the file handles */
-    if (status == SLM_SUCCESS)
-    {
-        status = DFile_InitFiles();
-    }
-
     /* Initialize the Comm module */
 #ifdef DISTMEM
 
@@ -244,6 +226,24 @@ STATUS DSLIM_SearchManager(Index *index)
         }
     }
 #endif /* DISTMEM */
+
+    /* Create a new Scheduler handle */
+    if (status == SLM_SUCCESS)
+    {
+        SchedHandle = new Scheduler;
+
+        /* Check for correct allocation */
+        if (SchedHandle == NULL)
+        {
+            status = ERR_BAD_MEM_ALLOC;
+        }
+    }
+
+    /* Initialize the file handles */
+    if (status == SLM_SUCCESS)
+    {
+        status = DFile_InitFiles();
+    }
 
     /**************************************************************************/
     /* The main query loop starts here */
@@ -278,8 +278,6 @@ STATUS DSLIM_SearchManager(Index *index)
         {
             /* TODO: Get the Tx Buffer and start Rx if required */
 
-            /* Signal Wakeup */
-            CommHandle->SignalWakeup();
         }
 #endif /* DISTMEM */
 
@@ -298,9 +296,9 @@ STATUS DSLIM_SearchManager(Index *index)
 
 #ifdef DISTMEM
         /* Transfer my partial results to others */
-        if (status == SLM_SUCCESS)
+        if (status == SLM_SUCCESS && params.nodes > 1)
         {
-            /* Signal the thread about the Tx array */
+            /* Signal the thread about the Tx/Rx array */
             status = CommHandle->SignalWakeup();
         }
 #endif /* DISTMEM */
@@ -386,7 +384,8 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
     UINT scale = params.scale;
     DOUBLE maxmass = params.max_mass;
 
-    //FIXME partRes *txArray = CommHandle->getCurr_WorkArr();
+    /* TODO: Need the btag number */
+    //partRes *txArray = CommHandle->getTxBuffer(0, ss->numSpecs);
 
     if (Score == NULL)
     {
@@ -999,13 +998,13 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
             /* Check if its a Tx or Rx */
             if (btag % (params.nodes) != params.myid)
             {
-                /* TODO Tx the results */
-                //status = CommHandle->Tx(btag);
+                /* TODO Tx the results need the batchsize */
+                status = CommHandle->Tx(btag, 0);
             }
             else
             {
-                /* TODO Rx the results */
-                //status = CommHandle->Rx(btag);
+                /* Rx the results */
+                status = CommHandle->Wait4Rx();
 
                 /* Check if next Rx is available */
                 if (CommHandle->checkMismatch())
