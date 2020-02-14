@@ -226,7 +226,7 @@ public:
 
     T front()
     {
-        T res = (T) NULL;
+        T res;
 
         if (isSem)
         {
@@ -248,7 +248,7 @@ public:
 
     T end()
     {
-        T res = (T) NULL;
+        T res;
 
         if (isSem)
         {

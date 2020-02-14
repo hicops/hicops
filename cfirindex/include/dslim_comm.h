@@ -49,10 +49,10 @@ private:
 
     /* RX buffer size in terms of
      * how many partRes it can contain */
-    INT rxbuffsize;
+    INT    rxbuffsize;
 
     /* MPI Communication thread */
-    THREAD commThd;
+    THREAD *commThd;
 
     /* Rx array */
     partRes *rxArr;
@@ -65,15 +65,6 @@ private:
 
     /* 2 Tx arrays */
     partRes *txArr[TXARRAYS];
-
-    /* Synchronous count */
-    LOCK txLock;
-
-    /* Current TxArray in use pointer */
-    INT currTxPtr;
-
-    /* Last Tx'ed buffer number */
-    INT lastTxPtr;
 
     /* Lock for control variables */
     LOCK control;
@@ -98,8 +89,12 @@ private:
     /* Handle for Rx request(S) */
     MPI_Request *RxRqsts;
 
+    INT *RxStat;
+
     /* Handle for the Tx request */
     MPI_Request *TxRqsts;
+
+    INT *TxStat;
 
 #endif /* DISTMEM */
 
@@ -133,11 +128,11 @@ public:
     /* Destructor */
     virtual ~DSLIM_Comm();
 
-    partRes *getTxBuffer(INT batchtag, INT batchsize);
+    partRes *getTxBuffer(INT batchtag, INT batchsize, INT&);
 
-    STATUS Tx(INT batchtag, INT batchsize);
+    STATUS Tx(INT, INT, INT);
 
-    STATUS Rx(INT batchtag, INT batchsize);
+    STATUS Rx(INT, INT);
 
     STATUS RxReady();
 

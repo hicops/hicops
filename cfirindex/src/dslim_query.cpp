@@ -41,6 +41,7 @@ BOOL ExitSignal = false;
 
 DSLIM_Comm *CommHandle = NULL;
 Scheduler *SchedHandle = NULL;
+//lwqueue<commRqst> *requestQ = NULL;
 
 /* Lock for query file vector and thread manager */
 LOCK qfilelock;
@@ -79,7 +80,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv);
 static VOID DSLIM_BinarySearch(Index *, FLOAT, INT&, INT&);
 static INT  DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max);
 static INT  DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max);
-static inline STATUS DSLIM_WaitFor_IO();
+static inline STATUS DSLIM_WaitFor_IO(INT &);
 static inline STATUS DSLIM_Deinit_IO();
 
 /* FUNCTION: DSLIM_WaitFor_IO
@@ -93,9 +94,11 @@ static inline STATUS DSLIM_Deinit_IO();
  * @status: status of execution
  *
  */
-static inline STATUS DSLIM_WaitFor_IO()
+static inline STATUS DSLIM_WaitFor_IO(INT &batchsize)
 {
     STATUS status;
+
+    batchsize = 0;
 
     /* Wait for a I/O request */
     status = qPtrs->lockr_();
@@ -114,7 +117,9 @@ static inline STATUS DSLIM_WaitFor_IO()
         /* If both conditions fail,
          * the I/O threads still working */
         status = qPtrs->unlockr_();
+
         sleep(0.1);
+
         status = qPtrs->lockr_();
     }
 
@@ -129,6 +134,8 @@ static inline STATUS DSLIM_WaitFor_IO()
         }
 
         status = qPtrs->unlockr_();
+
+        batchsize = workPtr->numSpecs;
     }
 
     return status;
@@ -154,6 +161,11 @@ STATUS DSLIM_Process_RxData()
 STATUS DSLIM_SearchManager(Index *index)
 {
     STATUS status = SLM_SUCCESS;
+
+    INT batchnum = 0;
+    INT batchsize = 0;
+    INT buffernum = 0;
+    partRes *buffers = NULL;
 
     auto start = chrono::system_clock::now();
     auto end   = chrono::system_clock::now();
@@ -214,6 +226,9 @@ STATUS DSLIM_SearchManager(Index *index)
     /* Only required if nodes > 1 */
     if (params.nodes > 1)
     {
+        /* Construct the Request Queue */
+        //requestQ = new lwqueue<commRqst>(3);
+
         /* Allocate a new DSLIM Comm handle */
         if (status == SLM_SUCCESS)
         {
@@ -245,6 +260,8 @@ STATUS DSLIM_SearchManager(Index *index)
         status = DFile_InitFiles();
     }
 
+    while (1);
+
     /**************************************************************************/
     /* The main query loop starts here */
     while (status == SLM_SUCCESS)
@@ -252,7 +269,7 @@ STATUS DSLIM_SearchManager(Index *index)
         /* Start computing penalty */
         auto spen = chrono::system_clock::now();
 
-        status = DSLIM_WaitFor_IO();
+        status = DSLIM_WaitFor_IO(batchsize);
 
         /* Check if endsignal */
         if (status == ENDSIGNAL)
@@ -276,7 +293,8 @@ STATUS DSLIM_SearchManager(Index *index)
 #ifdef DISTMEM
         if (params.nodes > 1)
         {
-            /* TODO: Get the Tx Buffer and start Rx if required */
+            /* Get the Tx Buffer and start Rx */
+            //buffers = CommHandle->getTxBuffer(batchnum, batchsize, buffernum);
 
         }
 #endif /* DISTMEM */
@@ -291,15 +309,24 @@ STATUS DSLIM_SearchManager(Index *index)
         if (status == SLM_SUCCESS)
         {
             /* Query the chunk */
-            status = DSLIM_QuerySpectrum(workPtr, index, (maxlen - minlen + 1));
+            status = DSLIM_QuerySpectrum(workPtr, index, (maxlen - minlen + 1), buffers);
         }
 
 #ifdef DISTMEM
         /* Transfer my partial results to others */
         if (status == SLM_SUCCESS && params.nodes > 1)
         {
+            commRqst txR;
+            txR.bsize = batchsize;
+            txR.btag = batchnum;
+            txR.buff = buffernum;
+
+            //requestQ->push(txR);
+
             /* Signal the thread about the Tx/Rx array */
-            status = CommHandle->SignalWakeup();
+            //status = CommHandle->SignalWakeup();
+
+            batchnum++;
         }
 #endif /* DISTMEM */
 
@@ -309,20 +336,6 @@ STATUS DSLIM_SearchManager(Index *index)
         qPtrs->Replenish(workPtr);
 
         status = qPtrs->unlockw_();
-
-#ifdef DISTMEM
-
-        if (status == SLM_SUCCESS)
-        {
-//FIXME            status = CommHandle->WaitFor_RxData();
-        }
-
-#endif /* DISTMEM */
-
-        if (status == SLM_SUCCESS)
-        {
-            status = DSLIM_Process_RxData();
-        }
 
         end = chrono::system_clock::now();
 
@@ -345,14 +358,17 @@ STATUS DSLIM_SearchManager(Index *index)
     if (params.nodes > 1)
     {
         /* All done - Post the exit signal */
-        CommHandle->SignalExit();
+        //CommHandle->SignalExit();
 
         /* TODO: Wait for CommHandle to complete its work */
 
         /* Delete the instance of CommHandle */
-        delete CommHandle;
+        //delete CommHandle;
 
-        CommHandle = NULL;
+        //CommHandle = NULL;
+
+        //delete requestQ;
+        //requestQ = NULL;
     }
 #endif /* DISTMEM */
 
@@ -375,7 +391,7 @@ STATUS DSLIM_SearchManager(Index *index)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
+STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *txArray)
 {
     STATUS status = SLM_SUCCESS;
     UINT maxz = params.maxz;
@@ -383,14 +399,6 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
     UINT threads = params.threads - SchedHandle->getNumActivThds();
     UINT scale = params.scale;
     DOUBLE maxmass = params.max_mass;
-
-    /* TODO: Need the btag number */
-    //partRes *txArray = CommHandle->getTxBuffer(0, ss->numSpecs);
-
-    if (Score == NULL)
-    {
-        status = ERR_INVLD_MEMORY;
-    }
 
 #ifdef BENCHMARK
     DOUBLE tcons[threads];
@@ -404,6 +412,11 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
 #ifdef BENCHMARK
     duration = omp_get_wtime();
 #endif /* BENCHMARK */
+
+    if (Score == NULL || txArray == NULL)
+    {
+        status = ERR_INVLD_MEMORY;
+    }
 
     if (status == SLM_SUCCESS)
     {
@@ -739,6 +752,7 @@ static INT DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max)
 
     return half;
 
+
 }
 
 
@@ -963,13 +977,15 @@ STATUS DSLIM_ModelSurvivalFunction(Results *resPtr)
 VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
 {
     INT btag = 0;
+    INT bsize = 0;
+    INT buff = 0;
 
     STATUS status = SLM_SUCCESS;
 
     /* The forever loop */
     for (;status == SLM_SUCCESS;)
     {
-        /* Wait for an eligible Tx array */
+        /* Wait for an wakeup event */
         status = CommHandle->Wait4Event();
 
         /* Check if the TxData has the exit signal */
@@ -995,27 +1011,23 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
         /* Wakeup came from Scheduler */
         else
         {
-            /* Check if its a Tx or Rx */
-            if (btag % (params.nodes) != params.myid)
-            {
-                /* TODO Tx the results need the batchsize */
-                status = CommHandle->Tx(btag, 0);
-            }
-            else
-            {
-                /* Rx the results */
-                status = CommHandle->Wait4Rx();
 
-                /* Check if next Rx is available */
-                if (CommHandle->checkMismatch())
-                {
-                    /* Initialize the next Rx */
-                    status = CommHandle->RxReady();
-                }
-            }
+            /* Check if its a Tx */
+            if (btag % (params.nodes) != params.myid && buff != -1)
+            {
+                /* Copy a txRqst from the front of queue */
+                //commRqst  txRqst = requestQ->front();
 
-            /* Update the batch tag */
-            btag++;
+                /* Pop from the queue */
+                //requestQ->pop();
+
+                //btag = txRqst.btag;
+                //bsize = txRqst.bsize;
+                //buff = txRqst.buff;
+
+                /* Tx the results need the batchsize */
+                status = CommHandle->Tx(btag, bsize, buff);
+            }
 
             /* Check if everything is successful */
             if (status != SLM_SUCCESS)
@@ -1029,6 +1041,29 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
                 break;
             }
         }
+
+        /* Check for Rx the results in every wakeup */
+        status = CommHandle->Test4Rx();
+
+        /* Check if next Rx is available */
+        if (CommHandle->checkMismatch())
+        {
+            /* Initialize the next Rx */
+            status = CommHandle->RxReady();
+        }
+
+        /* Check if everything is successful */
+        if (status != SLM_SUCCESS)
+        {
+            /* Should never reach here */
+            cout << "Status from Comm. Thread: " << status << " on node: "
+                 << params.myid << endl;
+
+            cout << "Aborting..." << endl;
+
+            break;
+        }
+
     }
 
     /* Return NULL */
@@ -1062,6 +1097,8 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
     /* local object is fine since it will be copied
      * to the queue object at the time of preemption */
     MSQuery *Query = NULL;
+
+    while (1);
 
     INT rem_spec = 0;
 
@@ -1225,10 +1262,16 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
                 cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
             }
 
-            /* If no more remaining spectra, then Deinit */
+            /* If no more remaining spectra, then deinit */
             if (rem_spec < 1)
             {
                 status = Query->DeinitQueryFile();
+
+                if (Query != NULL)
+                {
+                    delete Query;
+                    Query = NULL;
+                }
             }
         }
     }

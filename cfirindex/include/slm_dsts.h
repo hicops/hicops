@@ -611,6 +611,35 @@ typedef struct _heapEntry
 
 } hCell;
 
+/* Structure to contain a communication request */
+typedef struct _commRqst{
+    UINT btag;
+    UINT bsize;
+    UINT buff;
+
+    VOID _comRqst()
+    {
+        btag = 0;
+        bsize = 0;
+        buff = 0;
+    }
+
+    /* Overload = operator */
+    _commRqst& operator=(const _commRqst& rhs)
+    {
+        /* Check for self assignment */
+        if (this != &rhs)
+        {
+            this->btag  = rhs.btag;
+            this->bsize = rhs.bsize;
+            this->buff  = rhs.buff;
+        }
+        return *this;
+    }
+
+} commRqst;
+
+
 /* This structure will be made per thread */
 typedef struct _Results
 {

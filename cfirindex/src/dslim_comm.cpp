@@ -34,6 +34,13 @@ VOID DSLIM_Comm::InitRx()
 {
     /* We may need N-1 RxRequests at any time */
     RxRqsts = new MPI_Request[params.nodes - 1];
+    RxStat = new INT[params.nodes - 1];
+
+    for (UINT jj = 0; jj < params.nodes - 1; jj++)
+    {
+        /* True means free */
+        RxStat[jj] = 1;
+    }
 
     /* Initialize the RX lock */
     sem_init(&rxLock, 0, 1);
@@ -48,26 +55,24 @@ VOID DSLIM_Comm::InitRx()
 VOID DSLIM_Comm::InitTx()
 {
     TxRqsts = NULL;
-
-    /* Initialize the counter */
-    sem_init(&txLock, 0, TXARRAYS);
+    TxStat = NULL;
 
     TxRqsts = new MPI_Request[TXARRAYS];
+    TxStat = new INT[TXARRAYS];
 
-    if (TxRqsts != NULL)
+    if (TxRqsts != NULL && TxStat != NULL)
     {
         /* Initialize the two txArrays and
          * the two corresponding locks */
         for (INT jj = 0; jj < TXARRAYS; jj++)
         {
             txArr[jj] = new partRes[QCHUNK];
+
+            /* True means available */
+            TxStat[jj] = 1;
         }
     }
 
-    /* Current Tx Array in use is 0th */
-    currTxPtr = 0;
-
-    lastTxPtr = 0;
 }
 
 /* Default constructor */
@@ -100,13 +105,15 @@ DSLIM_Comm::DSLIM_Comm()
     InitComm_DataTypes();
 
     /* Initialize Tx */
-    InitTx();
+    //InitTx();
 
     /* Initialize Rx */
-    InitRx();
+    //InitRx();
+
+    commThd = new THREAD;
 
     /* Create the entry thread here */
-    pthread_create(&commThd, NULL, &DSLIM_Comm_Thread_Entry, NULL);
+    pthread_create(commThd, NULL, &DSLIM_Comm_Thread_Entry, NULL);
 }
 
 /* Destructor */
@@ -129,9 +136,17 @@ DSLIM_Comm::~DSLIM_Comm()
 
     sem_destroy(&control);
 
-    /* Wait for communication thread to complete */
-    pthread_join(commThd, &ptr);
 
+
+    if (commThd != NULL)
+    {
+        /* Wait for communication thread to complete */
+        pthread_join(*commThd, &ptr);
+
+        delete commThd;
+
+        commThd = NULL;
+    }
     /* Deallocate the Rx array */
     if (rxArr != NULL)
     {
@@ -189,13 +204,9 @@ STATUS DSLIM_Comm::FreeComm_DataTypes()
     return SLM_SUCCESS;
 }
 
-STATUS DSLIM_Comm::Tx(INT batchtag, INT batchsize)
+STATUS DSLIM_Comm::Tx(INT batchtag, INT batchsize, INT buff)
 {
     STATUS status = SLM_SUCCESS;
-
-    INT buff = (lastTxPtr + 1) % TXARRAYS;
-
-    lastTxPtr = buff;
 
     status = MPI_Isend(txArr[buff],
                        batchsize,
@@ -204,15 +215,6 @@ STATUS DSLIM_Comm::Tx(INT batchtag, INT batchsize)
                        batchtag,
                        MPI_COMM_WORLD,
                        TxRqsts + buff);
-
-    /* Return the head to workQ */
-    if (status == SLM_SUCCESS)
-    {
-        status = MPI_Wait(TxRqsts + buff, NULL);
-    }
-
-    /* Free a resource */
-    sem_post(&txLock);
 
     return status;
 }
@@ -228,12 +230,13 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
     INT rqst = 0;
 
     /* Do buffer management here */
+    currRxOffset += batchsize;
 
     /* Check if myid is the last node */
     if (params.myid == params.nodes - 1)
     {
         /* Receive from all from 0 to myid - 1 */
-        for (mch = 0; mch < (INT)params.myid; mch++)
+        for (mch = 0; mch < (INT)params.myid -1; mch++)
         {
             MPI_Request *request = RxRqsts + mch;
 
@@ -302,6 +305,8 @@ STATUS DSLIM_Comm::Wait4Rx()
     /* Reduce mismatch */
     mismatch--;
 
+    isRxready = false;
+
     sem_post(&control);
 
     return status;
@@ -311,17 +316,30 @@ STATUS DSLIM_Comm::Test4Rx()
 {
     STATUS status = MPI_SUCCESS;
 
-/*    for (UINT loop = 0; loop < params.nodes - 1; loop++)
-   {
-        status = MPI_Test(RxRqsts + loop, MPI_F_STATUS_IGNORE, NULL);
+    UINT cumulate = 0;
+
+    /* Check the Rx status */
+    for (UINT loop = 0; loop < params.nodes - 1; loop++)
+    {
+        status = MPI_Test(RxRqsts + loop, &RxStat[loop], MPI_STATUS_IGNORE);
+
+        if (RxStat[loop])
+        {
+            cumulate++;
+        }
     }
-*/
-    sem_wait(&control);
 
-    /* Reduce mismatch */
-    mismatch--;
+    if (cumulate == params.nodes - 1)
+    {
+        sem_wait(&control);
 
-    sem_post(&control);
+        /* Reduce mismatch */
+        mismatch--;
+
+        isRxready = false;
+
+        sem_post(&control);
+    }
 
     return status;
 }
@@ -349,8 +367,6 @@ STATUS DSLIM_Comm::SignalWakeup()
 VOID DSLIM_Comm::Destroy_Locks()
 {
     (VOID) sem_destroy(&rxLock);
-
-    (VOID) sem_destroy(&txLock);
 
 }
 
@@ -425,13 +441,17 @@ STATUS DSLIM_Comm::AddBufferEntry()
     /* Check the batch number */
     if (nBatches % params.nodes == params.myid)
     {
-        mismatch++;
-
-        if (isRxready == false)
+        if (mismatch == 0 && isRxready == false)
         {
             Wake4mIO = true;
 
+            mismatch++;
+
             status = SignalWakeup();
+        }
+        else
+        {
+            mismatch++;
         }
     }
 
@@ -443,29 +463,60 @@ STATUS DSLIM_Comm::AddBufferEntry()
     return status;
 }
 
-partRes *DSLIM_Comm::getTxBuffer(INT batchtag, INT batchsize)
+partRes *DSLIM_Comm::getTxBuffer(INT batchtag, INT batchsize, INT &buffer)
 {
     partRes *ptr = NULL;
+    buffer = -1;
 
     /* Check if Tx or Rx */
     if (batchtag % params.nodes != params.myid)
     {
-        /* Acquire a Tx resource */
-        sem_wait(&txLock);
+        INT buff = 0;
 
-        /* Update the currTxPtr */
-        this->currTxPtr = (currTxPtr+1) % TXARRAYS;
+        /* Wait for an empty buffer */
+        while (true)
+        {
+            /* Loop through all available buffers */
+            for (buff = 0; buff < TXARRAYS; buff++)
+            {
+                MPI_Test(TxRqsts + buff, &TxStat[buff], MPI_STATUS_IGNORE);
 
-        /* Set the return pointer to txArr + currTxPtr */
-        ptr = txArr[currTxPtr];
+                /* Found an empty buffer */
+                if (TxStat[buff])
+                {
+                    break;
+                }
+            }
+
+            /* Check again if really empty */
+            if (TxStat[buff])
+            {
+                /* Set the return pointer to txArr[buff] */
+                ptr = txArr[buff];
+
+                /* Set the TxStat to false - Used */
+                TxStat[buff] = false;
+
+                buffer = buff;
+
+                break;
+            }
+
+            /* No free buffer found - Wait 500ms */
+            sleep(0.5);
+        }
     }
     else
     {
+        sem_wait(&rxLock);
+
         /* Set the offset to this */
         ptr = rxArr + currRxOffset;
 
-        /* TODO: Update the currRxOffset */
+        /* Update the currRxOffset */
         currRxOffset += batchsize;
+
+        sem_post(&rxLock);
     }
 
     return ptr;

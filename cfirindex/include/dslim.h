@@ -163,7 +163,7 @@ STATUS DSLIM_SearchManager(Index *index);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT indexchunks);
+STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT indexchunks, partRes *);
 
 STATUS DSLIM_Process_RxData();
 
