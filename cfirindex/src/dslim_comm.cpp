@@ -245,6 +245,9 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
             /* The Rx size = lcsize */
             status = MPI_Irecv(rxArr + currRxOffset, batchsize, resPart, mch, batchtag, MPI_COMM_WORLD, request);
 
+            /* Mark the Rx status as used */
+            RxStat[mch] = 0;
+
             currRxOffset += batchsize;
 
             if (status != MPI_SUCCESS)
@@ -261,8 +264,12 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
         {
             MPI_Request *request = RxRqsts + rqst;
 
-            status = MPI_Irecv(rxArr + (mch * rxbuffsize), batchsize, resPart, mch, batchtag, MPI_COMM_WORLD, request);
+            status = MPI_Irecv(rxArr + currRxOffset, batchsize, resPart, mch, batchtag, MPI_COMM_WORLD, request);
 
+            /* Mark the Rx status as used */
+            RxStat[mch] = 0;
+
+            /* Update the pointer */
             currRxOffset += batchsize;
 
             if (status != MPI_SUCCESS)
@@ -278,8 +285,12 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
         {
             MPI_Request *request = RxRqsts + rqst;
 
-            status = MPI_Irecv(rxArr + (mch * rxbuffsize), batchsize, resPart, mch, batchtag, MPI_COMM_WORLD, request);
+            status = MPI_Irecv(rxArr + currRxOffset, batchsize, resPart, mch, batchtag, MPI_COMM_WORLD, request);
 
+            /* Mark the Rx status as used */
+            RxStat[mch] = 0;
+
+            /* Update the pointer */
             currRxOffset += batchsize;
 
             if (status != MPI_SUCCESS)
