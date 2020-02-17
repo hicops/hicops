@@ -84,6 +84,10 @@ private:
     /* Mismatch counter */
     INT mismatch;
 
+    lwqueue<UINT> *rxQueue;
+
+    INT RxTag;
+
 #ifdef DISTMEM
 
     /* Handle for Rx request(S) */
@@ -156,7 +160,7 @@ public:
 
     BOOL checkMismatch();
 
-    STATUS AddBufferEntry();
+    STATUS AddBufferEntry(INT);
 
 };
 

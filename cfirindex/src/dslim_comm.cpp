@@ -50,6 +50,12 @@ VOID DSLIM_Comm::InitRx()
 
     /* Current number of entries in Rx is zero (offset) */
     currRxOffset = 0;
+
+    /* Will be updated at each AddBuffer */
+    RxTag = params.myid - params.nodes;
+
+    /* Init the rxQueue */
+    rxQueue = new lwqueue<UINT>(20);
 }
 
 VOID DSLIM_Comm::InitTx()
@@ -137,6 +143,14 @@ DSLIM_Comm::~DSLIM_Comm()
 
     sem_destroy(&control);
 
+    /* Destroy the Rx queue */
+    if (rxQueue != NULL)
+    {
+        delete rxQueue;
+
+        rxQueue  = NULL;
+    }
+
     /* Deallocate the Rx array */
     if (rxArr != NULL)
     {
@@ -214,13 +228,11 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
     STATUS status = SLM_SUCCESS;
 
     /* Calculate chunk size and last chunk size */
-    INT csize = (batchsize / params.nodes);
-    INT lcsize = batchsize - (csize * (params.nodes -1));
     INT mch = 0;
     INT rqst = 0;
 
-    /* Do buffer management here */
-    currRxOffset += batchsize;
+    /* Lock the rxArray */
+    sem_wait(&rxLock);
 
     /* Check if myid is the last node */
     if (params.myid == params.nodes - 1)
@@ -231,7 +243,9 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
             MPI_Request *request = RxRqsts + mch;
 
             /* The Rx size = lcsize */
-            status = MPI_Irecv(rxArr + (mch * rxbuffsize), lcsize, resPart, mch, batchtag, MPI_COMM_WORLD, request);
+            status = MPI_Irecv(rxArr + currRxOffset, batchsize, resPart, mch, batchtag, MPI_COMM_WORLD, request);
+
+            currRxOffset += batchsize;
 
             if (status != MPI_SUCCESS)
             {
@@ -243,10 +257,13 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
     else
     {
         /* Receive from all but myid */
-        for (mch = 0; mch < (INT)params.myid - 1; mch++)
+        for (mch = 0; mch < (INT)params.myid; mch++)
         {
             MPI_Request *request = RxRqsts + rqst;
-            status = MPI_Irecv(rxArr + (mch * rxbuffsize), csize, resPart, mch, batchtag, MPI_COMM_WORLD, request);
+
+            status = MPI_Irecv(rxArr + (mch * rxbuffsize), batchsize, resPart, mch, batchtag, MPI_COMM_WORLD, request);
+
+            currRxOffset += batchsize;
 
             if (status != MPI_SUCCESS)
             {
@@ -260,7 +277,10 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
         for (mch = (INT)params.myid + 1; mch < (INT)params.nodes; mch++)
         {
             MPI_Request *request = RxRqsts + rqst;
-            status = MPI_Irecv(rxArr + (mch * rxbuffsize), csize, resPart, mch, batchtag, MPI_COMM_WORLD, request);
+
+            status = MPI_Irecv(rxArr + (mch * rxbuffsize), batchsize, resPart, mch, batchtag, MPI_COMM_WORLD, request);
+
+            currRxOffset += batchsize;
 
             if (status != MPI_SUCCESS)
             {
@@ -271,6 +291,9 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
             rqst++;
         }
     }
+
+    /* Unlock the rxArray */
+    sem_post(&rxLock);
 
     return status;
 }
@@ -399,15 +422,31 @@ BOOL DSLIM_Comm::checkWakeup()
 
 STATUS DSLIM_Comm::RxReady()
 {
-    /* TODO: Ready the Rx here: MPI_IRecv */
+    STATUS status = SLM_SUCCESS;
 
-    sem_wait(&control);
+    /* Get the batchtag and the batchsize */
+    INT btag = RxTag + params.nodes;
+    INT bsize = rxQueue->front();
 
-    isRxready = true;
+    status = rxQueue->pop();
 
-    sem_post(&control);
+    /* Initialize the MPI_Recv */
+    if (status == SLM_SUCCESS)
+    {
+        status = Rx(btag, bsize);
+    }
 
-    return SLM_SUCCESS;
+    /* Set the flag to true if success */
+    if (status == SLM_SUCCESS)
+    {
+        status = sem_wait(&control);
+
+        isRxready = true;
+
+        status = sem_post(&control);
+    }
+
+    return status;
 }
 
 BOOL DSLIM_Comm::getRxReadyPermission()
@@ -432,15 +471,18 @@ BOOL DSLIM_Comm::checkMismatch()
     return state;
 }
 
-STATUS DSLIM_Comm::AddBufferEntry()
+STATUS DSLIM_Comm::AddBufferEntry(INT bsize)
 {
     STATUS status;
-
-    sem_wait (&control);
 
     /* Check the batch number */
     if (nBatches % params.nodes == params.myid)
     {
+        /* Push the batchsize to the rxQueue */
+        rxQueue->push(bsize);
+
+        sem_wait (&control);
+
         if (mismatch == 0 && isRxready == false)
         {
             Wake4mIO = true;
@@ -453,12 +495,12 @@ STATUS DSLIM_Comm::AddBufferEntry()
         {
             mismatch++;
         }
+
+        sem_post(&control);
+
+        /* Increment the batch number */
+        nBatches++;
     }
-
-    /* Increment the batch number */
-    nBatches++;
-
-    sem_post(&control);
 
     return status;
 }

@@ -1233,7 +1233,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
             status = Query->ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
 
             /* Add an entry of the added buffer to the CommHandle */
-            status = CommHandle->AddBufferEntry();
+            status = CommHandle->AddBufferEntry(ioPtr->numSpecs);
 
             /* Lock the ready queue */
             qPtrs->lockr_();
