@@ -105,21 +105,22 @@ DSLIM_Comm::DSLIM_Comm()
     InitComm_DataTypes();
 
     /* Initialize Tx */
-    //InitTx();
+    InitTx();
 
     /* Initialize Rx */
-    //InitRx();
-
-    commThd = new THREAD;
+    InitRx();
 
     /* Create the entry thread here */
-    pthread_create(commThd, NULL, &DSLIM_Comm_Thread_Entry, NULL);
+    pthread_create(&commThd, NULL, &DSLIM_Comm_Thread_Entry, this);
 }
 
 /* Destructor */
 DSLIM_Comm::~DSLIM_Comm()
 {
     VOID *ptr = NULL;
+
+    /* Wait for communication thread to complete */
+    pthread_join(commThd, &ptr);
 
     rxbuffsize = 0;
 
@@ -136,17 +137,6 @@ DSLIM_Comm::~DSLIM_Comm()
 
     sem_destroy(&control);
 
-
-
-    if (commThd != NULL)
-    {
-        /* Wait for communication thread to complete */
-        pthread_join(*commThd, &ptr);
-
-        delete commThd;
-
-        commThd = NULL;
-    }
     /* Deallocate the Rx array */
     if (rxArr != NULL)
     {
@@ -321,21 +311,31 @@ STATUS DSLIM_Comm::Test4Rx()
     /* Check the Rx status */
     for (UINT loop = 0; loop < params.nodes - 1; loop++)
     {
-        status = MPI_Test(RxRqsts + loop, &RxStat[loop], MPI_STATUS_IGNORE);
+        /* Check if used - false */
+        if (!RxStat[loop])
+        {
+            status = MPI_Test(RxRqsts + loop, &RxStat[loop], MPI_STATUS_IGNORE);
+        }
 
+        /* Check if the request is complete */
         if (RxStat[loop])
         {
             cumulate++;
         }
     }
 
+    /* Check if all requests completed */
     if (cumulate == params.nodes - 1)
     {
         sem_wait(&control);
 
-        /* Reduce mismatch */
-        mismatch--;
+        /* Reduce mismatch if > 0 */
+        if (mismatch > 0)
+        {
+            mismatch--;
+        }
 
+        /* Set isRxReady to false */
         isRxready = false;
 
         sem_post(&control);
@@ -351,10 +351,10 @@ STATUS DSLIM_Comm::SignalExit()
     /* Set the exitSignal to true */
     exitSignal = true;
 
+    sem_post(&control);
+
     /*  Release Semaphore */
     SignalWakeup();
-
-    sem_post(&control);
 
     return SLM_SUCCESS;
 }
@@ -479,13 +479,20 @@ partRes *DSLIM_Comm::getTxBuffer(INT batchtag, INT batchsize, INT &buffer)
             /* Loop through all available buffers */
             for (buff = 0; buff < TXARRAYS; buff++)
             {
-                MPI_Test(TxRqsts + buff, &TxStat[buff], MPI_STATUS_IGNORE);
+                /* Only check if it's not available by status */
+                if (!TxStat[buff])
+                {
+                    MPI_Test(TxRqsts + buff, &TxStat[buff], MPI_STATUS_IGNORE);
+                }
 
                 /* Found an empty buffer */
                 if (TxStat[buff])
                 {
                     break;
                 }
+
+                /* Wait 100ms before next test */
+                sleep(0.1);
             }
 
             /* Check again if really empty */
@@ -494,7 +501,7 @@ partRes *DSLIM_Comm::getTxBuffer(INT batchtag, INT batchsize, INT &buffer)
                 /* Set the return pointer to txArr[buff] */
                 ptr = txArr[buff];
 
-                /* Set the TxStat to false - Used */
+                /* Set the TxStat to false - Used henceforth */
                 TxStat[buff] = false;
 
                 buffer = buff;

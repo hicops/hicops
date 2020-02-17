@@ -41,7 +41,7 @@ BOOL ExitSignal = false;
 
 DSLIM_Comm *CommHandle = NULL;
 Scheduler *SchedHandle = NULL;
-//lwqueue<commRqst> *requestQ = NULL;
+lwqueue<commRqst> *requestQ = NULL;
 
 /* Lock for query file vector and thread manager */
 LOCK qfilelock;
@@ -143,7 +143,7 @@ static inline STATUS DSLIM_WaitFor_IO(INT &batchsize)
 
 STATUS DSLIM_Process_RxData()
 {
-    //partRes *rxData = CommHandle->getCurr_CommArr();
+    //partRes *rxData = CommHandle->getRxArray()
 
     return SLM_SUCCESS;
 }
@@ -227,7 +227,7 @@ STATUS DSLIM_SearchManager(Index *index)
     if (params.nodes > 1)
     {
         /* Construct the Request Queue */
-        //requestQ = new lwqueue<commRqst>(3);
+        requestQ = new lwqueue<commRqst>(3);
 
         /* Allocate a new DSLIM Comm handle */
         if (status == SLM_SUCCESS)
@@ -259,8 +259,6 @@ STATUS DSLIM_SearchManager(Index *index)
     {
         status = DFile_InitFiles();
     }
-
-    while (1);
 
     /**************************************************************************/
     /* The main query loop starts here */
@@ -294,7 +292,7 @@ STATUS DSLIM_SearchManager(Index *index)
         if (params.nodes > 1)
         {
             /* Get the Tx Buffer and start Rx */
-            //buffers = CommHandle->getTxBuffer(batchnum, batchsize, buffernum);
+            buffers = CommHandle->getTxBuffer(batchnum, batchsize, buffernum);
 
         }
 #endif /* DISTMEM */
@@ -321,10 +319,10 @@ STATUS DSLIM_SearchManager(Index *index)
             txR.btag = batchnum;
             txR.buff = buffernum;
 
-            //requestQ->push(txR);
+            requestQ->push(txR);
 
             /* Signal the thread about the Tx/Rx array */
-            //status = CommHandle->SignalWakeup();
+            status = CommHandle->SignalWakeup();
 
             batchnum++;
         }
@@ -353,27 +351,29 @@ STATUS DSLIM_SearchManager(Index *index)
         end = chrono::system_clock::now();
     }
 
-    /* Post the exit signal to Comm Handle */
+    /* Deinitialize the IO module */
+    status = DSLIM_Deinit_IO();
+
 #ifdef DISTMEM
+    /* Deinitialize the Communication module */
     if (params.nodes > 1)
     {
-        /* All done - Post the exit signal */
-        //CommHandle->SignalExit();
-
         /* TODO: Wait for CommHandle to complete its work */
 
+        /* Post the exit signal to Comm Handle */
+        CommHandle->SignalExit();
+
         /* Delete the instance of CommHandle */
-        //delete CommHandle;
+        delete CommHandle;
 
-        //CommHandle = NULL;
+        CommHandle = NULL;
 
-        //delete requestQ;
-        //requestQ = NULL;
+        delete requestQ;
+        requestQ = NULL;
     }
 #endif /* DISTMEM */
 
-    status = DSLIM_Deinit_IO();
-
+    /* Return the status of execution */
     return status;
 }
 
@@ -982,6 +982,10 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
 
     STATUS status = SLM_SUCCESS;
 
+    /* Avoid race conditions by waiting for
+     * CommHandle pointer to initialize */
+    while ((VOID *)argv != (VOID *)CommHandle);
+
     /* The forever loop */
     for (;status == SLM_SUCCESS;)
     {
@@ -1011,45 +1015,41 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
         /* Wakeup came from Scheduler */
         else
         {
+            /* Copy a txRqst from the front of queue */
+            commRqst  txRqst = requestQ->front();
+
+            /* Pop from the queue */
+            requestQ->pop();
+
+            btag = txRqst.btag;
+            bsize = txRqst.bsize;
+            buff = txRqst.buff;
 
             /* Check if its a Tx */
-            if (btag % (params.nodes) != params.myid && buff != -1)
+            if (btag % (params.nodes) != params.myid)
             {
-                /* Copy a txRqst from the front of queue */
-                //commRqst  txRqst = requestQ->front();
+                if (buff != -1)
+                {
+                    /* Tx the results need the batchsize */
+                    status = CommHandle->Tx(btag, bsize, buff);
+                }
+                else
+                {
+                    cout << "\nDSLIM_Comm Thread: Buffer number -1 detected at process: " << params.myid << endl;
+                    break;
+                }
 
-                /* Pop from the queue */
-                //requestQ->pop();
-
-                //btag = txRqst.btag;
-                //bsize = txRqst.bsize;
-                //buff = txRqst.buff;
-
-                /* Tx the results need the batchsize */
-                status = CommHandle->Tx(btag, bsize, buff);
             }
 
-            /* Check if everything is successful */
-            if (status != SLM_SUCCESS)
+            /* Check for Rx the results in every wakeup from scheduler */
+            status = CommHandle->Test4Rx();
+
+            /* Check if next Rx is available and previous ended */
+            if (CommHandle->getRxReadyPermission())
             {
-                /* Should never reach here */
-                cout << "Status from Comm. Thread: " << status << " on node: "
-                     << params.myid << endl;
-
-                cout << "Aborting..." << endl;
-
-                break;
+                /* Initialize the next Rx */
+                status = CommHandle->RxReady();
             }
-        }
-
-        /* Check for Rx the results in every wakeup */
-        status = CommHandle->Test4Rx();
-
-        /* Check if next Rx is available */
-        if (CommHandle->checkMismatch())
-        {
-            /* Initialize the next Rx */
-            status = CommHandle->RxReady();
         }
 
         /* Check if everything is successful */
@@ -1097,8 +1097,6 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
     /* local object is fine since it will be copied
      * to the queue object at the time of preemption */
     MSQuery *Query = NULL;
-
-    while (1);
 
     INT rem_spec = 0;
 

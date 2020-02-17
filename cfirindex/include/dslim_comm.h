@@ -52,7 +52,7 @@ private:
     INT    rxbuffsize;
 
     /* MPI Communication thread */
-    THREAD *commThd;
+    THREAD commThd;
 
     /* Rx array */
     partRes *rxArr;
