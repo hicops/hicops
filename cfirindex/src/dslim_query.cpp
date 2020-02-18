@@ -1004,7 +1004,7 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
             /* Check if mismatch exists and if Rx is not ready */
             if (CommHandle->getRxReadyPermission())
             {
-                status = CommHandle->RxReady();
+                status = CommHandle->Rx();
             }
             else
             {
@@ -1042,13 +1042,13 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
             }
 
             /* Check for Rx the results in every wakeup from scheduler */
-            status = CommHandle->Test4Rx();
+            status = CommHandle->CheckRx();
 
             /* Check if next Rx is available and previous ended */
             if (CommHandle->getRxReadyPermission())
             {
                 /* Initialize the next Rx */
-                status = CommHandle->RxReady();
+                status = CommHandle->Rx();
             }
         }
 
@@ -1232,8 +1232,11 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
             /* Extract a chunk and return the chunksize */
             status = Query->ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
 
-            /* Add an entry of the added buffer to the CommHandle */
-            status = CommHandle->AddBufferEntry(ioPtr->numSpecs);
+            if (params.nodes > 1)
+            {
+                /* Add an entry of the added buffer to the CommHandle */
+                status = CommHandle->AddBufferEntry(ioPtr->numSpecs);
+            }
 
             /* Lock the ready queue */
             qPtrs->lockr_();

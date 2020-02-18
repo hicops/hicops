@@ -336,7 +336,7 @@ STATUS DSLIM_Comm::Wait4Rx()
     return status;
 }
 
-STATUS DSLIM_Comm::Test4Rx()
+STATUS DSLIM_Comm::CheckRx()
 {
     STATUS status = MPI_SUCCESS;
 
@@ -431,7 +431,7 @@ BOOL DSLIM_Comm::checkWakeup()
     return state;
 }
 
-STATUS DSLIM_Comm::RxReady()
+STATUS DSLIM_Comm::Rx()
 {
     STATUS status = SLM_SUCCESS;
 
@@ -544,12 +544,10 @@ partRes *DSLIM_Comm::getTxBuffer(INT batchtag, INT batchsize, INT &buffer)
                     break;
                 }
 
-                /* Wait 100ms before next test */
-                sleep(0.1);
             }
 
             /* Check again if really empty */
-            if (TxStat[buff])
+            if (buff < TXARRAYS && TxStat[buff])
             {
                 /* Set the return pointer to txArr[buff] */
                 ptr = txArr[buff];

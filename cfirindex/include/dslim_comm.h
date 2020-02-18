@@ -138,7 +138,7 @@ public:
 
     STATUS Rx(INT, INT);
 
-    STATUS RxReady();
+    STATUS Rx();
 
     STATUS ComputeResults();
 
@@ -146,7 +146,7 @@ public:
 
     STATUS Wait4Rx();
 
-    STATUS Test4Rx();
+    STATUS CheckRx();
 
     STATUS SignalExit();
 
