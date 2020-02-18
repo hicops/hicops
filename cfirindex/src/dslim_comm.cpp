@@ -212,6 +212,9 @@ STATUS DSLIM_Comm::Tx(INT batchtag, INT batchsize, INT buff)
 {
     STATUS status = SLM_SUCCESS;
 
+    /* Print the diagnostic */
+    cout << "\nTX: " << batchtag << " @node: " << (batchtag % params.nodes) << endl;
+
     status = MPI_Isend(txArr[buff],
                        batchsize,
                        resPart,
@@ -231,19 +234,28 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
     INT mch = 0;
     INT rqst = 0;
 
+    /* Print the diagnostics */
+    cout << "RX: " << batchtag << " @node: " << params.myid << endl;
+
     /* Lock the rxArray */
     sem_wait(&rxLock);
 
     /* Check if myid is the last node */
     if (params.myid == params.nodes - 1)
     {
-        /* Receive from all from 0 to myid - 1 */
-        for (mch = 0; mch < (INT)params.myid -1; mch++)
+        /* Receive from all from 0 to params.nodes - 1 */
+        for (mch = 0; mch < (INT)params.nodes - 1; mch++)
         {
             MPI_Request *request = RxRqsts + mch;
 
             /* The Rx size = lcsize */
-            status = MPI_Irecv(rxArr + currRxOffset, batchsize, resPart, mch, batchtag, MPI_COMM_WORLD, request);
+            status = MPI_Irecv(rxArr + currRxOffset,
+                               batchsize,
+                               resPart,
+                               mch,
+                               batchtag,
+                               MPI_COMM_WORLD,
+                               request);
 
             /* Mark the Rx status as used */
             RxStat[mch] = 0;
@@ -260,11 +272,17 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
     else
     {
         /* Receive from all but myid */
-        for (mch = 0; mch < (INT)params.myid; mch++)
+        for (mch = 0; mch < (INT) params.myid; mch++)
         {
             MPI_Request *request = RxRqsts + rqst;
 
-            status = MPI_Irecv(rxArr + currRxOffset, batchsize, resPart, mch, batchtag, MPI_COMM_WORLD, request);
+            status = MPI_Irecv(rxArr + currRxOffset,
+                               batchsize,
+                               resPart,
+                               mch,
+                               batchtag,
+                               MPI_COMM_WORLD,
+                               request);
 
             /* Mark the Rx status as used */
             RxStat[mch] = 0;
@@ -281,11 +299,17 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
             rqst++;
         }
 
-        for (mch = (INT)params.myid + 1; mch < (INT)params.nodes; mch++)
+        for (mch = (INT) params.myid + 1; mch < (INT)params.nodes; mch++)
         {
             MPI_Request *request = RxRqsts + rqst;
 
-            status = MPI_Irecv(rxArr + currRxOffset, batchsize, resPart, mch, batchtag, MPI_COMM_WORLD, request);
+            status = MPI_Irecv(rxArr + currRxOffset,
+                               batchsize,
+                               resPart,
+                               mch,
+                               batchtag,
+                               MPI_COMM_WORLD,
+                               request);
 
             /* Mark the Rx status as used */
             RxStat[mch] = 0;
@@ -366,6 +390,9 @@ STATUS DSLIM_Comm::CheckRx()
         /* Reduce mismatch if > 0 */
         if (mismatch > 0)
         {
+            /* Print the diagnostic */
+            cout << "RX Complete: " << RxTag << " @node: " << params.myid << endl;
+
             mismatch--;
         }
 

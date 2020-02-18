@@ -420,6 +420,9 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 
     if (status == SLM_SUCCESS)
     {
+        /* Print the number of query threads */
+        cout << "\n#QThreads: " << threads << " @node: " << params.myid << endl;
+
         /* Process all the queries in the chunk */
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
