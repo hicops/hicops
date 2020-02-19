@@ -60,25 +60,31 @@ VOID DSLIM_Comm::InitRx()
 
 VOID DSLIM_Comm::InitTx()
 {
+#if 0
     TxRqsts = NULL;
     TxStat = NULL;
+
 
     TxRqsts = new MPI_Request[TXARRAYS];
     TxStat = new INT[TXARRAYS];
 
+
     if (TxRqsts != NULL && TxStat != NULL)
     {
+#endif
         /* Initialize the two txArrays and
          * the two corresponding locks */
         for (INT jj = 0; jj < TXARRAYS; jj++)
         {
             txArr[jj] = new partRes[QCHUNK];
-
+        }
+#if 0
             /* True means available */
             TxStat[jj] = 1;
+
         }
     }
-
+#endif
 }
 
 /* Default constructor */
@@ -171,12 +177,14 @@ DSLIM_Comm::~DSLIM_Comm()
     /* Destroy Tx and Rx locks */
     Destroy_Locks();
 
+#if 0
     /* Deallocate Tx requests */
     if (TxRqsts != NULL)
     {
         delete[] TxRqsts;
         TxRqsts = NULL;
     }
+#endif
 
     /* Deallocate Rx requests */
     if (RxRqsts != NULL)
@@ -192,8 +200,8 @@ DSLIM_Comm::~DSLIM_Comm()
 
 STATUS DSLIM_Comm::InitComm_DataTypes()
 {
-    MPI_Type_contiguous((INT)(sizeof(partRes) / sizeof(FLOAT)),
-                        MPI_FLOAT,
+    MPI_Type_contiguous((INT)(sizeof(partRes) / sizeof(INT)),
+                        MPI_INT,
                         &resPart);
 
     MPI_Type_commit(&resPart);
@@ -213,15 +221,15 @@ STATUS DSLIM_Comm::Tx(INT batchtag, INT batchsize, INT buff)
     STATUS status = SLM_SUCCESS;
 
     /* Print the diagnostic */
-    cout << "\nTX: " << batchtag << " " << params.myid << "->" << (batchtag % params.nodes) << " buff:" << buff << endl;
+    cout << "\nTX: " << batchtag << " " << params.myid << "->" << (batchtag % params.nodes) << endl;
 
-    status = MPI_Isend((INT *)txArr[buff],
-                       1,
-                       MPI_INT,
+    status = MPI_Ssend((partRes *)txArr[buff],
+                       (batchsize),
+                       resPart,
                        (batchtag % params.nodes),
                        batchtag,
-                       MPI_COMM_WORLD,
-                       TxRqsts + buff);
+                       MPI_COMM_WORLD/*,
+                       TxRqsts + buff*/);
 
 #if 0
     cout << "TX DONE: " << batchtag << " " << params.myid << "->" << (batchtag % params.nodes) << ", BUFF:" << buff << endl;
@@ -263,9 +271,9 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
         }
 
         /* Do the Rx */
-        status = MPI_Irecv((INT *)rxArr + currRxOffset,
-                           1,
-                           MPI_INT,
+        status = MPI_Irecv((partRes *)rxArr + currRxOffset,
+                           batchsize,
+                           resPart,
                            mch,
                            batchtag,
                            MPI_COMM_WORLD,
@@ -287,6 +295,10 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
 
     /* Unlock the rxArray */
     sem_post(&rxLock);
+
+    /*
+    cout << "RXDONE: " << batchtag << " @node: " << params.myid << endl;
+    */
 
     return status;
 }
@@ -331,10 +343,14 @@ STATUS DSLIM_Comm::CheckRx()
         if (!RxStat[loop])
         {
             status = MPI_Test(RxRqsts + loop, &RxStat[loop], MPI_STATUS_IGNORE);
-        }
 
+            if (RxStat[loop])
+            {
+                cumulate++;
+            }
+        }
         /* Check if the request is complete */
-        if (RxStat[loop])
+        else
         {
             cumulate++;
         }
@@ -517,33 +533,46 @@ partRes *DSLIM_Comm::getTxBuffer(INT batchtag, INT batchsize, INT &buffer)
     partRes *ptr = NULL;
     buffer = -1;
 
+    /* Check for any Rx once */
+    this->SignalWakeup();
+
     /* Check if Tx or Rx */
     if (batchtag % params.nodes != params.myid)
     {
         INT buff = (batchtag % TXARRAYS);
 
+        buffer = buff;
+        ptr = txArr[buff];
+
+#if 0
         /* Wait for an empty buffer */
         for (;;)
         {
+            //cout << "MPI_Test@: " << params.myid << endl;
+
             /* Loop through all available buffers */
-            for (INT cnt = 0; cnt < TXARRAYS; cnt++, buff=(buff+1) % TXARRAYS)
+            for (INT cnt = 0; cnt < TXARRAYS; cnt++, buff= ((buff+1) % TXARRAYS))
             {
                 /* Only check if it's not available by status */
                 if (!TxStat[buff])
                 {
                     MPI_Test(TxRqsts + buff, &TxStat[buff], MPI_STATUS_IGNORE);
-                }
 
-                /* Found an empty buffer */
-                if (TxStat[buff])
+                    if (TxStat[buff])
+                    {
+                        break;
+                    }
+                }
+                else
                 {
                     break;
                 }
 
             }
+            //cout << "MPI_Done@: " << params.myid << endl;
 
             /* Check again if really empty */
-            if (buff < TXARRAYS && TxStat[buff])
+            if (TxStat[buff])
             {
                 /* Set the return pointer to txArr[buff] */
                 ptr = txArr[buff];
@@ -560,8 +589,9 @@ partRes *DSLIM_Comm::getTxBuffer(INT batchtag, INT batchsize, INT &buffer)
             this->SignalWakeup();
 
             /* No free buffer found - Wait 500ms */
-            sleep(0.3);
+            sleep(0.5);
         }
+#endif /* 0 */
     }
     else
     {
@@ -586,12 +616,16 @@ STATUS DSLIM_Comm::Wait4Completion()
     /* Wait until there is no mismatch
      * i.e. Rx is complete
      */
+#if 0
     INT cumulate = 0;
     BOOL txDone = false;
+#endif
+
     BOOL rxDone = false;
 
-    for (;!txDone || !rxDone; sleep(0.1))
+    for (;/*!txDone ||*/ !rxDone; sleep(0.1))
     {
+#if 0
         if (!txDone)
         {
             cumulate = 0;
@@ -618,7 +652,7 @@ STATUS DSLIM_Comm::Wait4Completion()
                 txDone = true;
             }
         }
-
+#endif
         if (!rxDone)
         {
             SignalWakeup();

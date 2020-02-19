@@ -701,14 +701,14 @@ typedef struct _Results
 /* Data structure for partial result Tx/Rx */
 typedef struct _partResult
 {
-    FLOAT min;
-    FLOAT max;
-    FLOAT med;
-    FLOAT m1;
-    FLOAT b1;
-    FLOAT m2;
-    FLOAT b2;
-    FLOAT N;
+    INT min;
+    INT max;
+    INT med;
+    INT m1;
+    INT b1;
+    INT m2;
+    INT b2;
+    INT N;
 
     /* Default contructor */
     _partResult()

@@ -117,6 +117,8 @@ static inline STATUS DSLIM_WaitFor_IO(INT &batchsize)
          * the I/O threads still working */
         status = qPtrs->unlockr_();
 
+        CommHandle->SignalWakeup();
+
         sleep(0.1);
 
         status = qPtrs->lockr_();
@@ -325,7 +327,6 @@ STATUS DSLIM_SearchManager(Index *index)
                 status = CommHandle->Tx(batchnum, batchsize, buffernum);
             }
 
-            /* Check for Rx */
             CommHandle->SignalWakeup();
 
             batchnum++;
@@ -404,7 +405,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
     STATUS status = SLM_SUCCESS;
     UINT maxz = params.maxz;
     UINT dF = params.dF;
-    UINT threads = params.threads - SchedHandle->getNumActivThds();
+    INT threads = (INT)params.threads - (INT)SchedHandle->getNumActivThds();
     UINT scale = params.scale;
     DOUBLE maxmass = params.max_mass;
 
@@ -430,6 +431,9 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
     {
         /* Print the number of query threads */
         //cout << "\n#QThreads: " << threads << " @node: " << params.myid << endl;
+
+        /* Should at least be 1 */
+        threads = MAX(1, threads);
 
         /* Process all the queries in the chunk */
 #ifdef _OPENMP
@@ -1022,18 +1026,12 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
         /* Wakeup came from Scheduler or Internal */
         else
         {
-
             /* Check for Rx the results in every wakeup from scheduler */
             status = CommHandle->CheckRx();
-
-            //cout << "Motherfucker: " << params.myid << endl;
 
             /* Check if next Rx is available and previous ended */
             if (CommHandle->getRxReadyPermission())
             {
-
-                //cout << "MotherfuckeReady: " << params.myid << endl;
-
                 /* Initialize the next Rx */
                 status = CommHandle->Rx();
             }
@@ -1050,8 +1048,6 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
 
             break;
         }
-
-        //cout << "GAndu: " << params.myid << endl;
 
     }
 
