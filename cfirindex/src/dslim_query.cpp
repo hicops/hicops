@@ -41,7 +41,6 @@ BOOL ExitSignal = false;
 
 DSLIM_Comm *CommHandle = NULL;
 Scheduler *SchedHandle = NULL;
-lwqueue<commRqst> *requestQ = NULL;
 
 /* Lock for query file vector and thread manager */
 LOCK qfilelock;
@@ -164,7 +163,8 @@ STATUS DSLIM_SearchManager(Index *index)
 
     INT batchnum = 0;
     INT batchsize = 0;
-    INT buffernum = 0;
+    INT buffernum = -1;
+
     partRes *buffers = NULL;
 
     auto start = chrono::system_clock::now();
@@ -226,9 +226,6 @@ STATUS DSLIM_SearchManager(Index *index)
     /* Only required if nodes > 1 */
     if (params.nodes > 1)
     {
-        /* Construct the Request Queue */
-        requestQ = new lwqueue<commRqst>(3);
-
         /* Allocate a new DSLIM Comm handle */
         if (status == SLM_SUCCESS)
         {
@@ -278,7 +275,7 @@ STATUS DSLIM_SearchManager(Index *index)
         /* Compute the penalty */
         chrono::duration<double> penalty = chrono::system_clock::now() - spen;
 
-        cout << "PENALTY: " << penalty.count() << endl;
+        //cout << "PENALTY: " << penalty.count() << endl;
 
         /* Check the status of buffer queues */
         qPtrs->lockr_();
@@ -294,12 +291,18 @@ STATUS DSLIM_SearchManager(Index *index)
             /* Get the Tx Buffer and start Rx */
             buffers = CommHandle->getTxBuffer(batchnum, batchsize, buffernum);
 
+            if ((batchnum % params.nodes) != params.myid && buffernum == -1)
+            {
+                cout << "FATAL: Something has been fucked at: " << params.myid << endl;
+                exit(-1);
+            }
+
         }
 #endif /* DISTMEM */
 
         if (params.myid == 0)
         {
-            cout << "Querying: \n" << endl;
+            //cout << "Querying: \n" << endl;
         }
 
         start = chrono::system_clock::now();
@@ -314,18 +317,20 @@ STATUS DSLIM_SearchManager(Index *index)
         /* Transfer my partial results to others */
         if (status == SLM_SUCCESS && params.nodes > 1)
         {
-            commRqst txR;
-            txR.bsize = batchsize;
-            txR.btag = batchnum;
-            txR.buff = buffernum;
 
-            requestQ->push(txR);
+            /* Check if its a Tx */
+            if (batchnum % (params.nodes) != params.myid)
+            {
+                /* Tx the results need the batchsize */
+                status = CommHandle->Tx(batchnum, batchsize, buffernum);
+            }
 
-            /* Signal the thread about the Tx/Rx array */
-            status = CommHandle->SignalWakeup();
+            /* Check for Rx */
+            CommHandle->SignalWakeup();
 
             batchnum++;
         }
+
 #endif /* DISTMEM */
 
         status = qPtrs->lockw_();
@@ -344,8 +349,8 @@ STATUS DSLIM_SearchManager(Index *index)
         //if (params.myid == 0)
         {
             /* Compute Duration */
-            cout << "Query Time: " << qtime.count() << "s" << endl;
-            cout << "Queried with status:\t\t" << status << endl << endl;
+            //cout << "Query Time: " << qtime.count() << "s" << endl;
+            //cout << "Queried with status:\t\t" << status << endl << endl;
         }
 
         end = chrono::system_clock::now();
@@ -358,7 +363,12 @@ STATUS DSLIM_SearchManager(Index *index)
     /* Deinitialize the Communication module */
     if (params.nodes > 1)
     {
-        /* TODO: Wait for CommHandle to complete its work */
+       cout << "Wait4Completion: " << params.myid << endl;
+
+        /* Wait for CommHandle to complete its work */
+        status = CommHandle->Wait4Completion();
+
+        cout << "ExitSignal: " << params.myid << endl;
 
         /* Post the exit signal to Comm Handle */
         CommHandle->SignalExit();
@@ -368,8 +378,6 @@ STATUS DSLIM_SearchManager(Index *index)
 
         CommHandle = NULL;
 
-        delete requestQ;
-        requestQ = NULL;
     }
 #endif /* DISTMEM */
 
@@ -421,7 +429,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
     if (status == SLM_SUCCESS)
     {
         /* Print the number of query threads */
-        cout << "\n#QThreads: " << threads << " @node: " << params.myid << endl;
+        //cout << "\n#QThreads: " << threads << " @node: " << params.myid << endl;
 
         /* Process all the queries in the chunk */
 #ifdef _OPENMP
@@ -445,7 +453,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 
             if (thno == 0 && params.myid == 0)
             {
-                std::cout << "\rDONE: " << (queries * 100) /ss->numSpecs << "%";
+                //std::cout << "\rDONE: " << (queries * 100) /ss->numSpecs << "%";
             }
 
             for (UINT ixx = 0; ixx < idxchunk; ixx++)
@@ -605,7 +613,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
     }
 #endif
 
-    cout << "Queried Spectra:\t\t" << workPtr->numSpecs << endl;
+//    cout << "Queried Spectra:\t\t" << workPtr->numSpecs << endl;
 
     return status;
 }
@@ -979,10 +987,6 @@ STATUS DSLIM_ModelSurvivalFunction(Results *resPtr)
  */
 VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
 {
-    INT btag = 0;
-    INT bsize = 0;
-    INT buff = 0;
-
     STATUS status = SLM_SUCCESS;
 
     /* Avoid race conditions by waiting for
@@ -1015,41 +1019,21 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
                      << params.myid << endl;
             }
         }
-        /* Wakeup came from Scheduler */
+        /* Wakeup came from Scheduler or Internal */
         else
         {
-            /* Copy a txRqst from the front of queue */
-            commRqst  txRqst = requestQ->front();
-
-            /* Pop from the queue */
-            requestQ->pop();
-
-            btag = txRqst.btag;
-            bsize = txRqst.bsize;
-            buff = txRqst.buff;
-
-            /* Check if its a Tx */
-            if (btag % (params.nodes) != params.myid)
-            {
-                if (buff != -1)
-                {
-                    /* Tx the results need the batchsize */
-                    status = CommHandle->Tx(btag, bsize, buff);
-                }
-                else
-                {
-                    cout << "\nDSLIM_Comm Thread: Buffer number -1 detected at process: " << params.myid << endl;
-                    break;
-                }
-
-            }
 
             /* Check for Rx the results in every wakeup from scheduler */
             status = CommHandle->CheckRx();
 
+            //cout << "Motherfucker: " << params.myid << endl;
+
             /* Check if next Rx is available and previous ended */
             if (CommHandle->getRxReadyPermission())
             {
+
+                //cout << "MotherfuckeReady: " << params.myid << endl;
+
                 /* Initialize the next Rx */
                 status = CommHandle->Rx();
             }
@@ -1066,6 +1050,8 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
 
             break;
         }
+
+        //cout << "GAndu: " << params.myid << endl;
 
     }
 
@@ -1163,8 +1149,8 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 
                 if (params.myid == 0)
                 {
-                    cout << "Query File: " << queryfiles[qfid_lcl] << endl;
-                    cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                    //cout << "Query File: " << queryfiles[qfid_lcl] << endl;
+                    //cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
                 }
 
                 rem_spec = Query->getQAcount(); // Init to 1 for first loop to run
@@ -1262,8 +1248,8 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 
             if (params.myid == 0)
             {
-                cout << "Extracted Spectra :\t\t" << ioPtr->numSpecs << endl;
-                cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                //cout << "Extracted Spectra :\t\t" << ioPtr->numSpecs << endl;
+                //cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
             }
 
             /* If no more remaining spectra, then deinit */

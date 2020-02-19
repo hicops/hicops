@@ -621,7 +621,7 @@ typedef struct _commRqst{
     {
         btag = 0;
         bsize = 0;
-        buff = 0;
+        buff = -1;
     }
 
     /* Overload = operator */

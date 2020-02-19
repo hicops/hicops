@@ -160,6 +160,10 @@ public:
 
     BOOL checkMismatch();
 
+    BOOL checkEndCondition();
+
+    STATUS Wait4Completion();
+
     STATUS AddBufferEntry(INT);
 
 };

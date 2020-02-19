@@ -213,15 +213,27 @@ STATUS DSLIM_Comm::Tx(INT batchtag, INT batchsize, INT buff)
     STATUS status = SLM_SUCCESS;
 
     /* Print the diagnostic */
-    cout << "\nTX: " << batchtag << " @node: " << (batchtag % params.nodes) << endl;
+    cout << "\nTX: " << batchtag << " " << params.myid << "->" << (batchtag % params.nodes) << " buff:" << buff << endl;
 
-    status = MPI_Isend(txArr[buff],
-                       batchsize,
-                       resPart,
+    status = MPI_Isend((INT *)txArr[buff],
+                       1,
+                       MPI_INT,
                        (batchtag % params.nodes),
                        batchtag,
                        MPI_COMM_WORLD,
                        TxRqsts + buff);
+
+#if 0
+    cout << "TX DONE: " << batchtag << " " << params.myid << "->" << (batchtag % params.nodes) << ", BUFF:" << buff << endl;
+
+    MPI_Wait(TxRqsts + buff, MPI_STATUS_IGNORE);
+
+    cout << "TX DONE: " << batchtag << " " << params.myid << "->" << (batchtag % params.nodes) << ", BUFF:" << buff << endl;
+
+    fflush(stdout);
+
+    //cout << "\nTX: " << batchtag << " " << params.myid << "->" << (batchtag % params.nodes) << " buff:" << buff << endl;
+#endif
 
     return status;
 }
@@ -235,96 +247,42 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
     INT rqst = 0;
 
     /* Print the diagnostics */
-    cout << "RX: " << batchtag << " @node: " << params.myid << endl;
+    cout << "RXINIT: " << batchtag << " @node: " << params.myid << endl;
 
     /* Lock the rxArray */
     sem_wait(&rxLock);
 
-    /* Check if myid is the last node */
-    if (params.myid == params.nodes - 1)
+    /* Receive from all other nodes */
+    for (mch = 0, rqst = 0; mch < (INT) params.nodes; mch++)
     {
-        /* Receive from all from 0 to params.nodes - 1 */
-        for (mch = 0; mch < (INT)params.nodes - 1; mch++)
+        MPI_Request *request = RxRqsts + rqst;
+
+        if ((UINT)mch == params.myid)
         {
-            MPI_Request *request = RxRqsts + mch;
-
-            /* The Rx size = lcsize */
-            status = MPI_Irecv(rxArr + currRxOffset,
-                               batchsize,
-                               resPart,
-                               mch,
-                               batchtag,
-                               MPI_COMM_WORLD,
-                               request);
-
-            /* Mark the Rx status as used */
-            RxStat[mch] = 0;
-
-            currRxOffset += batchsize;
-
-            if (status != MPI_SUCCESS)
-            {
-                cout << endl << "Rx Failed at Node: " << params.myid << " for batchnum: " << batchtag << endl;
-                break;
-            }
-        }
-    }
-    else
-    {
-        /* Receive from all but myid */
-        for (mch = 0; mch < (INT) params.myid; mch++)
-        {
-            MPI_Request *request = RxRqsts + rqst;
-
-            status = MPI_Irecv(rxArr + currRxOffset,
-                               batchsize,
-                               resPart,
-                               mch,
-                               batchtag,
-                               MPI_COMM_WORLD,
-                               request);
-
-            /* Mark the Rx status as used */
-            RxStat[mch] = 0;
-
-            /* Update the pointer */
-            currRxOffset += batchsize;
-
-            if (status != MPI_SUCCESS)
-            {
-                cout << endl << "Rx Failed at Node: " << params.myid << " for batchnum: " << batchtag << endl;
-                break;
-            }
-
-            rqst++;
+            continue;
         }
 
-        for (mch = (INT) params.myid + 1; mch < (INT)params.nodes; mch++)
+        /* Do the Rx */
+        status = MPI_Irecv((INT *)rxArr + currRxOffset,
+                           1,
+                           MPI_INT,
+                           mch,
+                           batchtag,
+                           MPI_COMM_WORLD,
+                           request);
+
+        /* Mark the Rx status as used */
+        RxStat[rqst] = 0;
+
+        currRxOffset += batchsize;
+
+        if (status != MPI_SUCCESS)
         {
-            MPI_Request *request = RxRqsts + rqst;
-
-            status = MPI_Irecv(rxArr + currRxOffset,
-                               batchsize,
-                               resPart,
-                               mch,
-                               batchtag,
-                               MPI_COMM_WORLD,
-                               request);
-
-            /* Mark the Rx status as used */
-            RxStat[mch] = 0;
-
-            /* Update the pointer */
-            currRxOffset += batchsize;
-
-            if (status != MPI_SUCCESS)
-            {
-                cout << endl << "Rx Failed at Node: " << params.myid << " for batchnum: " << batchtag << endl;
-                break;
-            }
-
-            rqst++;
+            cout << endl << "Rx Failed at Node: " << params.myid << " for batchnum: " << batchtag << endl;
+            break;
         }
+
+        rqst++;
     }
 
     /* Unlock the rxArray */
@@ -463,7 +421,7 @@ STATUS DSLIM_Comm::Rx()
     STATUS status = SLM_SUCCESS;
 
     /* Get the batchtag and the batchsize */
-    INT btag = RxTag + params.nodes;
+    RxTag += params.nodes;
     INT bsize = rxQueue->front();
 
     status = rxQueue->pop();
@@ -471,7 +429,7 @@ STATUS DSLIM_Comm::Rx()
     /* Initialize the MPI_Recv */
     if (status == SLM_SUCCESS)
     {
-        status = Rx(btag, bsize);
+        status = Rx(RxTag, bsize);
     }
 
     /* Set the flag to true if success */
@@ -498,6 +456,17 @@ BOOL DSLIM_Comm::getRxReadyPermission()
     return state;
 }
 
+BOOL DSLIM_Comm::checkEndCondition()
+{
+    sem_wait(&control);
+
+    BOOL state = (mismatch == 0 && isRxready == false);
+
+    sem_post(&control);
+
+    return state;
+
+}
 BOOL DSLIM_Comm::checkMismatch()
 {
     sem_wait(&control);
@@ -535,10 +504,10 @@ STATUS DSLIM_Comm::AddBufferEntry(INT bsize)
         }
 
         sem_post(&control);
-
-        /* Increment the batch number */
-        nBatches++;
     }
+
+    /* Increment the batch number */
+    nBatches++;
 
     return status;
 }
@@ -551,13 +520,13 @@ partRes *DSLIM_Comm::getTxBuffer(INT batchtag, INT batchsize, INT &buffer)
     /* Check if Tx or Rx */
     if (batchtag % params.nodes != params.myid)
     {
-        INT buff = 0;
+        INT buff = (batchtag % TXARRAYS);
 
         /* Wait for an empty buffer */
-        while (true)
+        for (;;)
         {
             /* Loop through all available buffers */
-            for (buff = 0; buff < TXARRAYS; buff++)
+            for (INT cnt = 0; cnt < TXARRAYS; cnt++, buff=(buff+1) % TXARRAYS)
             {
                 /* Only check if it's not available by status */
                 if (!TxStat[buff])
@@ -587,8 +556,11 @@ partRes *DSLIM_Comm::getTxBuffer(INT batchtag, INT batchsize, INT &buffer)
                 break;
             }
 
+            /* Check for any Rx meanwhile */
+            this->SignalWakeup();
+
             /* No free buffer found - Wait 500ms */
-            sleep(0.5);
+            sleep(0.3);
         }
     }
     else
@@ -605,6 +577,60 @@ partRes *DSLIM_Comm::getTxBuffer(INT batchtag, INT batchsize, INT &buffer)
     }
 
     return ptr;
+}
+
+STATUS DSLIM_Comm::Wait4Completion()
+{
+    STATUS status = SLM_SUCCESS;
+
+    /* Wait until there is no mismatch
+     * i.e. Rx is complete
+     */
+    INT cumulate = 0;
+    BOOL txDone = false;
+    BOOL rxDone = false;
+
+    for (;!txDone || !rxDone; sleep(0.1))
+    {
+        if (!txDone)
+        {
+            cumulate = 0;
+
+            for (INT loop = 0; loop < TXARRAYS; loop++)
+            {
+                if (!TxStat[loop])
+                {
+                    MPI_Test(TxRqsts + loop, &TxStat[loop], MPI_STATUS_IGNORE);
+
+                    if (TxStat[loop])
+                    {
+                        cumulate++;
+                    }
+                }
+                else
+                {
+                    cumulate++;
+                }
+            }
+
+            if (cumulate == TXARRAYS)
+            {
+                txDone = true;
+            }
+        }
+
+        if (!rxDone)
+        {
+            SignalWakeup();
+
+            if (checkEndCondition())
+            {
+                rxDone = true;
+            }
+        }
+    }
+
+    return status;
 }
 
 #endif /* DISTMEM */
