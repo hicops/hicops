@@ -635,7 +635,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
     }
 #endif
 
-//    cout << "Queried Spectra:\t\t" << workPtr->numSpecs << endl;
+    cout << "Queried Spectra:\t\t" << workPtr->numSpecs << endl;
 
     return status;
 }
@@ -1088,8 +1088,9 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
     INT rem_spec = 0;
 
     /* Initialize and process Query Spectra */
-    for (;;)
+    for (;status == SLM_SUCCESS;)
     {
+
 #ifdef BENCHMARK
         duration = omp_get_wtime();
 #endif /* BENCHMARK */
@@ -1180,7 +1181,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 #ifdef BENCHMARK
             duration = omp_get_wtime();
 #endif /* BENCHMARK */
-
+            
             /* Wait for a I/O request */
             status = qPtrs->lockw_();
 
@@ -1246,8 +1247,8 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 
             if (params.myid == 0)
             {
-                //cout << "Extracted Spectra :\t\t" << ioPtr->numSpecs << endl;
-                //cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                cout << "Extracted Spectra :\t\t" << ioPtr->numSpecs << endl;
+                cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
             }
 
             /* If no more remaining spectra, then deinit */
@@ -1262,6 +1263,10 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
                 }
             }
         }
+		else
+		{
+            cout << "ALERT: IOTHD @" << params.myid << endl;
+		}
     }
 
     /* Check if we ran out of files */

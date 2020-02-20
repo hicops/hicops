@@ -237,7 +237,11 @@ public:
         {
             res = arr[head];
         }
-
+		else
+		{
+			res = 0;
+		}
+		
         if (isSem)
         {
             sem_post (&lock);
@@ -259,6 +263,10 @@ public:
         {
             res = arr[tail];
         }
+		else
+		{
+			res = 0;
+		}
 
         if (isSem)
         {

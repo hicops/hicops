@@ -147,6 +147,7 @@ VOID Scheduler::flushDumpQueue()
         dump->pop();
         waitForThread(pt);
         delete pt;
+		//pt = NULL;
     }
 
     sem_post(&dumpQ);

@@ -252,11 +252,11 @@ STATUS DSLIM_Comm::Tx(INT batchtag, INT batchsize, INT buff)
 
     cout << "TX DONE: " << batchtag << " " << params.myid << "->" << (batchtag % params.nodes) << ", BUFF:" << buff << endl;
 
-    MPI_Wait(TxRqsts + buff, MPI_STATUS_IGNORE);
+    //MPI_Wait(TxRqsts + buff, MPI_STATUS_IGNORE);
 
-    cout << "TX DONE: " << batchtag << " " << params.myid << "->" << (batchtag % params.nodes) << ", BUFF:" << buff << endl;
+    //cout << "TX DONE: " << batchtag << " " << params.myid << "->" << (batchtag % params.nodes) << ", BUFF:" << buff << endl;
 
-    fflush(stdout);
+    //fflush(stdout);
 
     //cout << "\nTX: " << batchtag << " " << params.myid << "->" << (batchtag % params.nodes) << " buff:" << buff << endl;
 #endif /* DIAGNOSE */
@@ -406,9 +406,10 @@ STATUS DSLIM_Comm::CheckRx()
         /* Reduce mismatch if > 0 */
         if (mismatch > 0)
         {
+#ifdef DIAGNOSE
             /* Print the diagnostic */
             cout << "RX Complete: " << RxTag << " @node: " << params.myid << endl;
-
+#endif /* DIAGNOSE */
             mismatch--;
         }
 
@@ -549,7 +550,11 @@ BOOL DSLIM_Comm::checkMismatch()
 
 STATUS DSLIM_Comm::AddBufferEntry(INT bsize)
 {
-    STATUS status;
+    STATUS status = SLM_SUCCESS;
+
+#ifdef DIAGNOSE
+	cout << "AddBuffer Called: " << nBatches << " @: " << params.myid << endl;
+#endif /* DIAGNOSE */
 
     /* Check the batch number */
     if (nBatches % params.nodes == params.myid)
@@ -560,7 +565,9 @@ STATUS DSLIM_Comm::AddBufferEntry(INT bsize)
         sem_wait(&control);
 
         mismatch++;
-
+#ifdef DIAGNOSE
+		cout << "Mismatch: " << mismatch << " @: " << params.myid << endl;
+#endif /* DIAGNOSE */
         sem_post(&control);
 
         status = SignalWakeup();
