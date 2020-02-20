@@ -93,8 +93,8 @@ private:
     /* Handle for Rx request(S) */
     MPI_Request *RxRqsts;
 
-    INT *RxStat;
 
+    INT *RxStat;
 #if 0
     /* Handle for the Tx request */
     MPI_Request *TxRqsts;

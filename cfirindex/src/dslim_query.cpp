@@ -117,8 +117,6 @@ static inline STATUS DSLIM_WaitFor_IO(INT &batchsize)
          * the I/O threads still working */
         status = qPtrs->unlockr_();
 
-        CommHandle->SignalWakeup();
-
         sleep(0.1);
 
         status = qPtrs->lockr_();
@@ -277,7 +275,10 @@ STATUS DSLIM_SearchManager(Index *index)
         /* Compute the penalty */
         chrono::duration<double> penalty = chrono::system_clock::now() - spen;
 
-        //cout << "PENALTY: " << penalty.count() << endl;
+        if (params.myid == 0)
+        {
+            cout << "PENALTY: " << penalty.count() << endl;
+        }
 
         /* Check the status of buffer queues */
         qPtrs->lockr_();
@@ -295,7 +296,7 @@ STATUS DSLIM_SearchManager(Index *index)
 
             if ((batchnum % params.nodes) != params.myid && buffernum == -1)
             {
-                cout << "FATAL: Something has been fucked at: " << params.myid << endl;
+                cout << "FATAL: Check getTxBuffer @node: " << params.myid << endl;
                 exit(-1);
             }
 
@@ -304,7 +305,7 @@ STATUS DSLIM_SearchManager(Index *index)
 
         if (params.myid == 0)
         {
-            //cout << "Querying: \n" << endl;
+            cout << "Querying: \n" << endl;
         }
 
         start = chrono::system_clock::now();
@@ -319,15 +320,12 @@ STATUS DSLIM_SearchManager(Index *index)
         /* Transfer my partial results to others */
         if (status == SLM_SUCCESS && params.nodes > 1)
         {
-
             /* Check if its a Tx */
             if (batchnum % (params.nodes) != params.myid)
             {
                 /* Tx the results need the batchsize */
                 status = CommHandle->Tx(batchnum, batchsize, buffernum);
             }
-
-            CommHandle->SignalWakeup();
 
             batchnum++;
         }
@@ -347,11 +345,11 @@ STATUS DSLIM_SearchManager(Index *index)
         qtime += end - start;
 
         /* FIXME: Uncomment this thing */
-        //if (params.myid == 0)
+        if (params.myid == 0)
         {
             /* Compute Duration */
-            //cout << "Query Time: " << qtime.count() << "s" << endl;
-            //cout << "Queried with status:\t\t" << status << endl << endl;
+            cout << "Query Time: " << qtime.count() << "s" << endl;
+            cout << "Queried with status:\t\t" << status << endl << endl;
         }
 
         end = chrono::system_clock::now();
@@ -360,16 +358,30 @@ STATUS DSLIM_SearchManager(Index *index)
     /* Deinitialize the IO module */
     status = DSLIM_Deinit_IO();
 
+    /* Delete the scheduler object */
+    if (SchedHandle != NULL)
+    {
+        /* Deallocate the scheduler module */
+        delete SchedHandle;
+
+        SchedHandle = NULL;
+    }
+
 #ifdef DISTMEM
     /* Deinitialize the Communication module */
     if (params.nodes > 1)
     {
+#ifdef DIAGNOSE
        cout << "Wait4Completion: " << params.myid << endl;
+#endif /* DIAGNOSE */
 
         /* Wait for CommHandle to complete its work */
         status = CommHandle->Wait4Completion();
 
+#ifdef DIAGNOSE
         cout << "ExitSignal: " << params.myid << endl;
+#endif /* DIAGNOSE */
+        status = MPI_Barrier(MPI_COMM_WORLD);
 
         /* Post the exit signal to Comm Handle */
         CommHandle->SignalExit();
@@ -429,11 +441,15 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 
     if (status == SLM_SUCCESS)
     {
-        /* Print the number of query threads */
-        //cout << "\n#QThreads: " << threads << " @node: " << params.myid << endl;
+        /* Should at least be 1 and min 75% */
+        threads = MAX(1, (params.threads * 3)/4);
 
-        /* Should at least be 1 */
-        threads = MAX(1, threads);
+        /* Print how many threads are we using here */
+        if (params.myid == 0)
+        {
+            /* Print the number of query threads */
+            cout << "\n#QThds: " << threads << endl;
+        }
 
         /* Process all the queries in the chunk */
 #ifdef _OPENMP
@@ -457,7 +473,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 
             if (thno == 0 && params.myid == 0)
             {
-                //std::cout << "\rDONE: " << (queries * 100) /ss->numSpecs << "%";
+                std::cout << "\rDONE: " << (queries * 100) /ss->numSpecs << "%";
             }
 
             for (UINT ixx = 0; ixx < idxchunk; ixx++)
@@ -1009,32 +1025,16 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
             break;
         }
 
-        /* Check if Wakeup Signal came from an IO Thread */
-        if (CommHandle->checkWakeup())
+        /* Check if Rx is legal */
+        if (CommHandle->getRxReadyPermission())
         {
-            /* Check if mismatch exists and if Rx is not ready */
-            if (CommHandle->getRxReadyPermission())
-            {
-                status = CommHandle->Rx();
-            }
-            else
-            {
-                cout << "COMM THD: Something went wrong on node: "
-                     << params.myid << endl;
-            }
+            status = CommHandle->Rx();
         }
-        /* Wakeup came from Scheduler or Internal */
         else
         {
-            /* Check for Rx the results in every wakeup from scheduler */
-            status = CommHandle->CheckRx();
+            status = ERR_INVLD_PARAM;
 
-            /* Check if next Rx is available and previous ended */
-            if (CommHandle->getRxReadyPermission())
-            {
-                /* Initialize the next Rx */
-                status = CommHandle->Rx();
-            }
+            cout << "COMM THD: Something went wrong on node: " << params.myid << endl;
         }
 
         /* Check if everything is successful */
@@ -1145,8 +1145,8 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 
                 if (params.myid == 0)
                 {
-                    //cout << "Query File: " << queryfiles[qfid_lcl] << endl;
-                    //cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                    cout << "\nQuery File: " << queryfiles[qfid_lcl] << endl;
+                    cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
                 }
 
                 rem_spec = Query->getQAcount(); // Init to 1 for first loop to run
@@ -1320,11 +1320,6 @@ static inline STATUS DSLIM_Deinit_IO()
 
     /* Destroy the ioQ lock semaphore */
     status = sem_destroy(&ioQlock);
-
-    /* Deallocate the scheduler module */
-    delete SchedHandle;
-
-    SchedHandle = NULL;
 
     return status;
 }
