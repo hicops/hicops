@@ -125,11 +125,9 @@ STATUS MSQuery::InitQueryFile(STRING *filename)
             /* Scan: (S) */
             else if (line[0] == 'S')
             {
-
                 count++;
                 largestspec = max(specsize, largestspec);
                 specsize = 0;
-
             }
             /* Header: (H) */
             else if (line[0] == 'H' || line[0] == 'I' || line[0] == 'D' || line[0] == 'Z')

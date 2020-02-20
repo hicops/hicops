@@ -37,32 +37,72 @@
 #include "config.h"
 #include "lwqueue.h"
 
+#define TXARRAYS                   2
+
 /* Class for DSLIM MPI Communication */
 class DSLIM_Comm
 {
 private:
 
+    /* Number of data batches processed (either Tx or Rx'ed) */
+    UINT    nBatches;
+
+    /* RX buffer size in terms of
+     * how many partRes it can contain */
+    INT    rxbuffsize;
+
     /* MPI Communication thread */
     THREAD commThd;
 
+    /* Rx array */
     partRes *rxArr;
 
+    /* Semaphore for Rx array */
+    LOCK rxLock;
+
+    /* currRxOffset */
+    INT currRxOffset;
+
+    /* 2 Tx arrays */
+    partRes *txArr[TXARRAYS];
+
+    /* Lock for control variables */
+    LOCK control;
+
+    /* Exit Signal */
+    BOOL exitSignal;
+
+    /* Wake up event */
+    LOCK wakeup;
+
+    /* Wake4mIO Signal*/
+    BOOL Wake4mIO;
+
+    /* Signal for Rx ready */
+    BOOL isRxready;
+
+    /* Mismatch counter */
+    INT mismatch;
+
+    lwqueue<UINT> *rxQueue;
+
+    INT RxTag;
+
 #ifdef DISTMEM
-    /* Handle for Tx requests */
+
+    /* Handle for Rx request(S) */
+    MPI_Request *RxRqsts;
+
+
+    INT *RxStat;
+
+    /* Handle for the Tx request */
     MPI_Request *TxRqsts;
 
-    /* Handle for Rx requests */
-    MPI_Request *RxRqsts;
+    INT *TxStat;
+
+
 #endif /* DISTMEM */
-
-    /* Number of allocated work queues */
-    UINT    nworkQ;
-
-    /* Semaphores for both queues */
-    LOCK work_lock;
-    LOCK comm_lock;
-
-    INT rxbuffsize;
 
     VOID Init_Locks();
 
@@ -72,8 +112,6 @@ private:
 
     VOID Destroy_Locks();
 
-    STATUS Addto_workQ();
-
     STATUS FlushRxBuffer();
 
     STATUS DestroyRxBuffers();
@@ -81,6 +119,12 @@ private:
     STATUS InitComm_DataTypes();
 
     STATUS FreeComm_DataTypes();
+
+    VOID * Thread_Entry(VOID *argv);
+
+    partRes *getCurrTxArr();
+
+    partRes *getCurrRxArr();
 
 public:
 
@@ -90,29 +134,39 @@ public:
     /* Destructor */
     virtual ~DSLIM_Comm();
 
-    partRes *getCurr_WorkArr();
+    partRes *getTxBuffer(INT batchtag, INT batchsize, INT&);
 
-    partRes *getCurr_CommArr();
+    STATUS Tx(INT, INT, INT);
 
-    STATUS Sendto_workQ();
+    STATUS Rx(INT, INT);
 
-    STATUS Sendto_commQ();
-
-    STATUS Tx(INT batchnum);
-
-    STATUS Rx(UINT specs, INT batchnum);
+    STATUS Rx();
 
     STATUS ComputeResults();
 
-    STATUS Waitfor_TxData();
+    STATUS Wait4Event();
 
-    STATUS WaitFor_RxData();
+    STATUS Wait4Rx();
 
-    STATUS SignalExit(BOOL &signal);
+    STATUS CheckRx();
 
-    STATUS SignalTx();
+    STATUS SignalExit();
 
+    STATUS SignalWakeup();
 
+    BOOL checkExitSignal();
+
+    BOOL checkWakeup();
+
+    BOOL getRxReadyPermission();
+
+    BOOL checkMismatch();
+
+    BOOL checkEndCondition();
+
+    STATUS Wait4Completion();
+
+    STATUS AddBufferEntry(INT);
 
 };
 

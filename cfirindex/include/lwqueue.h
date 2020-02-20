@@ -226,7 +226,7 @@ public:
 
     T front()
     {
-        T res = (T) NULL;
+        T res;
 
         if (isSem)
         {
@@ -237,7 +237,11 @@ public:
         {
             res = arr[head];
         }
-
+		else
+		{
+			res = 0;
+		}
+		
         if (isSem)
         {
             sem_post (&lock);
@@ -248,7 +252,7 @@ public:
 
     T end()
     {
-        T res = (T) NULL;
+        T res;
 
         if (isSem)
         {
@@ -259,6 +263,10 @@ public:
         {
             res = arr[tail];
         }
+		else
+		{
+			res = 0;
+		}
 
         if (isSem)
         {

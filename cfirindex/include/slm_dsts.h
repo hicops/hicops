@@ -611,6 +611,35 @@ typedef struct _heapEntry
 
 } hCell;
 
+/* Structure to contain a communication request */
+typedef struct _commRqst{
+    UINT btag;
+    UINT bsize;
+    UINT buff;
+
+    VOID _comRqst()
+    {
+        btag = 0;
+        bsize = 0;
+        buff = -1;
+    }
+
+    /* Overload = operator */
+    _commRqst& operator=(const _commRqst& rhs)
+    {
+        /* Check for self assignment */
+        if (this != &rhs)
+        {
+            this->btag  = rhs.btag;
+            this->bsize = rhs.bsize;
+            this->buff  = rhs.buff;
+        }
+        return *this;
+    }
+
+} commRqst;
+
+
 /* This structure will be made per thread */
 typedef struct _Results
 {
@@ -669,22 +698,42 @@ typedef struct _Results
 
 } Results;
 
-/* Dat structure for partial result Tx/Rx */
+/* Data structure for partial result Tx/Rx */
 typedef struct _partResult
 {
-    FLOAT min;
-    FLOAT max;
-    FLOAT m;
-    FLOAT b;
-    FLOAT hyp;//[2];
+    INT min;
+    INT max;
+    INT med;
+    INT m1;
+    INT b1;
+    INT m2;
+    INT b2;
+    INT N;
 
+    /* Default contructor */
     _partResult()
     {
         min = 0;
         max = 0;
-        m = 0;
-        b = 0;
-        hyp = 0;
+        med = 0;
+        m1 = 0;
+        b1 = 0;
+        m2 = 0;
+        b2 = 0;
+        N  = 0;
+    }
+
+    /* Destructor */
+    ~_partResult()
+    {
+        min = 0;
+        max = 0;
+        med = 0;
+        m1 = 0;
+        b1 = 0;
+        m2 = 0;
+        b2 = 0;
+        N  = 0;
     }
 
 } partRes;
@@ -693,7 +742,7 @@ typedef struct _BYICount
 {
     BYC     *byc;       /* Both counts */
     iBYC   *ibyc;       /* Sum of b/y ion intensities */
-    Results        res;
+    Results  res;
 
     _BYICount()
     {

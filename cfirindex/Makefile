@@ -23,7 +23,7 @@ DEPS = src/dslim_query.cpp src/dslim_comm.cpp include/dslim_comm.h src/scheduler
 
 LIBS = -ldslim
 LIBPATHS = -L$(SRC)
-EXECUTEABLE = cfir.exe
+EXECUTEABLE = hicops.exe
 
 ifeq ($(PROFILE),YES)
 	LIBS += -lprofiler
@@ -59,14 +59,14 @@ export CXXFLAGS
 export CXX
 
 all: lbe
-	$(CXX) $(LNKFLAGS) $(LIBPATHS) -Wl,--start-group  $(LIBS) ./pcdsframe.o -Wl,--end-group -o $(EXECUTEABLE) -Wl,-Map=$(EXECUTEABLE).map
+	$(CXX) $(LNKFLAGS) $(LIBPATHS) -Wl,--start-group  $(LIBS) ./hicops.o -Wl,--end-group -o $(EXECUTEABLE) -Wl,-Map=$(EXECUTEABLE).map
 
 lbe: $(DEPS)
 	$(MAKE) -j$(JOBS) -C $(SRC)
-	$(CXX) -c -I./include -I./mstoolkit/include $(CXXFLAGS) -DGCC ./pcdsframe.cpp -o pcdsframe.o
+	$(CXX) -c -I./include -I./mstoolkit/include $(CXXFLAGS) -DGCC ./hicops.cpp -o hicops.o
 
 clean:
 	$(MAKE) -C $(SRC) clean
-	rm -rf $(EXECUTEABLE) $(EXECUTEABLE).map pcdsframe.o
+	rm -rf $(EXECUTEABLE) $(EXECUTEABLE).map hicops.o
 
 .PHONY: all lbe clean
