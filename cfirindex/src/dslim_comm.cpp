@@ -555,25 +555,25 @@ partRes *DSLIM_Comm::getTxBuffer(INT batchtag, INT batchsize, INT &buffer)
 {
     partRes *ptr = NULL;
 
-    for (;; usleep(300000))
-    {
-        if (!TxStat[buffer])
-        {
-            MPI_Test(TxRqsts + buffer, &TxStat[buffer], MPI_STATUS_IGNORE);
-        }
-        else
-        {
-             break;
-        }
-    }
-	
     /* Check if Tx or Rx */
     if (batchtag % params.nodes != params.myid)
     {
-        INT buff = ((buffer + 1) % TXARRAYS);
+        INT lbuff = ((buffer + 1) % TXARRAYS);
 
-        buffer = buff;
-        ptr = txArr[buff];
+        for (;; usleep(300000), lbuff = ((lbuff + 1) % TXARRAYS))
+        {
+            if (!TxStat[lbuff])
+            {
+                MPI_Test(TxRqsts + lbuff, &TxStat[lbuff], MPI_STATUS_IGNORE);
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        buffer = lbuff;
+        ptr = txArr[lbuff];
 
 #if 0
         /* Wait for an empty buffer */
@@ -655,16 +655,13 @@ STATUS DSLIM_Comm::Wait4Completion()
     /* Wait until there is no mismatch
      * i.e. Rx is complete
      */
-#if 0
     INT cumulate = 0;
     BOOL txDone = false;
-#endif
 
     BOOL rxDone = false;
 
-    for (;/*!txDone ||*/ !rxDone; usleep(500000))
+    for (;!txDone || !rxDone; usleep(500000))
     {
-#if 0
         if (!txDone)
         {
             cumulate = 0;
@@ -691,7 +688,6 @@ STATUS DSLIM_Comm::Wait4Completion()
                 txDone = true;
             }
         }
-#endif
 
         if (checkEndCondition())
         {

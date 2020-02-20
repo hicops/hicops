@@ -1263,7 +1263,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 #ifndef DIAGNOSE
             if (params.myid == 0)
             {
-                cout << "Extracted Spectra :\t\t" << ioPtr->numSpecs << endl;
+                cout << "\nExtracted Spectra :\t\t" << ioPtr->numSpecs << endl;
                 cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
             }
 #endif /* DIAGNOSE */
