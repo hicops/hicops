@@ -163,7 +163,7 @@ STATUS DSLIM_SearchManager(Index *index)
 
     INT batchnum = 0;
     INT batchsize = 0;
-    INT buffernum = -1;
+    INT buffernum = 0;
 
     partRes *buffers = NULL;
 
@@ -275,10 +275,12 @@ STATUS DSLIM_SearchManager(Index *index)
         /* Compute the penalty */
         chrono::duration<double> penalty = chrono::system_clock::now() - spen;
 
+#ifndef DIAGNOSE
         if (params.myid == 0)
         {
             cout << "PENALTY: " << penalty.count() << endl;
         }
+#endif /* DIAGNOSE */
 
         /* Check the status of buffer queues */
         qPtrs->lockr_();
@@ -303,10 +305,12 @@ STATUS DSLIM_SearchManager(Index *index)
         }
 #endif /* DISTMEM */
 
+#ifndef DIAGNOSE
         if (params.myid == 0)
         {
             cout << "Querying: \n" << endl;
         }
+#endif /* DIAGNOSE */
 
         start = chrono::system_clock::now();
 
@@ -344,13 +348,14 @@ STATUS DSLIM_SearchManager(Index *index)
         /* Compute Duration */
         qtime += end - start;
 
-        /* FIXME: Uncomment this thing */
+#ifndef DIAGNOSE
         if (params.myid == 0)
         {
             /* Compute Duration */
             cout << "Query Time: " << qtime.count() << "s" << endl;
             cout << "Queried with status:\t\t" << status << endl << endl;
         }
+#endif /* DIAGNOSE */
 
         end = chrono::system_clock::now();
     }
@@ -446,12 +451,14 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 
         threads = MAX(threads, minthreads);
 
+#ifndef DIAGNOSE
         /* Print how many threads are we using here */
         if (params.myid == 0)
         {
             /* Print the number of query threads */
             cout << "\n#QThds: " << threads << endl;
         }
+#endif /* DIAGNOSE */
 
         /* Process all the queries in the chunk */
 #ifdef _OPENMP
@@ -473,10 +480,12 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
             iBYC *ibycPtr = Score[thno].ibyc;
             Results *resPtr = &Score[thno].res;
 
+#ifndef DIAGNOSE
             if (thno == 0 && params.myid == 0)
             {
                 std::cout << "\rDONE: " << (queries * 100) /ss->numSpecs << "%";
             }
+#endif /* DIAGNOSE */
 
             for (UINT ixx = 0; ixx < idxchunk; ixx++)
             {
@@ -635,7 +644,12 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
     }
 #endif
 
-    cout << "Queried Spectra:\t\t" << workPtr->numSpecs << endl;
+#ifndef DIAGNOSE
+    if (params.myid == 1)
+    {
+        cout << "Queried Spectra:\t\t" << workPtr->numSpecs << endl;
+    }
+#endif /* DIAGNOSE */
 
     return status;
 }
@@ -1145,12 +1159,13 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 
                 /* Initialize Query MS/MS file */
                 status = Query->InitQueryFile(&queryfiles[qfid_lcl]);
-
-                if (params.myid == 0)
+#ifndef DIAGNOSE
+                if (params.myid == 1)
                 {
                     cout << "\nQuery File: " << queryfiles[qfid_lcl] << endl;
                     cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
                 }
+#endif /* DIAGNOSE */
 
                 rem_spec = Query->getQAcount(); // Init to 1 for first loop to run
                 end = chrono::system_clock::now();
@@ -1245,11 +1260,13 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
             /* Compute Duration */
             elapsed_seconds = end - start;
 
+#ifndef DIAGNOSE
             if (params.myid == 0)
             {
                 cout << "Extracted Spectra :\t\t" << ioPtr->numSpecs << endl;
                 cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
             }
+#endif /* DIAGNOSE */
 
             /* If no more remaining spectra, then deinit */
             if (rem_spec < 1)

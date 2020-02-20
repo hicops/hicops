@@ -236,29 +236,8 @@ STATUS DSLIM_Comm::Tx(INT batchtag, INT batchsize, INT buff)
 
     TxStat[buff] = 0;
 
-    for (;; usleep(300000))
-    {
-        if (!TxStat[buff])
-        {
-            status = MPI_Test(TxRqsts + buff, &TxStat[buff], MPI_STATUS_IGNORE);
-
-            if (TxStat[buff])
-            {
-                break;
-            }
-        }
-    }
 #ifdef DIAGNOSE
-
     cout << "TX DONE: " << batchtag << " " << params.myid << "->" << (batchtag % params.nodes) << ", BUFF:" << buff << endl;
-
-    //MPI_Wait(TxRqsts + buff, MPI_STATUS_IGNORE);
-
-    //cout << "TX DONE: " << batchtag << " " << params.myid << "->" << (batchtag % params.nodes) << ", BUFF:" << buff << endl;
-
-    //fflush(stdout);
-
-    //cout << "\nTX: " << batchtag << " " << params.myid << "->" << (batchtag % params.nodes) << " buff:" << buff << endl;
 #endif /* DIAGNOSE */
 
     return status;
@@ -406,10 +385,9 @@ STATUS DSLIM_Comm::CheckRx()
         /* Reduce mismatch if > 0 */
         if (mismatch > 0)
         {
-#ifdef DIAGNOSE
             /* Print the diagnostic */
             cout << "RX Complete: " << RxTag << " @node: " << params.myid << endl;
-#endif /* DIAGNOSE */
+
             mismatch--;
         }
 
@@ -552,10 +530,6 @@ STATUS DSLIM_Comm::AddBufferEntry(INT bsize)
 {
     STATUS status = SLM_SUCCESS;
 
-#ifdef DIAGNOSE
-	cout << "AddBuffer Called: " << nBatches << " @: " << params.myid << endl;
-#endif /* DIAGNOSE */
-
     /* Check the batch number */
     if (nBatches % params.nodes == params.myid)
     {
@@ -565,9 +539,7 @@ STATUS DSLIM_Comm::AddBufferEntry(INT bsize)
         sem_wait(&control);
 
         mismatch++;
-#ifdef DIAGNOSE
-		cout << "Mismatch: " << mismatch << " @: " << params.myid << endl;
-#endif /* DIAGNOSE */
+
         sem_post(&control);
 
         status = SignalWakeup();
@@ -582,14 +554,23 @@ STATUS DSLIM_Comm::AddBufferEntry(INT bsize)
 partRes *DSLIM_Comm::getTxBuffer(INT batchtag, INT batchsize, INT &buffer)
 {
     partRes *ptr = NULL;
-    buffer = -1;
 
-    //cout << "GetTxBuffer: " << params.myid << " BATCH: " << batchtag << endl;
-
+    for (;; usleep(300000))
+    {
+        if (!TxStat[buffer])
+        {
+            MPI_Test(TxRqsts + buffer, &TxStat[buffer], MPI_STATUS_IGNORE);
+        }
+        else
+        {
+             break;
+        }
+    }
+	
     /* Check if Tx or Rx */
     if (batchtag % params.nodes != params.myid)
     {
-        INT buff = (batchtag % TXARRAYS);
+        INT buff = ((buffer + 1) % TXARRAYS);
 
         buffer = buff;
         ptr = txArr[buff];
