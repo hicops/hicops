@@ -43,7 +43,6 @@ VOID DSLIM_Comm::InitRx()
         RxStat[jj] = 1;
     }
 
-
     if (RxRqsts != NULL)
     {
         /* Initialize the RX lock */
@@ -67,31 +66,24 @@ VOID DSLIM_Comm::InitRx()
 
 VOID DSLIM_Comm::InitTx()
 {
-#if 0
     TxRqsts = NULL;
     TxStat = NULL;
-
 
     TxRqsts = new MPI_Request[TXARRAYS];
     TxStat = new INT[TXARRAYS];
 
-
     if (TxRqsts != NULL && TxStat != NULL)
     {
-#endif
         /* Initialize the two txArrays and
          * the two corresponding locks */
         for (INT jj = 0; jj < TXARRAYS; jj++)
         {
             txArr[jj] = new partRes[QCHUNK];
-        }
-#if 0
+
             /* True means available */
             TxStat[jj] = 1;
-
         }
     }
-#endif
 }
 
 /* Default constructor */
@@ -234,14 +226,28 @@ STATUS DSLIM_Comm::Tx(INT batchtag, INT batchsize, INT buff)
     cout << "\nTX: " << batchtag << " " << params.myid << "->" << (batchtag % params.nodes) << endl;
 #endif /* DIAGNOSE */
 
-    status = MPI_Ssend((partRes *)txArr[buff],
+    status = MPI_Isend((partRes *)txArr[buff],
                        (batchsize),
                        resPart,
                        (batchtag % params.nodes),
                        batchtag,
-                       MPI_COMM_WORLD/*,
-                       TxRqsts + buff*/);
+                       MPI_COMM_WORLD,
+                       TxRqsts + buff);
 
+    TxStat[buff] = 0;
+
+    for (;; usleep(300000))
+    {
+        if (!TxStat[buff])
+        {
+            status = MPI_Test(TxRqsts + buff, &TxStat[buff], MPI_STATUS_IGNORE);
+
+            if (TxStat[buff])
+            {
+                break;
+            }
+        }
+    }
 #ifdef DIAGNOSE
 
     cout << "TX DONE: " << batchtag << " " << params.myid << "->" << (batchtag % params.nodes) << ", BUFF:" << buff << endl;

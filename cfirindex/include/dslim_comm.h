@@ -95,13 +95,12 @@ private:
 
 
     INT *RxStat;
-#if 0
+
     /* Handle for the Tx request */
     MPI_Request *TxRqsts;
 
     INT *TxStat;
 
-#endif
 
 #endif /* DISTMEM */
 

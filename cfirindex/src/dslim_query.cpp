@@ -442,7 +442,9 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
     if (status == SLM_SUCCESS)
     {
         /* Should at least be 1 and min 75% */
-        threads = MAX(1, (params.threads * 3)/4);
+        INT minthreads = MAX(1, (params.threads * 3)/4);
+
+        threads = MAX(threads, minthreads);
 
         /* Print how many threads are we using here */
         if (params.myid == 0)
