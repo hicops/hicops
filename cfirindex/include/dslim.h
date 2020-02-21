@@ -143,6 +143,9 @@ STATUS DSLIM_Analyze(UINT threads, DOUBLE &mean, DOUBLE &std);
  * @status: Status of execution
  */
 STATUS DSLIM_Deinitialize(Index *index);
+
+STATUS DSLIM_DeallocateIonIndex(Index *index);
+
 STATUS DSLIM_DeallocateSC();
 
 STATUS DSLIM_DeallocateSpecArr();

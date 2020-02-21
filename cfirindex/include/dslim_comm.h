@@ -57,6 +57,14 @@ private:
     /* Rx array */
     partRes *rxArr;
 
+    /* Array to keep track of sizes
+     * of buffers received
+     */
+    INT     *sizeArray;
+
+    /* currPtr */
+    INT  sizeOffset;
+
     /* Semaphore for Rx array */
     LOCK rxLock;
 
@@ -92,7 +100,6 @@ private:
 
     /* Handle for Rx request(S) */
     MPI_Request *RxRqsts;
-
 
     INT *RxStat;
 
@@ -146,10 +153,6 @@ public:
 
     STATUS Wait4Event();
 
-    STATUS Wait4Rx();
-
-    STATUS CheckRx();
-
     STATUS SignalExit();
 
     STATUS SignalWakeup();
@@ -167,6 +170,12 @@ public:
     STATUS Wait4Completion();
 
     STATUS AddBufferEntry(INT);
+
+#if 0
+    STATUS Wait4Rx();
+
+    STATUS CheckRx();
+#endif
 
 };
 

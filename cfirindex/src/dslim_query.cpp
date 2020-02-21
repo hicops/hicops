@@ -76,6 +76,7 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv);
 
 VOID *DSLIM_IO_Threads_Entry(VOID *argv);
 
+
 static VOID DSLIM_BinarySearch(Index *, FLOAT, INT&, INT&);
 static INT  DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max);
 static INT  DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max);
@@ -278,7 +279,7 @@ STATUS DSLIM_SearchManager(Index *index)
 #ifndef DIAGNOSE
         if (params.myid == 0)
         {
-            cout << "PENALTY: " << penalty.count() << endl;
+            std::cout << "PENALTY: " << penalty.count() << endl;
         }
 #endif /* DIAGNOSE */
 
@@ -298,7 +299,7 @@ STATUS DSLIM_SearchManager(Index *index)
 
             if ((batchnum % params.nodes) != params.myid && buffernum == -1)
             {
-                cout << "FATAL: Check getTxBuffer @node: " << params.myid << endl;
+                std::cout << "FATAL: Check getTxBuffer @node: " << params.myid << endl;
                 exit(-1);
             }
 
@@ -308,7 +309,7 @@ STATUS DSLIM_SearchManager(Index *index)
 #ifndef DIAGNOSE
         if (params.myid == 0)
         {
-            cout << "Querying: \n" << endl;
+            std::cout << "Querying: \n" << endl;
         }
 #endif /* DIAGNOSE */
 
@@ -352,8 +353,8 @@ STATUS DSLIM_SearchManager(Index *index)
         if (params.myid == 0)
         {
             /* Compute Duration */
-            cout << "Query Time: " << qtime.count() << "s" << endl;
-            cout << "Queried with status:\t\t" << status << endl << endl;
+            std::cout << "Query Time: " << qtime.count() << "s" << endl;
+            std::cout << "Queried with status:\t\t" << status << endl << endl;
         }
 #endif /* DIAGNOSE */
 
@@ -377,14 +378,14 @@ STATUS DSLIM_SearchManager(Index *index)
     if (params.nodes > 1)
     {
 #ifdef DIAGNOSE
-       cout << "Wait4Completion: " << params.myid << endl;
+       std::cout << "Wait4Completion: " << params.myid << endl;
 #endif /* DIAGNOSE */
 
         /* Wait for CommHandle to complete its work */
         status = CommHandle->Wait4Completion();
 
 #ifdef DIAGNOSE
-        cout << "ExitSignal: " << params.myid << endl;
+        std::cout << "ExitSignal: " << params.myid << endl;
 #endif /* DIAGNOSE */
         status = MPI_Barrier(MPI_COMM_WORLD);
 
@@ -456,7 +457,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
         if (params.myid == 0)
         {
             /* Print the number of query threads */
-            cout << "\n#QThds: " << threads << endl;
+            std::cout << "\n#QThds: " << threads << endl;
         }
 #endif /* DIAGNOSE */
 
@@ -594,10 +595,10 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 hCell psm = resPtr->topK.getMax();
 
                 /* Fill in the Tx array cells */
-//                txArray[queries].b = resPtr->bias;
-//                txArray[queries].m = resPtr->weight;
-//                txArray[queries].min = resPtr->minhypscore;
-//                txArray[queries].max = resPtr->nexthypscore;
+                txArray[queries].b = resPtr->bias;
+                txArray[queries].m = resPtr->weight;
+                txArray[queries].min = resPtr->minhypscore;
+                txArray[queries].max = resPtr->nexthypscore;
 
                 /* Estimate the log (s(x)); x = log(hyperscore) */
                 DOUBLE lgs_x = resPtr->weight * (psm.hyperscore * 10 + 0.5) + resPtr->bias;
@@ -611,7 +612,6 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 if (e_x < params.expect_max)
                 {
 #ifndef ANALYSIS
-
                     /* Printing the scores in OpenMP mode */
                     status = DFile_PrintScore(index, queries, pmass, &psm, e_x, resPtr->cpsms);
 #else
@@ -621,7 +621,10 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
             }
             else
             {
-                /* Get the handle to the txArr - Fill it up and move on */
+                /* Get the handle to the txArr
+                 * Fill it up and move on */
+                txArray[queries] = 0;
+                txArray[queries].max = resPtr->maxhypscore;
             }
 
             /* Reset the results */
@@ -633,21 +636,19 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
         }
     }
 
-    std::cout << '\n';
-
 #ifdef BENCHMARK
     compute += omp_get_wtime() - duration;
 
     for (unsigned int thd = 0; thd < params.threads; thd++)
     {
-        std::cout << "Thread #: " << thd << "\t" << tcons[thd] << std::endl;
+        std::cout << "\nThread #: " << thd << "\t" << tcons[thd];
     }
 #endif
 
 #ifndef DIAGNOSE
     if (params.myid == 1)
     {
-        cout << "Queried Spectra:\t\t" << workPtr->numSpecs << endl;
+        std::cout << "\nQueried Spectra:\t\t" << workPtr->numSpecs << endl;
     }
 #endif /* DIAGNOSE */
 
@@ -1050,17 +1051,17 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
         {
             status = ERR_INVLD_PARAM;
 
-            cout << "COMM THD: Something went wrong on node: " << params.myid << endl;
+            std::cout << "COMM THD: Something went wrong on node: " << params.myid << endl;
         }
 
         /* Check if everything is successful */
         if (status != SLM_SUCCESS)
         {
             /* Should never reach here */
-            cout << "Status from Comm. Thread: " << status << " on node: "
+            std::cout << "Status from Comm. Thread: " << status << " on node: "
                  << params.myid << endl;
 
-            cout << "Aborting..." << endl;
+            std::cout << "Aborting..." << endl;
 
             break;
         }
@@ -1162,8 +1163,8 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 #ifndef DIAGNOSE
                 if (params.myid == 1)
                 {
-                    cout << "\nQuery File: " << queryfiles[qfid_lcl] << endl;
-                    cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                    std::cout << "\nQuery File: " << queryfiles[qfid_lcl] << endl;
+                    std::cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
                 }
 #endif /* DIAGNOSE */
 
@@ -1263,8 +1264,8 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 #ifndef DIAGNOSE
             if (params.myid == 0)
             {
-                cout << "\nExtracted Spectra :\t\t" << ioPtr->numSpecs << endl;
-                cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                std::cout << "\nExtracted Spectra :\t\t" << ioPtr->numSpecs << endl;
+                std::cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
             }
 #endif /* DIAGNOSE */
 
@@ -1280,10 +1281,10 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
                 }
             }
         }
-		else
-		{
-            cout << "ALERT: IOTHD @" << params.myid << endl;
-		}
+        else
+        {
+            std::cout << "ALERT: IOTHD @" << params.myid << endl;
+        }
     }
 
     /* Check if we ran out of files */

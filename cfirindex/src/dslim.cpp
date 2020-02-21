@@ -780,31 +780,11 @@ STATUS DSLIM_Deinitialize(Index *index)
 {
     STATUS status = SLM_SUCCESS;
 
+    /* Deallocate the scorecard */
     status = DSLIM_DeallocateSC();
 
-    /* Deallocate all the DSLIM chunks */
-    for (UINT chno = 0; chno < index->nChunks; chno++)
-    {
-        SLMchunk curr_chunk = index->ionIndex[chno];
-
-        if (curr_chunk.bA != NULL)
-        {
-            delete[] curr_chunk.bA;
-            curr_chunk.bA = NULL;
-        }
-
-        if (curr_chunk.iA != NULL)
-        {
-            delete[] curr_chunk.iA;
-            curr_chunk.iA = NULL;
-        }
-    }
-
-    if (index->ionIndex != NULL)
-    {
-        delete[] index->ionIndex;
-        index->ionIndex = NULL;
-    }
+    /* Deallocate the Ion Index */
+    status = DSLIM_DeallocateIonIndex(index);
 
     if (index->pepEntries != NULL)
     {
@@ -832,9 +812,37 @@ STATUS DSLIM_Deinitialize(Index *index)
     return status;
 }
 
+STATUS DSLIM_DeallocateIonIndex(Index *index)
+{
+    /* Deallocate all the DSLIM chunks */
+    for (UINT chno = 0; chno < index->nChunks; chno++)
+    {
+        SLMchunk curr_chunk = index->ionIndex[chno];
+
+        if (curr_chunk.bA != NULL)
+        {
+            delete[] curr_chunk.bA;
+            curr_chunk.bA = NULL;
+        }
+
+        if (curr_chunk.iA != NULL)
+        {
+            delete[] curr_chunk.iA;
+            curr_chunk.iA = NULL;
+        }
+    }
+
+    if (index->ionIndex != NULL)
+    {
+        delete[] index->ionIndex;
+        index->ionIndex = NULL;
+    }
+
+    return SLM_SUCCESS;
+}
+
 STATUS DSLIM_DeallocateSpecArr()
 {
-
 #ifdef BENCHMARK
     duration = omp_get_wtime();
 #endif
