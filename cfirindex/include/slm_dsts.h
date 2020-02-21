@@ -699,15 +699,13 @@ typedef struct _Results
 } Results;
 
 /* Data structure for partial result Tx/Rx */
+/* Data structure for partial result Tx/Rx */
 typedef struct _partResult
 {
     INT min;
     INT max;
-    INT med;
-    INT m1;
-    INT b1;
-    INT m2;
-    INT b2;
+    INT m;
+    INT b;
     INT N;
 
     /* Default contructor */
@@ -715,12 +713,18 @@ typedef struct _partResult
     {
         min = 0;
         max = 0;
-        med = 0;
-        m1 = 0;
-        b1 = 0;
-        m2 = 0;
-        b2 = 0;
+        m = 0;
+        b = 0;
         N  = 0;
+    }
+
+    _partResult(INT def)
+    {
+        min = def;
+        max = def;
+        m = def;
+        b = def;
+        N  = def;
     }
 
     /* Destructor */
@@ -728,12 +732,31 @@ typedef struct _partResult
     {
         min = 0;
         max = 0;
-        med = 0;
-        m1 = 0;
-        b1 = 0;
-        m2 = 0;
-        b2 = 0;
+        m = 0;
+        b = 0;
         N  = 0;
+    }
+
+    _partResult& operator=(const INT& rhs)
+    {
+        min = rhs;
+        max = rhs;
+        m = rhs;
+        b = rhs;
+        N  = rhs;
+
+        return *this;
+    }
+
+    _partResult& operator=(const _partResult& rhs)
+    {
+        min = rhs.min;
+        max = rhs.max;
+        m = rhs.m;
+        b = rhs.b;
+        N  = rhs.N;
+
+        return *this;
     }
 
 } partRes;
