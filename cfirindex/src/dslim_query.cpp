@@ -531,11 +531,13 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                                 if (ppid >= minlimit && ppid <= maxlimit)
                                 {
                                     /* Update corresponding scorecard entries */
+                                    /* b-ion matched */
                                     if ((raw % speclen) < speclen / 2)
                                     {
                                         bycPtr[ppid].bc += 1;
                                         ibycPtr[ppid].ibc += iPtr[k];
                                     }
+                                    /* y-ion matched */
                                     else
                                     {
                                         bycPtr[ppid].yc += 1;
@@ -547,10 +549,13 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                         }
                     }
 
+                    /* Compute the chunksize to look further into */
                     INT csize = maxlimit - minlimit;
 
+                    /* Look for candidate PSMs */
                     for (INT it = minlimit; it < maxlimit; it++)
                     {
+                        /* Filter by the min shared peaks */
                         if (bycPtr[it].bc + bycPtr[it].yc >= params.min_shp)
                         {
                             /* Create a heap cell */
@@ -570,6 +575,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                                 cell.psid = it;
                                 cell.sharedions = bycPtr[it].bc + bycPtr[it].yc;
                                 cell.totalions = speclen;
+                                cell.pmass = pmass;
 
                                 /* Insert the cell in the heap dst */
                                 resPtr->topK.insert(cell);
@@ -587,19 +593,28 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 }
             }
 
-            /* Compute expect score if there are any candidate PSMs */
-            if (resPtr->cpsms > params.min_cpsm)
+#if 0
+            /* TODO: Extract the top result
+             * and put it in the list */
+            hCell psm = resPtr->topK.getMax();
+#endif /* 0 */
+
+            /* FIXME: How to set the params.min_cpsm */
+            if (resPtr->cpsms > 1 /*params.min_cpsm*/)
             {
+                /* Compute expect score if there
+                 * are any candidate PSMs */
                 status = DSLIM_ModelSurvivalFunction(resPtr);
 
-                hCell psm = resPtr->topK.getMax();
-
                 /* Fill in the Tx array cells */
-                txArray[queries].b = resPtr->bias;
-                txArray[queries].m = resPtr->weight;
+                txArray[queries].b = (INT)(resPtr->bias * 1000);
+                txArray[queries].m = (INT)(resPtr->weight * 1000);
                 txArray[queries].min = resPtr->minhypscore;
-                txArray[queries].max = resPtr->nexthypscore;
+                txArray[queries].max2 = resPtr->nexthypscore;
+                txArray[queries].max = resPtr->maxhypscore;
 
+                /* Take care of this during merging stage */
+#if 0
                 /* Estimate the log (s(x)); x = log(hyperscore) */
                 DOUBLE lgs_x = resPtr->weight * (psm.hyperscore * 10 + 0.5) + resPtr->bias;
 
@@ -609,15 +624,17 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 /* e(x) = n * s(x) */
                 DOUBLE e_x = resPtr->cpsms * s_x;
 
+                /* Do not print any scores just yet */
                 if (e_x < params.expect_max)
                 {
 #ifndef ANALYSIS
                     /* Printing the scores in OpenMP mode */
-                    status = DFile_PrintScore(index, queries, pmass, &psm, e_x, resPtr->cpsms);
+                    //status = DFile_PrintScore(index, queries, pmass, &psm, e_x, resPtr->cpsms);
 #else
                     status = DFile_PrintPartials(queries, resPtr);
 #endif /* ANALYSIS */
                 }
+#endif /* 0 */
             }
             else
             {
@@ -1088,6 +1105,7 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
 VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 {
     STATUS status = SLM_SUCCESS;
+    UINT qfid_lcl = 0;
     auto start = chrono::system_clock::now();
     auto end   = chrono::system_clock::now();
     chrono::duration<double> elapsed_seconds = end - start;
@@ -1134,7 +1152,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
             /* lock the query file */
             sem_wait(&qfilelock);
 
-            UINT qfid_lcl = qfid;
+            qfid_lcl = qfid;
 
             /* Check if anymore queryfiles */
             if (qfid_lcl < queryfiles.size())
@@ -1159,7 +1177,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
                 Query = new MSQuery;
 
                 /* Initialize Query MS/MS file */
-                status = Query->InitQueryFile(&queryfiles[qfid_lcl]);
+                status = Query->InitQueryFile(&queryfiles[qfid_lcl], qfid_lcl);
 #ifndef DIAGNOSE
                 if (params.myid == 1)
                 {
@@ -1239,7 +1257,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
             if (params.nodes > 1)
             {
                 /* Add an entry of the added buffer to the CommHandle */
-                status = CommHandle->AddBufferEntry(ioPtr->numSpecs);
+                status = CommHandle->AddBufferEntry(ioPtr->numSpecs, Query->getQfileIndex());
             }
 
             /* Lock the ready queue */

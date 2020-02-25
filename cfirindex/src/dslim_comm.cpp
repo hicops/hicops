@@ -35,6 +35,7 @@ VOID DSLIM_Comm::InitRx()
     /* We may need N-1 RxRequests at any time */
     RxRqsts = new MPI_Request[params.nodes - 1];
 
+    /* Status variables for RxRqsts */
     RxStat = new INT[params.nodes - 1];
 
     for (UINT jj = 0; jj < params.nodes - 1; jj++)
@@ -104,12 +105,15 @@ DSLIM_Comm::DSLIM_Comm()
     /* However may can fit in the RXBUFFERSIZE memory */
     rxbuffsize = RXBUFFERSIZE / (QCHUNK * sizeof(partRes));
 
-    /* Initialize the sizeArray */
+    /* Initialize the sizeArray and fileArray */
     sizeArray = new INT[rxbuffsize];
+
+    fileArray = new INT[rxbuffsize];
 
     sizeOffset  = 0;
 
-    /* Product by QCHUNK to get num spectra */
+    /* Product rxbuffsize by QCHUNK
+     * to get max num spectra */
     rxbuffsize *= QCHUNK;
 
     /* Initialize the wakeup signal to zero */
@@ -164,6 +168,14 @@ DSLIM_Comm::~DSLIM_Comm()
 
         sizeArray = NULL;
     }
+
+    if (fileArray != NULL)
+    {
+        delete[] fileArray;
+
+        fileArray = NULL;
+    }
+
     /* Destroy the Rx queue */
     if (rxQueue != NULL)
     {
@@ -552,7 +564,7 @@ BOOL DSLIM_Comm::checkMismatch()
     return state;
 }
 
-STATUS DSLIM_Comm::AddBufferEntry(INT bsize)
+STATUS DSLIM_Comm::AddBufferEntry(INT bsize, INT fno)
 {
     STATUS status = SLM_SUCCESS;
 
@@ -563,7 +575,8 @@ STATUS DSLIM_Comm::AddBufferEntry(INT bsize)
         rxQueue->push(bsize);
 
         /* Add the size to sizeArray */
-        sizeArray[sizeOffset++] = bsize;
+        sizeArray[sizeOffset] = bsize;
+        fileArray[sizeOffset++] = fno;
 
         sem_wait(&control);
 

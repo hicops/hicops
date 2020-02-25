@@ -61,6 +61,7 @@ private:
      * of buffers received
      */
     INT     *sizeArray;
+    INT     *fileArray;
 
     /* currPtr */
     INT  sizeOffset;
@@ -169,7 +170,7 @@ public:
 
     STATUS Wait4Completion();
 
-    STATUS AddBufferEntry(INT);
+    STATUS AddBufferEntry(INT, INT);
 
 #if 0
     STATUS Wait4Rx();

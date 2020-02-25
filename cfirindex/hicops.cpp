@@ -279,6 +279,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         status = DSLIM_DeallocateSpecArr();
     }
 
+    /* Initialize the Scorecard */
     if (status == SLM_SUCCESS)
     {
         status = DSLIM_InitializeScorecard(slm_index, (maxlen - minlen + 1));
@@ -296,9 +297,10 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         status = DSLIM_SearchManager(slm_index);
     }
 
+    /* De-initialize the index */
     for (UINT peplen = minlen; peplen <= maxlen; peplen++)
     {
-        status = LBE_Deinitialize(slm_index + peplen - minlen);
+        status = DSLIM_Deinitialize(slm_index + peplen - minlen);
     }
 
 #ifdef DISTMEM
@@ -335,6 +337,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     /* Make sure stdout is empty at the end */
     fflush(stdout);
 
+    /* Return the status of execution */
     return status;
 }
 
@@ -532,12 +535,12 @@ static STATUS ParseParams(CHAR* paramfile)
             params.perf[nn] = 1.0;
         }
 
-#ifdef DISTMEM
+#ifdef LALA //DISTMEM
         status = MPI_Comm_rank(MPI_COMM_WORLD, (INT *)&params.myid);
         status = MPI_Comm_size(MPI_COMM_WORLD, (INT *)&params.nodes);
 #else
-        params.myid = 0;
-        params.nodes = 1;
+        params.myid = 1;
+        params.nodes = 4;
 
 #endif /* DISTMEM */
 

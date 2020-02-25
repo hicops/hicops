@@ -117,8 +117,8 @@ typedef struct _pepSeq
         AAs = 0;
     }
 
-} PepSeqs;
 
+} PepSeqs;
 typedef struct _modAA
 {
     ULONGLONG  sites; /* maxlen(pep) = 60AA + 2 bits (termini mods)      */
@@ -291,8 +291,8 @@ typedef struct _pepEntry
  */
 typedef struct _BYC
 {
-    UCHAR   bc;        /* b ion count */
-    UCHAR   yc;        /* y ion count */
+    USHORT   bc;        /* b ion count */
+    USHORT   yc;        /* y ion count */
 
     _BYC()
     {
@@ -497,7 +497,7 @@ typedef struct _queries
         }
     }
 
-    ~_queries()
+    virtual ~_queries()
     {
         numPeaks = 0;
         numSpecs = 0;
@@ -545,6 +545,8 @@ typedef struct _heapEntry
     /* Parent spectrum ID in the respective chunk of index */
     UINT  psid;
 
+    FLOAT pmass;
+
     /* Computed hyperscore */
     FLOAT hyperscore;
 
@@ -556,6 +558,7 @@ typedef struct _heapEntry
         hyperscore = 0;
         sharedions = 0;
         totalions  = 0;
+        pmass      = 0;
     }
 
     /* Copy constructor */
@@ -566,6 +569,7 @@ typedef struct _heapEntry
         hyperscore = obj.hyperscore;
         sharedions = obj.sharedions;
         totalions  = obj.totalions;
+        pmass      = obj.pmass;
     }
 
     /* Overload = operator */
@@ -579,6 +583,7 @@ typedef struct _heapEntry
             this->hyperscore = rhs.hyperscore;
             this->sharedions = rhs.sharedions;
             this->totalions  = rhs.totalions;
+            this->pmass      = rhs.pmass;
         }
 
         return *this;
@@ -702,59 +707,76 @@ typedef struct _Results
 /* Data structure for partial result Tx/Rx */
 typedef struct _partResult
 {
+    /* Convert: x10 + 0.5 */
     INT min;
+    INT max2;
     INT max;
+
+    /* NOTE: Have been multiplied by 1000 for discretization */
     INT m;
     INT b;
+
+    /* Total number of samples scored */
     INT N;
+
 
     /* Default contructor */
     _partResult()
     {
         min = 0;
-        max = 0;
+        max2 = 0;
         m = 0;
         b = 0;
         N  = 0;
+        max = 0;
     }
 
     _partResult(INT def)
     {
         min = def;
-        max = def;
+        max2 = def;
         m = def;
         b = def;
         N  = def;
+        max = def;
     }
 
     /* Destructor */
-    ~_partResult()
+    virtual ~_partResult()
     {
         min = 0;
         max = 0;
         m = 0;
         b = 0;
         N  = 0;
+        max2 = 0;
     }
 
     _partResult& operator=(const INT& rhs)
     {
-        min = rhs;
-        max = rhs;
-        m = rhs;
-        b = rhs;
-        N  = rhs;
+        /* Check for self assignment */
+            min = rhs;
+            max2 = rhs;
+            m = rhs;
+            b = rhs;
+            N = rhs;
+            max = rhs;
 
         return *this;
     }
 
     _partResult& operator=(const _partResult& rhs)
     {
-        min = rhs.min;
-        max = rhs.max;
-        m = rhs.m;
-        b = rhs.b;
-        N  = rhs.N;
+        /* Check for self assignment */
+        if (this != &rhs)
+        {
+            min = rhs.min;
+            max = rhs.max;
+            m = rhs.m;
+            b = rhs.b;
+            N = rhs.N;
+            max2 = rhs.max2;
+        }
 
         return *this;
     }
@@ -775,6 +797,46 @@ typedef struct _BYICount
 
 } BYICount;
 
-#define BYISIZE                 (sizeof(UCHAR) * 2 + sizeof(UINT) * 2)
+#define BYISIZE                 (sizeof(USHORT) * 2 + sizeof(UINT) * 2)
+
+typedef struct _fResult
+{
+    INT eValue;
+    INT specID;
+
+    _fResult()
+    {
+        eValue = 0;
+        specID = 0;
+    }
+
+    virtual ~_fResult()
+    {
+        this->eValue = 0;
+        this->specID = 0;
+    }
+
+    _fResult &operator=(const _fResult& rhs)
+    {
+        /* Check for self assignment */
+        if (this != &rhs)
+        {
+            this->eValue = rhs.eValue;
+            this->specID = rhs.specID;
+        }
+
+        return *this;
+    }
+
+    _fResult &operator=(const INT& rhs)
+    {
+        /* Check for self assignment */
+        this->eValue = rhs;
+        this->specID = rhs;
+
+        return *this;
+    }
+
+} fResult;
 
 #endif /* INCLUDE_SLM_DSTS_H_ */

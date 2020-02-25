@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2019 Muhammad Haseeb, Fahad Saeed
+ * This file is part of PCDSFrame software
+ * Copyright (C) 2019  Muhammad Haseeb, Fahad Saeed
  * Florida International University, Miami, FL
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,21 +18,14 @@
  *
  */
 
-#ifndef INCLUDE_DSLIM_FILEOUT_H_
-#define INCLUDE_DSLIM_FILEOUT_H_
+#include "dslim_score.h"
 
-#include <sstream>
-#include "common.h"
-#include "slm_dsts.h"
-#include "slmerr.h"
+DSLIM_Score::DSLIM_Score()
+{
+    // TODO Auto-generated constructor stub
+}
 
-/* Function Definitions */
-STATUS    DFile_PrintPartials(UINT specid, Results *resPtr);
-STATUS    DFile_PrintScore(Index *index, UINT specid, FLOAT pmass,
-                           hCell* psm, DOUBLE e_x, UINT npsms);
-STATUS    DFile_InitFiles();
-STATUS    DFile_DeinitFiles();
-ULONGLONG DFile_Factorial(ULONGLONG n);
-STRING    DFile_Datetime();
-
-#endif /* DSLIM_FILEOUT */
+DSLIM_Score::~DSLIM_Score()
+{
+    // TODO Auto-generated destructor stub
+}

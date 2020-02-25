@@ -528,7 +528,8 @@ STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs)
         for (UINT thd = 0; thd < params.threads; thd++)
         {
             Score[thd].byc = new BYC[sAize];
-            memset(Score[thd].byc, 0x0, 2 * sizeof(UCHAR) * sAize);
+            memset(Score[thd].byc, 0x0, 2 * sizeof(USHORT) * sAize);
+
             Score[thd].ibyc = new iBYC[sAize];
             memset(Score[thd].ibyc, 0x0, 2 * sizeof(UINT) * sAize);
 
@@ -780,34 +781,14 @@ STATUS DSLIM_Deinitialize(Index *index)
 {
     STATUS status = SLM_SUCCESS;
 
-    /* Deallocate the scorecard */
-    status = DSLIM_DeallocateSC();
-
     /* Deallocate the Ion Index */
     status = DSLIM_DeallocateIonIndex(index);
 
-    if (index->pepEntries != NULL)
-    {
-        delete[] index->pepEntries;
-        index->pepEntries = NULL;
-    }
+    /* Deallocate the scorecard */
+    status = DSLIM_DeallocateSC();
 
-    if (index->pepIndex.seqs != NULL)
-    {
-        delete[] index->pepIndex.seqs;
-        index->pepIndex.seqs = NULL;
-    }
-
-    /* Reset Index Variables */
-    index->nChunks = 0;
-    index->pepCount = 0;
-    index->modCount = 0;
-    index->totalCount = 0;
-    index->chunksize = 0;
-    index->lastchunksize = 0;
-
-    index->pepIndex.AAs = 0;
-    index->pepIndex.peplen = 0;
+    /* Deallocate the peptide index */
+    status = DSLIM_DeallocatePepIndex(index);
 
     return status;
 }
@@ -837,6 +818,34 @@ STATUS DSLIM_DeallocateIonIndex(Index *index)
         delete[] index->ionIndex;
         index->ionIndex = NULL;
     }
+
+    return SLM_SUCCESS;
+}
+
+STATUS DSLIM_DeallocatePepIndex(Index *index)
+{
+    if (index->pepEntries != NULL)
+    {
+        delete[] index->pepEntries;
+        index->pepEntries = NULL;
+    }
+
+    if (index->pepIndex.seqs != NULL)
+    {
+        delete[] index->pepIndex.seqs;
+        index->pepIndex.seqs = NULL;
+    }
+
+    /* Reset Index Variables */
+    index->nChunks = 0;
+    index->pepCount = 0;
+    index->modCount = 0;
+    index->totalCount = 0;
+    index->chunksize = 0;
+    index->lastchunksize = 0;
+
+    index->pepIndex.AAs = 0;
+    index->pepIndex.peplen = 0;
 
     return SLM_SUCCESS;
 }

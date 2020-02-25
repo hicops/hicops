@@ -146,6 +146,8 @@ STATUS DSLIM_Deinitialize(Index *index);
 
 STATUS DSLIM_DeallocateIonIndex(Index *index);
 
+STATUS DSLIM_DeallocatePepIndex(Index *index);
+
 STATUS DSLIM_DeallocateSC();
 
 STATUS DSLIM_DeallocateSpecArr();
