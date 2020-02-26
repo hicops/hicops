@@ -291,17 +291,26 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         cout << "Indexing Time: " << elapsed_seconds.count() << "s" << endl;
     }
 
-    /* Query the index */
+    /* Perform the distributed database search */
     if (status == SLM_SUCCESS)
     {
         status = DSLIM_SearchManager(slm_index);
     }
 
+    /* Deinitialize the scorecard */
+    if (status == SLM_SUCCESS)
+    {
+        /* Deallocate the scorecard */
+        status = DSLIM_DeallocateSC();
+    }
+
     /* De-initialize the index */
     for (UINT peplen = minlen; peplen <= maxlen; peplen++)
     {
-        status = DSLIM_Deinitialize(slm_index + peplen - minlen);
+        status = DSLIM_DeallocateIonIndex(slm_index + peplen - minlen);
     }
+
+    status = TestBData();
 
 #ifdef DISTMEM
     status = MPI_Finalize();
@@ -535,7 +544,7 @@ static STATUS ParseParams(CHAR* paramfile)
             params.perf[nn] = 1.0;
         }
 
-#ifdef LALA //DISTMEM
+#ifdef DISTMEM
         status = MPI_Comm_rank(MPI_COMM_WORLD, (INT *)&params.myid);
         status = MPI_Comm_size(MPI_COMM_WORLD, (INT *)&params.nodes);
 #else

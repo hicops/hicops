@@ -20,7 +20,7 @@
 #ifndef DSLIM_SCORE_H_
 #define DSLIM_SCORE_H_
 
-#include <semaphore.h>
+#include "common.h"
 #include <unistd.h>
 #include "config.h"
 #include "slm_dsts.h"
@@ -31,21 +31,22 @@
 class DSLIM_Score
 {
 private:
-    /* These pointers will be borrowed */
-    Results **resPtr;
-    hCell *heap;
-    Index **index;
-    INT *batchsizes;
-    INT *filenumbers;
-
     /* Local variables */
-    INT threads;
-    BOOL isInit;
+    INT    threads;
+    BOOL   isInit;
     THREAD comm_thd;
 
     /* Dataset size */
-    INT dsetsize;
-    INT num_batches;
+    INT    nSpectra;
+    INT    nBatches;
+
+    /* These pointers will be borrowed */
+    INT      *sizeArray;
+    INT      *fileArray;
+    BYICount *resPtr;
+    hCell    *heapArray;
+    Index    *index;
+
 
     /* Data size that I expect to
      * receive from other processes */
@@ -53,11 +54,13 @@ private:
     INT *txSizes;
 
     /* key-values */
-    INT *keys;
+    INT     *keys;
     fResult *values;
 
 public:
     DSLIM_Score();
+    DSLIM_Score(BData *bd);
+
     virtual ~DSLIM_Score();
 
 };

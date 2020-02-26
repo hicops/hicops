@@ -39,13 +39,14 @@ FLOAT *hyperscores = NULL;
 UCHAR *sCArr = NULL;
 BOOL ExitSignal = false;
 
-DSLIM_Comm *CommHandle = NULL;
-Scheduler *SchedHandle = NULL;
+DSLIM_Comm *CommHandle    = NULL;
+Scheduler  *SchedHandle   = NULL;
+hCell      *CandidatePSMS = NULL;
 
 /* Lock for query file vector and thread manager */
 LOCK qfilelock;
-
 INT qfid = 0;
+INT spectrumID = 0;
 
 /****************************************************************/
 
@@ -141,13 +142,6 @@ static inline STATUS DSLIM_WaitFor_IO(INT &batchsize)
     return status;
 }
 
-STATUS DSLIM_Process_RxData()
-{
-    //partRes *rxData = CommHandle->getRxArray()
-
-    return SLM_SUCCESS;
-}
-
 /* FUNCTION: DSLIM_SearchManager
  *
  * DESCRIPTION: Manages and performs the Peptide Search
@@ -237,7 +231,18 @@ STATUS DSLIM_SearchManager(Index *index)
                 status = ERR_BAD_MEM_ALLOC;
             }
         }
+
+        if (status == SLM_SUCCESS)
+        {
+            CandidatePSMS = new hCell[CommHandle->getRxBufferSize()];
+
+            if (CandidatePSMS == NULL)
+            {
+                status = ERR_BAD_MEM_ALLOC;
+            }
+        }
     }
+
 #endif /* DISTMEM */
 
     /* Create a new Scheduler handle */
@@ -334,7 +339,6 @@ STATUS DSLIM_SearchManager(Index *index)
 
             batchnum++;
         }
-
 #endif /* DISTMEM */
 
         status = qPtrs->lockw_();
@@ -387,10 +391,15 @@ STATUS DSLIM_SearchManager(Index *index)
 #ifdef DIAGNOSE
         std::cout << "ExitSignal: " << params.myid << endl;
 #endif /* DIAGNOSE */
+
+        /* Wait for everyone to synchronize */
         status = MPI_Barrier(MPI_COMM_WORLD);
 
-        /* Post the exit signal to Comm Handle */
+        /* Post the exit signal to Communication Handle */
         CommHandle->SignalExit();
+
+        /* Carry forward the data to the distributed scoring module */
+        status = DSLIM_CarryForward(index, CommHandle, Score, CandidatePSMS, spectrumID);
 
         /* Delete the instance of CommHandle */
         delete CommHandle;
@@ -593,11 +602,16 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 }
             }
 
-#if 0
-            /* TODO: Extract the top result
+            /* Extract the top result
              * and put it in the list */
-            hCell psm = resPtr->topK.getMax();
-#endif /* 0 */
+            if (resPtr->cpsms > 0)
+            {
+                CandidatePSMS[spectrumID + queries] = resPtr->topK.getMax();;
+            }
+            else
+            {
+                CandidatePSMS[spectrumID + queries] = 0;
+            }
 
             /* FIXME: How to set the params.min_cpsm */
             if (resPtr->cpsms > 1 /*params.min_cpsm*/)
@@ -651,6 +665,9 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
             tcons[thno] += omp_get_wtime() - stime;
 #endif
         }
+
+        /* Add how much spectra have been queried */
+        spectrumID += ss->numSpecs;
     }
 
 #ifdef BENCHMARK
@@ -670,43 +687,6 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 #endif /* DIAGNOSE */
 
     return status;
-}
-
-/*
- * FUNCTION: DSLIM_DeallocateSC
- *
- * DESCRIPTION:
- *
- * INPUT:
- * none
- *
- * OUTPUT:
- * @status: status of execution
- */
-STATUS DSLIM_DeallocateSC()
-{
-    /* Free the Scorecard memory */
-    if (Score != NULL)
-    {
-        for (UINT thd = 0; thd < params.threads; thd++)
-        {
-            delete[] Score[thd].byc;
-            delete[] Score[thd].ibyc;
-            delete[] Score[thd].res.survival;
-            delete[] Score[thd].res.xaxis;
-
-            Score[thd].byc = NULL;
-            Score[thd].ibyc = NULL;
-            Score[thd].res.survival = NULL;
-            Score[thd].res.xaxis = NULL;
-        }
-
-        delete[] Score;
-        Score = NULL;
-
-    }
-
-    return SLM_SUCCESS;
 }
 
 /*
@@ -872,7 +852,7 @@ STATUS DSLIM_ModelSurvivalFunction(Results *resPtr)
     UINT N = resPtr->cpsms;
 
     /* Choosing the kneePt and endPt to be
-     * at 70.7% and 99% respectively */
+     * at 70.7% aspectrumIDnd 99% respectively */
     UINT kneePt = N - (UINT)((float)N * 0.707);
 
 #ifndef ANALYSIS

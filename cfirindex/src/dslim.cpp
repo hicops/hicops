@@ -784,9 +784,6 @@ STATUS DSLIM_Deinitialize(Index *index)
     /* Deallocate the Ion Index */
     status = DSLIM_DeallocateIonIndex(index);
 
-    /* Deallocate the scorecard */
-    status = DSLIM_DeallocateSC();
-
     /* Deallocate the peptide index */
     status = DSLIM_DeallocatePepIndex(index);
 
@@ -819,6 +816,13 @@ STATUS DSLIM_DeallocateIonIndex(Index *index)
         index->ionIndex = NULL;
     }
 
+    /* Set the chunking to zero */
+    index->nChunks = 0;
+    index->chunksize = 0;
+    index->lastchunksize = 0;
+
+    /* Nothing really to return
+     * so success */
     return SLM_SUCCESS;
 }
 
@@ -836,17 +840,16 @@ STATUS DSLIM_DeallocatePepIndex(Index *index)
         index->pepIndex.seqs = NULL;
     }
 
-    /* Reset Index Variables */
-    index->nChunks = 0;
+    /* Reset peptide Index Variables */
     index->pepCount = 0;
     index->modCount = 0;
     index->totalCount = 0;
-    index->chunksize = 0;
-    index->lastchunksize = 0;
 
     index->pepIndex.AAs = 0;
     index->pepIndex.peplen = 0;
 
+    /* Nothing really to return
+     * so success */
     return SLM_SUCCESS;
 }
 
@@ -855,6 +858,7 @@ STATUS DSLIM_DeallocateSpecArr()
 #ifdef BENCHMARK
     duration = omp_get_wtime();
 #endif
+
     if (SpecArr != NULL)
     {
         delete[] SpecArr;
@@ -864,6 +868,49 @@ STATUS DSLIM_DeallocateSpecArr()
 #ifdef BENCHMARK
     memory += omp_get_wtime() - duration;
 #endif
+
+    /* Nothing really to return
+     * so success */
+    return SLM_SUCCESS;
+}
+
+/*
+ * FUNCTION: DSLIM_DeallocateSC
+ *
+ * DESCRIPTION:
+ *
+ * INPUT:
+ * none
+ *
+ * OUTPUT:
+ * @status: status of execution
+ */
+STATUS DSLIM_DeallocateSC()
+{
+    /* Free the Scorecard memory */
+    if (Score != NULL)
+    {
+        for (UINT thd = 0; thd < params.threads; thd++)
+        {
+            delete[] Score[thd].byc;
+            delete[] Score[thd].ibyc;
+            /*
+            delete[] Score[thd].res.survival;
+            delete[] Score[thd].res.xaxis;
+             */
+            Score[thd].byc = NULL;
+            Score[thd].ibyc = NULL;
+            /*
+            Score[thd].res.survival = NULL;
+            Score[thd].res.xaxis = NULL;
+            */
+        }
+/*
+        delete[] Score;
+        Score = NULL;
+*/
+    }
+
     return SLM_SUCCESS;
 }
 

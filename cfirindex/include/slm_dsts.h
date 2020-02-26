@@ -589,6 +589,19 @@ typedef struct _heapEntry
         return *this;
     }
 
+    /* Overload = operator */
+    _heapEntry& operator=(const INT& rhs)
+    {
+        this->idxoffset = rhs;
+        this->psid = rhs;
+        this->hyperscore = rhs;
+        this->sharedions = rhs;
+        this->totalions = rhs;
+        this->pmass = rhs;
+
+        return *this;
+    }
+
     BOOL operator <=(const _heapEntry& rhs)
     {
         return this->hyperscore <= rhs.hyperscore;
@@ -696,7 +709,7 @@ typedef struct _Results
         maxhypscore = 0;
         nexthypscore = 0;
 
-        std::memset(survival, 0x0, sizeof(UINT) * (2 + MAX_HYPERSCORE * 10));
+        std::memset(survival, 0x0, sizeof(DOUBLE) * (2 + MAX_HYPERSCORE * 10));
 
         topK.heap_reset();
     }
@@ -838,5 +851,34 @@ typedef struct _fResult
     }
 
 } fResult;
+
+typedef struct _BorrowedData
+{
+    /* These pointers will be borrowed */
+    partRes *resPtr;
+    BYICount *scPtr;
+    hCell *heapArray;
+    Index *index;
+    INT *sizeArray;
+    INT *fileArray;
+
+    /* Dataset size */
+    INT cPSMsize;
+    INT nBatches;
+
+    _BorrowedData()
+    {
+        resPtr = NULL;
+        scPtr = NULL;
+        heapArray = NULL;
+        index = NULL;
+        sizeArray = NULL;
+        fileArray = NULL;
+
+        cPSMsize = 0;
+        nBatches = 0;
+    }
+
+} BData;
 
 #endif /* INCLUDE_SLM_DSTS_H_ */

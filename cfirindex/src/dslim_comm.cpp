@@ -162,6 +162,7 @@ DSLIM_Comm::~DSLIM_Comm()
 
     sem_destroy(&control);
 
+/*
     if (sizeArray != NULL)
     {
         delete[] sizeArray;
@@ -176,19 +177,24 @@ DSLIM_Comm::~DSLIM_Comm()
         fileArray = NULL;
     }
 
+    * Deallocate the Rx array *
+    if (rxArr != NULL)
+    {
+        delete[] rxArr;
+        rxArr = NULL;
+    }
+*/
+
+    sizeArray = NULL;
+    fileArray = NULL;
+    rxArr = NULL;
+
     /* Destroy the Rx queue */
     if (rxQueue != NULL)
     {
         delete rxQueue;
 
         rxQueue  = NULL;
-    }
-
-    /* Deallocate the Rx array */
-    if (rxArr != NULL)
-    {
-        delete[] rxArr;
-        rxArr = NULL;
     }
 
     /* Deallocate the txArrays */
@@ -222,7 +228,6 @@ DSLIM_Comm::~DSLIM_Comm()
 
     /* Decommit the MPI DataTypes */
     FreeComm_DataTypes();
-
 }
 
 STATUS DSLIM_Comm::InitComm_DataTypes()
@@ -690,6 +695,13 @@ STATUS DSLIM_Comm::Wait4Completion()
     }
 
     return status;
+}
+
+INT DSLIM_Comm::getRxBufferSize()
+{
+
+    return this->rxbuffsize;
+
 }
 
 #endif /* DISTMEM */

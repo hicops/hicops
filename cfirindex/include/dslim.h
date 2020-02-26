@@ -24,6 +24,8 @@
 #include "common.h"
 #include "utils.h"
 #include "lbe.h"
+#include "slm_dsts.h"
+#include "dslim_comm.h"
 
 /* Macros for SLM bitmask operations */
 #define BYTE1                              8
@@ -142,18 +144,23 @@ STATUS DSLIM_Analyze(UINT threads, DOUBLE &mean, DOUBLE &std);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_Deinitialize(Index *index);
+STATUS DSLIM_Deinitialize(Index *);
 
-STATUS DSLIM_DeallocateIonIndex(Index *index);
+STATUS DSLIM_DeallocateIonIndex(Index *);
 
-STATUS DSLIM_DeallocatePepIndex(Index *index);
+STATUS DSLIM_InitDistScore();
+
+STATUS DSLIM_CarryForward(Index *, DSLIM_Comm *, BYICount *, hCell *, INT);
+
+STATUS DSLIM_DeallocatePepIndex(Index *);
 
 STATUS DSLIM_DeallocateSC();
 
 STATUS DSLIM_DeallocateSpecArr();
 
-STATUS DSLIM_SearchManager(Index *index);
+STATUS DSLIM_SearchManager(Index *);
 
+INT TestBData();
 /* FUNCTION: DSLIM_QuerySpectrum
  *
  * DESCRIPTION: Query the DSLIM for all query peaks
@@ -170,8 +177,6 @@ STATUS DSLIM_SearchManager(Index *index);
  */
 STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT indexchunks, partRes *);
 
-STATUS DSLIM_Process_RxData();
-
 /* FUNCTION: DSLIM_WriteLIBSVM
  *
  * DESCRIPTION: Write the MS/MS spectra data in libsvm format
@@ -184,10 +189,6 @@ STATUS DSLIM_Process_RxData();
  * @status: Status of execution
  */
 STATUS DSLIM_WriteLIBSVM(STRING path, UINT peplen, UINT chno);
-
-#ifdef DISTMEM
-STATUS DSLIM_Gather_Results(partRes *tupPtr);
-#endif /* DISTMEN */
 
 STATUS DSLIM_WriteCSV(STRING path, UINT peplen, UINT chno);
 #endif /* DSLIM_H_ */

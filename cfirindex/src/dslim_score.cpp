@@ -20,7 +20,14 @@
 
 #include "dslim_score.h"
 
+using namespace std;
+
 DSLIM_Score::DSLIM_Score()
+{
+    // TODO Auto-generated constructor stub
+}
+
+DSLIM_Score::DSLIM_Score(BData *bd)
 {
     // TODO Auto-generated constructor stub
 }
