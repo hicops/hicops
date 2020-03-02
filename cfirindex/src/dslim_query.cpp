@@ -77,7 +77,7 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv);
 
 VOID *DSLIM_IO_Threads_Entry(VOID *argv);
 
-
+/* Static function */
 static VOID DSLIM_BinarySearch(Index *, FLOAT, INT&, INT&);
 static INT  DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max);
 static INT  DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max);
@@ -255,12 +255,6 @@ STATUS DSLIM_SearchManager(Index *index)
         {
             status = ERR_BAD_MEM_ALLOC;
         }
-    }
-
-    /* Initialize the file handles */
-    if (status == SLM_SUCCESS)
-    {
-        status = DFile_InitFiles();
     }
 
     /**************************************************************************/
@@ -572,8 +566,8 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 
                             /* Fill in the information */
                             cell.hyperscore = log10(0.001 +
-                                                    DFile_Factorial(ULONGLONG(bycPtr[it].bc)) *
-                                                    DFile_Factorial(ULONGLONG(bycPtr[it].yc)) *
+                                                    UTILS_Factorial(ULONGLONG(bycPtr[it].bc)) *
+                                                    UTILS_Factorial(ULONGLONG(bycPtr[it].yc)) *
                                                     ibycPtr[it].ibc *
                                                     ibycPtr[it].iyc);
 
@@ -626,29 +620,6 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 txArray[queries].min = resPtr->minhypscore;
                 txArray[queries].max2 = resPtr->nexthypscore;
                 txArray[queries].max = resPtr->maxhypscore;
-
-                /* Take care of this during merging stage */
-#if 0
-                /* Estimate the log (s(x)); x = log(hyperscore) */
-                DOUBLE lgs_x = resPtr->weight * (psm.hyperscore * 10 + 0.5) + resPtr->bias;
-
-                /* Compute the s(x) */
-                DOUBLE s_x = pow(10, lgs_x);
-
-                /* e(x) = n * s(x) */
-                DOUBLE e_x = resPtr->cpsms * s_x;
-
-                /* Do not print any scores just yet */
-                if (e_x < params.expect_max)
-                {
-#ifndef ANALYSIS
-                    /* Printing the scores in OpenMP mode */
-                    //status = DFile_PrintScore(index, queries, pmass, &psm, e_x, resPtr->cpsms);
-#else
-                    status = DFile_PrintPartials(queries, resPtr);
-#endif /* ANALYSIS */
-                }
-#endif /* 0 */
             }
             else
             {

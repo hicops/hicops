@@ -34,8 +34,6 @@
 /* Switch the benchmarking */
 //#define BENCHMARK
 
-//#define DIAGNOSE
-
 #define MAX_SEQ_LEN              60
 
 /* Number of fragments (peaks) per query spectrum */

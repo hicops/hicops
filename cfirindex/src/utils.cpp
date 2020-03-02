@@ -133,6 +133,22 @@ UINT UTILS_GetNumProcs()
 }
 
 /*
+ * FUNCTION: UTILS_Factorial
+ *
+ * DESCRIPTION: Calculate the factorial of a number
+ *
+ * INPUT:
+ * @n : input value for which to calculate factorial
+ *
+ * OUTPUT:
+ * @factorial : the factorial of the input number n
+ */
+ULONGLONG UTILS_Factorial(ULONGLONG n)
+{
+    return (n == 1 || n == 0) ? 1 : UTILS_Factorial(n - 1) * n;
+}
+
+/*
  * FUNCTION: UTILS_Shuffle
  *
  * DESCRIPTION: Shuffles an array

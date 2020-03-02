@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Muhammad Haseeb, Fahad Saeed
+ * Copyright (C) 2020 Muhammad Haseeb, and Fahad Saeed
  * Florida International University, Miami, FL
  *
  * This program is free software: you can redistribute it and/or modify
@@ -31,38 +31,56 @@
 class DSLIM_Score
 {
 private:
-    /* Local variables */
-    INT    threads;
-    BOOL   isInit;
-    THREAD comm_thd;
 
-    /* Dataset size */
-    INT    nSpectra;
-    INT    nBatches;
+    /* Variables */
+    INT       threads;
+
+    /* Dataset sizes */
+    INT       nSpectra;
+    INT       nBatches;
+    INT       myRXsize;
 
     /* These pointers will be borrowed */
     INT      *sizeArray;
     INT      *fileArray;
-    BYICount *resPtr;
+    BYICount *scPtr;
+    partRes  *resPtr;
     hCell    *heapArray;
     Index    *index;
-
+    THREAD   *comm_thd;
 
     /* Data size that I expect to
      * receive from other processes */
-    INT *rxSizes;
-    INT *txSizes;
+    INT      *rxSizes;
+    INT      *txSizes;
 
     /* key-values */
-    INT     *keys;
-    fResult *values;
+    INT      *keys;
+
+    fResult  *TxValues;
+    fResult  *RxValues;
 
 public:
+
     DSLIM_Score();
     DSLIM_Score(BData *bd);
+    virtual  ~DSLIM_Score();
 
-    virtual ~DSLIM_Score();
+    VOID     Initialize(BData *bd);
 
+    STATUS   ComputeDistScores();
+
+    STATUS   ScatterScores();
+
+    STATUS   TXSizes(MPI_Request *);
+    STATUS   RXSizes(MPI_Request *);
+
+    STATUS   TXResults(MPI_Request *, INT);
+    STATUS   RXResults(MPI_Request *, INT);
+
+    STATUS   DisplayResults();
+
+    VOID     Deinitialize();
 };
 
 #endif /* DSLIM_SCORE_H_ */

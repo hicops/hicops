@@ -31,7 +31,5 @@ STATUS    DFile_PrintScore(Index *index, UINT specid, FLOAT pmass,
                            hCell* psm, DOUBLE e_x, UINT npsms);
 STATUS    DFile_InitFiles();
 STATUS    DFile_DeinitFiles();
-ULONGLONG DFile_Factorial(ULONGLONG n);
-STRING    DFile_Datetime();
 
 #endif /* DSLIM_FILEOUT */

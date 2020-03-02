@@ -152,6 +152,8 @@ STATUS DSLIM_InitDistScore();
 
 STATUS DSLIM_CarryForward(Index *, DSLIM_Comm *, BYICount *, hCell *, INT);
 
+STATUS DSLIM_DistScoreManager();
+
 STATUS DSLIM_DeallocatePepIndex(Index *);
 
 STATUS DSLIM_DeallocateSC();

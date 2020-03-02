@@ -394,7 +394,7 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
             {
                 /* Fill zeros for illegal peptides
                  * FIXME: Should not be filled into the chunk
-                 *        and be removed from SPI as well
+                 *  and be removed from peptide index as well
                  */
                 std::memset(&SpecArr[nfilled], 0x0, sizeof(UINT) * speclen);
                 bAPtr[0] += speclen; // Update the BA counter

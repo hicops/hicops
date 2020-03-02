@@ -304,13 +304,36 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         status = DSLIM_DeallocateSC();
     }
 
-    /* De-initialize the index */
+    /* De-initialize the ion index */
     for (UINT peplen = minlen; peplen <= maxlen; peplen++)
     {
         status = DSLIM_DeallocateIonIndex(slm_index + peplen - minlen);
     }
 
+    /* FIXME: Remove me */
     status = TestBData();
+
+    /* Compute the distributed scores */
+    if (status == SLM_SUCCESS)
+    {
+        status = DSLIM_DistScoreManager();
+    }
+
+    /* De-initialize the remaining index */
+    if (status == SLM_SUCCESS)
+    {
+        for (UINT peplen = minlen; peplen <= maxlen; peplen++)
+        {
+            status = DSLIM_Deinitialize(slm_index + peplen - minlen);
+        }
+    }
+
+    /* Delete the index Handle */
+    if (status == SLM_SUCCESS)
+    {
+        delete [] slm_index;
+        slm_index = NULL;
+    }
 
 #ifdef DISTMEM
     status = MPI_Finalize();
