@@ -66,8 +66,6 @@ public:
     DSLIM_Score(BData *bd);
     virtual  ~DSLIM_Score();
 
-    VOID     Initialize(BData *bd);
-
     STATUS   ComputeDistScores();
 
     STATUS   ScatterScores();
@@ -82,7 +80,8 @@ public:
 
     STATUS   Wait4RX();
 
-    VOID     Deinitialize();
+    STATUS   InitDataTypes();
+    STATUS   FreeDataTypes();
 };
 
 #endif /* DSLIM_SCORE_H_ */

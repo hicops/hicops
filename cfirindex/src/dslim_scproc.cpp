@@ -70,7 +70,7 @@ STATUS DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, BYICount *Score,
 STATUS DSLIM_DistScoreManager()
 {
     STATUS status = SLM_SUCCESS;
-
+    
     /* Check if parameters have been brought */
     if (isCarried == false && params.nodes > 1)
     {
@@ -160,6 +160,7 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
     {
         rxStats[kk] = 0;
     }
+
     /* Avoid race conditions by waiting for
      * ScoreHandle pointer to initialize */
     while ((VOID *)argv != (VOID *)ScoreHandle);
@@ -172,7 +173,7 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
         ScoreHandle->RXSizes(rxRqsts);
 
         /* Wait 500ms between each loop */
-        for (; cumulate < (nodes_1); usleep(500000))
+        for (; cumulate < (nodes_1); usleep(300000))
         {
             for (INT ll = 0; ll < nodes_1; ll ++)
             {
@@ -186,20 +187,24 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
                      */
                     if (rxStats[ll])
                     {
-                        /* Set the rxStat if nothing to be received */
-                        if (ScoreHandle->RXResults(rxRqsts2 + ll, ll) == ERR_INVLD_SIZE)
-                        {
-                            rxStats2[ll] = 1;
-                        }
-
                         cumulate++;
                     }
                 }
             }
         }
 
+        /* All sizes have been received - Now do the actual Rx */
+        for (INT ll = 0; ll < nodes_1; ll++)
+        {
+            /* Set the rxStat if nothing to be received */
+            if (ScoreHandle->RXResults(rxRqsts2 + ll, ll) == ERR_INVLD_SIZE)
+            {
+                rxStats2[ll] = 1;
+            }
+        }
+
         /* Wait 500ms between each loop */
-        for (; cumulate < (nodes_1); usleep(500000))
+        for (; cumulate < (nodes_1); usleep(300000))
         {
             /* Reset cumulate */
             cumulate = 0;
@@ -251,13 +256,13 @@ INT DSLIM_TestBData()
     cout << "\nTesting BData object: " << endl;
     if (bdata != NULL)
     {
-        cout << bdata->index[0].pepCount << endl;
-        cout << bdata->scPtr[0].res.bias << endl;
-        cout << bdata->heapArray[0].hyperscore << endl;
-        cout << bdata->fileArray[0] << endl;
-        cout << bdata->sizeArray[0] << endl;
+        cout << bdata->index[0].pepCount << " @: " << params.myid << endl;
+        cout << (void *) &bdata->scPtr[0] << " @: " << params.myid << endl;
+        cout << (void *) &bdata->heapArray[0] << " @: " << params.myid << endl;
+        cout << (void *) &bdata->fileArray[0] << " @: " << params.myid << endl;
+        cout << (void *)&bdata->sizeArray[0] << " @: " << params.myid << endl;
         cout << bdata->nBatches << endl;
-        cout << bdata->resPtr[0].N << endl;
+        cout << (void *) &bdata->resPtr[0] << " @: " << params.myid << endl;
         cout << bdata->cPSMsize << endl;
     }
 

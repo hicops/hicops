@@ -325,6 +325,10 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         }
     }
 
+#ifdef DIAGNOSE2
+        cout << "SCProc DONE@ " << params.myid << endl;
+#endif /* DIAGNOSE2 */
+
     /* Delete the index Handle */
     if (status == SLM_SUCCESS)
     {

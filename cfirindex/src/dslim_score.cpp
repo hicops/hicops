@@ -22,6 +22,8 @@
 
 using namespace std;
 
+MPI_Datatype resultF;
+
 extern gParams params;
 extern VOID *DSLIM_Score_Thread_Entry(VOID *);
 
@@ -57,6 +59,8 @@ DSLIM_Score::DSLIM_Score()
     keys     = NULL;
     TxValues = NULL;
     RxValues = NULL;
+
+    InitDataTypes();
 
     /* Communication threads */
     comm_thd = new THREAD;
@@ -106,15 +110,41 @@ DSLIM_Score::DSLIM_Score(BData *bd)
     TxValues = new fResult[myRXsize + nSpectra];
     RxValues = TxValues + myRXsize;
 
+#ifdef DIAGNOSE2
+    cout << "myRXsize = " << myRXsize << " @: " << params.myid << endl;
+    cout << "nSpectra = " << nSpectra << " @: " << params.myid << endl;
+    cout << "nSpectra + myRXsize = " << nSpectra + myRXsize << " @: " << params.myid << endl;
+
+    fResult *ptr = TxValues + nSpectra + myRXsize;
+
+    cout << (void *) TxValues << " TxV@: " << params.myid << endl;
+    cout << (void *) RxValues << " RxV@: " << params.myid << endl;
+    cout << (void *) ptr << " TxEnd@: " << params.myid << endl;
+#endif /* DIAGNOSE2 */
+
+    myRXsize = 0;
+
+    for (INT kk = 0; kk < nBatches; kk++)
+    {
+        myRXsize += sizeArray[kk];
+    }
+
+    /* Allocate for Rx */
+    RxValues = new fResult[nSpectra];
+
     /* If no RX'ed data */
     if (myRXsize > 0)
     {
+        TxValues = new fResult[myRXsize];
         keys = new INT[myRXsize];
     }
     else
     {
+        TxValues = NULL;
         keys = NULL;
     }
+
+    InitDataTypes();
 
     /* Communication threads */
     comm_thd = new THREAD;
@@ -130,89 +160,101 @@ DSLIM_Score::~DSLIM_Score()
     /* Wait for score thread to complete */
     Wait4RX();
 
+    FreeDataTypes();
+
     nSpectra = 0;
     nBatches = 0;
     myRXsize = 0;
 
+    if (txSizes != NULL)
+    {
+#ifdef DIAGNOSE2
+        cout << (void *) txSizes << " txS@: " << params.myid << endl;
+#endif /* DIAGNOSE2 */
+
+        delete[] txSizes;
+        txSizes = NULL;
+    }
+
+    if (rxSizes != NULL)
+    {
+#ifdef DIAGNOSE2
+        cout << (void *) rxSizes << " rxS@: " << params.myid << endl;
+#endif /* DIAGNOSE2 */
+        delete[] rxSizes;
+        rxSizes = NULL;
+    }
+
     if (sizeArray != NULL)
     {
+#ifdef DIAGNOSE2
+        cout << (void *) sizeArray << " sA@: " << params.myid << endl;
+#endif /* DIAGNOSE2 */
         delete[] sizeArray;
         sizeArray = NULL;
     }
 
     if (fileArray != NULL)
     {
+#ifdef DIAGNOSE2
+        cout << (void *) fileArray << " fA@: " << params.myid << endl;
+#endif /* DIAGNOSE2 */
         delete[] fileArray;
         fileArray = NULL;
     }
 
     if (scPtr != NULL)
     {
+#ifdef DIAGNOSE2
+        cout << (void *) scPtr << "scA@: " << params.myid << endl;
+#endif /* DIAGNOSE2 */
         delete[] scPtr;
         scPtr = NULL;
     }
 
     if (heapArray != NULL)
     {
+#ifdef DIAGNOSE2
+        cout << (void *) heapArray << " hA@: " << params.myid << endl;
+#endif /* DIAGNOSE2 */
         delete[] heapArray;
         heapArray = NULL;
     }
 
     if (resPtr != NULL)
     {
+#ifdef DIAGNOSE2
+        cout << (void *) resPtr << " resPtr@: " << params.myid << endl;
+#endif /* DIAGNOSE2 */
         delete[] resPtr;
         resPtr = NULL;
     }
 
     if (keys != NULL)
     {
+#ifdef DIAGNOSE2
+        cout << (void *) keys << " key@: " << params.myid << endl;
+#endif /* DIAGNOSE2 */
         delete[] keys;
         keys = NULL;
     }
 
     if (TxValues != NULL)
     {
+#ifdef DIAGNOSE2
+        cout << (void *) TxValues << " key@: " << params.myid << endl;
+#endif /* DIAGNOSE2 */
         delete[] TxValues;
         TxValues = NULL;
+    }
+
+    if (RxValues != NULL)
+    {
+#ifdef DIAGNOSE2
+        cout << (void *) RxValues << " key@: " << params.myid << endl;
+#endif /* DIAGNOSE2 */
+        delete[] RxValues;
         RxValues = NULL;
-    }
-
-    return;
-}
-
-VOID DSLIM_Score::Initialize(BData *bd)
-{
-    /* Dataset size */
-    nSpectra = bd->cPSMsize;
-    nBatches = bd->nBatches;
-
-    /* These pointers will be borrowed */
-    sizeArray = bd->sizeArray;
-    fileArray = bd->fileArray;
-    scPtr = bd->scPtr;
-    heapArray = bd->heapArray;
-    index = bd->index;
-    resPtr = bd->resPtr;
-
-    myRXsize = 0;
-
-    for (INT kk = 0; kk < nBatches; kk++)
-    {
-        myRXsize += sizeArray[kk];
-    }
-
-    /* Allocate for Tx and Rx */
-    TxValues = new fResult[myRXsize + nSpectra];
-    RxValues = TxValues + myRXsize;
-
-    /* If no RX'ed data */
-    if (myRXsize > 0)
-    {
-        keys = new INT[myRXsize];
-    }
-    else
-    {
-        keys = NULL;
     }
 
     return;
@@ -298,7 +340,7 @@ STATUS DSLIM_Score::ScatterScores()
     if (status == SLM_SUCCESS)
     {
         /* Wait 500ms between each loop */
-        for (; cumulate < (nodes_1); usleep(500000))
+        for (; cumulate < (nodes_1); usleep(300000))
         {
             for (INT ll = 0; ll < nodes_1; ll ++)
             {
@@ -328,7 +370,7 @@ STATUS DSLIM_Score::ScatterScores()
     if (status == SLM_SUCCESS)
     {
         /* Wait 500ms between each loop */
-        for (; cumulate < (nodes_1); usleep(500000))
+        for (; cumulate < (nodes_1); usleep(300000))
         {
             /* Reset cumulate to 0 */
             cumulate = 0;
@@ -462,18 +504,28 @@ STATUS DSLIM_Score::TXResults(MPI_Request *txRqst, INT rawID)
 
 #ifdef DIAGNOSE2
         cout << "TXValues: " << params.myid << " -> " << mchID << " " << offset << endl;
+        cout << (void *) ((fResult *)(TxValues + offset)) << " TxV+off @ " << params.myid << endl;
 #endif /* DIAGNOSE */
+
+        if (offset + rxSizes[rawID] > nSpectra)
+        {
+            cout << "FATAL: Tx overflow @: " << params.myid << endl;
+            status = ERR_INVLD_SIZE;
+        }
 
         /* Transmit data to machine:
          * @mch: mchID, @size: rxSizes[rawID] * INT in fResult
          */
-        status = MPI_Isend((INT *)((fResult *)(TxValues + offset)),
-                           txSizes[rawID] * (sizeof(fResult) / sizeof(INT)),
-                           MPI_INT,
-                           mchID,
-                           0xDA2A,
-                           MPI_COMM_WORLD,
-                           txRqst);
+        if (status == SLM_SUCCESS)
+        {
+            status = MPI_Isend((fResult *)(TxValues + offset),
+                               txSizes[rawID],
+                               resultF,
+                               mchID,
+                               0xDA2A,
+                               MPI_COMM_WORLD,
+                               txRqst);
+        }
     }
 
     return status;
@@ -510,18 +562,28 @@ STATUS DSLIM_Score::RXResults(MPI_Request *rxRqst, INT rawID)
 
 #ifdef DIAGNOSE2
         cout << "RXValues: " << params.myid << " <- " << mchID << " " << offset << endl;
+        cout << (void *) ((fResult *)(RxValues + offset)) << " RxV+off @ " << params.myid << endl;
 #endif /* DIAGNOSE */
+
+        if (offset + rxSizes[rawID] > nSpectra)
+        {
+            cout << "FATAL: Rx overflow @: " << params.myid << endl;
+            status = ERR_INVLD_SIZE;
+        }
 
         /* Receive data from machine:
          * @mch: mchID, @size: rxSizes[rawID] * INT in fResult
          */
-        status = MPI_Irecv((INT *)((fResult *)(RxValues + offset)),
-                           rxSizes[rawID] * (sizeof(fResult) / sizeof(INT)),
-                           MPI_INT,
-                           mchID,
-                           0xDA2A,
-                           MPI_COMM_WORLD,
-                           rxRqst);
+        if (status == SLM_SUCCESS)
+        {
+            status = MPI_Irecv((fResult *)(RxValues + offset),
+                               rxSizes[rawID],
+                               resultF,
+                               mchID,
+                               0xDA2A,
+                               MPI_COMM_WORLD,
+                               rxRqst);
+        }
     }
 
     return status;
@@ -563,57 +625,20 @@ STATUS DSLIM_Score::DisplayResults()
     return status;
 }
 
-VOID DSLIM_Score::Deinitialize()
+STATUS DSLIM_Score::InitDataTypes()
 {
-    /* Wait for score thread to complete */
-    Wait4RX();
+    MPI_Type_contiguous((INT)(sizeof(fResult) / sizeof(INT)),
+                        MPI_INT,
+                        &resultF);
 
-    nSpectra = 0;
-    nBatches = 0;
-    myRXsize = 0;
+    MPI_Type_commit(&resultF);
 
-    if (sizeArray != NULL)
-    {
-        delete[] sizeArray;
-        sizeArray = NULL;
-    }
+    return SLM_SUCCESS;
+}
 
-    if (fileArray != NULL)
-    {
-        delete[] fileArray;
-        fileArray = NULL;
-    }
+STATUS DSLIM_Score::FreeDataTypes()
+{
+    MPI_Type_free(&resultF);
 
-    if (scPtr != NULL)
-    {
-        delete[] scPtr;
-        scPtr = NULL;
-    }
-
-    if (heapArray != NULL)
-    {
-        delete[] heapArray;
-        heapArray = NULL;
-    }
-
-    if (resPtr != NULL)
-    {
-        delete[] resPtr;
-        resPtr = NULL;
-    }
-
-    if (keys != NULL)
-    {
-        delete[] keys;
-        keys = NULL;
-    }
-
-    if (TxValues != NULL)
-    {
-        delete[] TxValues;
-        TxValues = NULL;
-        RxValues = NULL;
-    }
-
-    return;
+    return SLM_SUCCESS;
 }
