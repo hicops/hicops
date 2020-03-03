@@ -310,9 +310,6 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         status = DSLIM_DeallocateIonIndex(slm_index + peplen - minlen);
     }
 
-    /* FIXME: Remove me */
-    status = TestBData();
-
     /* Compute the distributed scores */
     if (status == SLM_SUCCESS)
     {
@@ -324,7 +321,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     {
         for (UINT peplen = minlen; peplen <= maxlen; peplen++)
         {
-            status = DSLIM_Deinitialize(slm_index + peplen - minlen);
+            status = DSLIM_DeallocatePepIndex(slm_index + peplen - minlen);
         }
     }
 
@@ -363,7 +360,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 
 #ifdef _PROFILE
     ProfilerFlush();
-	ProfilerStop();
+    ProfilerStop();
 #endif /* _PROFILE */
 
     /* Make sure stdout is empty at the end */

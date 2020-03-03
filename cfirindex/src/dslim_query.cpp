@@ -596,18 +596,21 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 }
             }
 
-            /* Extract the top result
-             * and put it in the list */
-            if (resPtr->cpsms > 0)
+            if (params.nodes > 1)
             {
-                CandidatePSMS[spectrumID + queries] = resPtr->topK.getMax();;
-            }
-            else
-            {
-                CandidatePSMS[spectrumID + queries] = 0;
+                /* Extract the top result
+                 * and put it in the list */
+                if (resPtr->cpsms > 0)
+                {
+                    CandidatePSMS[spectrumID + queries] = resPtr->topK.getMax();
+                }
+                else
+                {
+                    CandidatePSMS[spectrumID + queries] = 0;
+                }
             }
 
-            /* FIXME: How to set the params.min_cpsm */
+            /* FIXME: How to set the params.min_cpsm? */
             if (resPtr->cpsms > 1 /*params.min_cpsm*/)
             {
                 /* Compute expect score if there

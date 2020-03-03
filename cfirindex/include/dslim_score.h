@@ -80,6 +80,8 @@ public:
 
     STATUS   DisplayResults();
 
+    STATUS   Wait4RX();
+
     VOID     Deinitialize();
 };
 

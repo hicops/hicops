@@ -27,6 +27,8 @@ extern VOID *DSLIM_Score_Thread_Entry(VOID *);
 
 DSLIM_Score::DSLIM_Score()
 {
+    INT nodes_1 = params.nodes - 1;
+
     threads = params.threads;
 
     /* Dataset size */
@@ -44,12 +46,12 @@ DSLIM_Score::DSLIM_Score()
 
     /* Data size that I expect to
      * receive from other processes */
-    rxSizes = new INT[threads-1];
-    txSizes = new INT[threads-1];
+    rxSizes = new INT[nodes_1];
+    txSizes = new INT[nodes_1];
 
     /* Set all to zero */
-    std::memset(rxSizes, 0x0, (sizeof(rxSizes[0]) * (threads-1)));
-    std::memset(rxSizes, 0x0, (sizeof(txSizes[0]) * (threads-1)));
+    std::memset(rxSizes, 0x0, (sizeof(rxSizes[0]) * (nodes_1)));
+    std::memset(rxSizes, 0x0, (sizeof(txSizes[0]) * (nodes_1)));
 
     /* key-values */
     keys     = NULL;
@@ -67,6 +69,8 @@ DSLIM_Score::DSLIM_Score()
 
 DSLIM_Score::DSLIM_Score(BData *bd)
 {
+    INT nodes_1 = params.nodes - 1;
+
     threads = params.threads;
 
     /* Dataset size */
@@ -84,12 +88,12 @@ DSLIM_Score::DSLIM_Score(BData *bd)
 
     /* Data size that I expect to
      * receive from other processes */
-    rxSizes = new INT[threads-1];
-    txSizes = new INT[threads-1];
+    rxSizes = new INT[nodes_1];
+    txSizes = new INT[nodes_1];
 
     /* Set all to zero */
-    std::memset(rxSizes, 0x0, (sizeof(rxSizes[0]) * (threads-1)));
-    std::memset(rxSizes, 0x0, (sizeof(txSizes[0]) * (threads-1)));
+    std::memset(rxSizes, 0x0, (sizeof(rxSizes[0]) * (nodes_1)));
+    std::memset(rxSizes, 0x0, (sizeof(txSizes[0]) * (nodes_1)));
 
     myRXsize = 0;
 
@@ -98,16 +102,18 @@ DSLIM_Score::DSLIM_Score(BData *bd)
         myRXsize += sizeArray[kk];
     }
 
-    /* FIXME: What if nothing RX'ed? */
-    if (myRXsize >= 0)
+    /* Allocate for Tx and Rx */
+    TxValues = new fResult[myRXsize + nSpectra];
+    RxValues = TxValues + myRXsize;
+
+    /* If no RX'ed data */
+    if (myRXsize > 0)
     {
         keys = new INT[myRXsize];
-        TxValues = new fResult[myRXsize + nSpectra];
-        RxValues = TxValues + myRXsize;
     }
     else
     {
-        cout << "ABORT: myRXsize = 0 @" << params.myid << endl;
+        keys = NULL;
     }
 
     /* Communication threads */
@@ -122,22 +128,11 @@ DSLIM_Score::DSLIM_Score(BData *bd)
 DSLIM_Score::~DSLIM_Score()
 {
     /* Wait for score thread to complete */
-    VOID *ptr;
-
-    if (comm_thd != NULL)
-    {
-        pthread_join(*comm_thd, &ptr);
-    }
+    Wait4RX();
 
     nSpectra = 0;
     nBatches = 0;
     myRXsize = 0;
-
-    if (sizeArray != NULL)
-    {
-        delete[] sizeArray;
-        sizeArray = NULL;
-    }
 
     if (sizeArray != NULL)
     {
@@ -163,12 +158,6 @@ DSLIM_Score::~DSLIM_Score()
         heapArray = NULL;
     }
 
-    if (heapArray != NULL)
-    {
-        delete[] heapArray;
-        heapArray = NULL;
-    }
-
     if (resPtr != NULL)
     {
         delete[] resPtr;
@@ -185,12 +174,7 @@ DSLIM_Score::~DSLIM_Score()
     {
         delete[] TxValues;
         TxValues = NULL;
-    }
-
-    if (comm_thd != NULL)
-    {
-        delete comm_thd;
-        comm_thd = NULL;
+        RxValues = NULL;
     }
 
     return;
@@ -217,17 +201,18 @@ VOID DSLIM_Score::Initialize(BData *bd)
         myRXsize += sizeArray[kk];
     }
 
-    /* FIXME: What if nothing RX'ed? */
-    if (myRXsize >= 0)
+    /* Allocate for Tx and Rx */
+    TxValues = new fResult[myRXsize + nSpectra];
+    RxValues = TxValues + myRXsize;
+
+    /* If no RX'ed data */
+    if (myRXsize > 0)
     {
-        /* key-values */
         keys = new INT[myRXsize];
-        TxValues = new fResult[myRXsize + nSpectra];
-        RxValues = TxValues + myRXsize;
     }
     else
     {
-        cout << "ABORT: myRXsize < 0 @" << params.myid << endl;
+        keys = NULL;
     }
 
     return;
@@ -239,6 +224,12 @@ STATUS DSLIM_Score::ComputeDistScores()
 
     /* TODO: Implement here */
     /* Take care of this during merging stage */
+
+    /* FIXME Only stub implementation */
+    for (UINT jj = 0; jj < params.nodes - 1; jj++)
+    {
+        txSizes[jj] = (this->myRXsize)/(params.nodes - 1);
+    }
 
 #if 0
     /* Estimate the log (s(x)); x = log(hyperscore) */
@@ -270,7 +261,7 @@ STATUS DSLIM_Score::ScatterScores()
     STATUS status = SLM_SUCCESS;
 
     /* Get the number of nodes - 1 */
-    INT nodes_1   = threads - 1;
+    INT nodes_1   = params.nodes - 1;
     INT cumulate = 0;
 
     /* MPI pointers */
@@ -288,12 +279,16 @@ STATUS DSLIM_Score::ScatterScores()
     txStats2 = txStats + (nodes_1);
 
     /* Fill the txStats with zeros - not available */
-    std::memset(txStats, 0x0, (sizeof(txStats[0]) * (2 * (nodes_1))));
+    for (INT kk = 0; kk < 2 * nodes_1; kk++)
+    {
+        txStats[kk] = 0;
+    }
 
     /* Check if everything is in order */
     if (txRqsts != NULL && txStats != NULL)
     {
         status = TXSizes(txRqsts);
+
     }
     else
     {
@@ -303,7 +298,7 @@ STATUS DSLIM_Score::ScatterScores()
     if (status == SLM_SUCCESS)
     {
         /* Wait 500ms between each loop */
-        for (cumulate = 0; cumulate < (nodes_1); usleep(500000))
+        for (; cumulate < (nodes_1); usleep(500000))
         {
             for (INT ll = 0; ll < nodes_1; ll ++)
             {
@@ -317,7 +312,12 @@ STATUS DSLIM_Score::ScatterScores()
                      */
                     if (txStats[ll])
                     {
-                        status = TXResults(txRqsts2 + ll, ll);
+                        /* Check if need to send */
+                        if (TXResults(txRqsts2 + ll, ll) == ERR_INVLD_SIZE)
+                        {
+                            txStats2[ll] = 1;
+                        }
+
                         cumulate++;
                     }
                 }
@@ -328,13 +328,20 @@ STATUS DSLIM_Score::ScatterScores()
     if (status == SLM_SUCCESS)
     {
         /* Wait 500ms between each loop */
-        for (cumulate = 0; cumulate < (nodes_1); usleep(500000))
+        for (; cumulate < (nodes_1); usleep(500000))
         {
+            /* Reset cumulate to 0 */
+            cumulate = 0;
+
             for (INT ll = 0; ll < nodes_1; ll ++)
             {
                 /* Only check if not already received */
                 if (!txStats2[ll])
                 {
+#ifdef DIAGNOSE2
+                    cout << " MPI_Test@ " << params.myid << "Stat: " << txStats2[ll] << " ll: " << ll << endl;
+#endif /* DIAGNOSE2 */
+
                     status = MPI_Test(txRqsts2 + ll, &txStats2[ll], MPI_STATUS_IGNORE);
 
                     /* Check if the results
@@ -344,6 +351,10 @@ STATUS DSLIM_Score::ScatterScores()
                     {
                         cumulate++;
                     }
+                }
+                else
+                {
+                    cumulate++;
                 }
             }
         }
@@ -375,13 +386,17 @@ STATUS DSLIM_Score::TXSizes(MPI_Request *txRqsts)
     for (UINT kk = 0; kk < params.nodes; kk++)
     {
         /* If myself then no RX */
-        if (ll == params.myid)
+        if (kk == params.myid)
         {
             continue;
         }
 
-        /* Receive an integer from all other machines */
-        status = MPI_Isend(txSizes, 1, MPI_INT, kk, 0x5125, MPI_COMM_WORLD, txRqsts + ll);
+#ifdef DIAGNOSE2
+        cout << "TXSIZE: " << params.myid << " -> " << kk << " Size: "<< txSizes[ll] << endl;
+#endif /* DIAGNOSE */
+
+        /* Send an integer to all other machines */
+        status = MPI_Isend((INT *)txSizes + ll, 1, MPI_INT, kk, 0x5125, MPI_COMM_WORLD, txRqsts + ll);
 
         /* Increment the ll variable */
         ll++;
@@ -399,13 +414,17 @@ STATUS DSLIM_Score::RXSizes(MPI_Request *rxRqsts)
     for (UINT kk = 0; kk < params.nodes; kk++)
     {
         /* If myself then no RX */
-        if (ll == params.myid)
+        if (kk == params.myid)
         {
             continue;
         }
 
+#ifdef DIAGNOSE2
+        cout << "RXSIZE: " << params.myid << " <- " << kk << endl;
+#endif /* DIAGNOSE */
+
         /* Receive an integer from all other machines */
-        status = MPI_Irecv(rxSizes, 1, MPI_INT, kk, 0x5125, MPI_COMM_WORLD, rxRqsts + ll);
+        status = MPI_Irecv((INT *)rxSizes + ll, 1, MPI_INT, kk, 0x5125, MPI_COMM_WORLD, rxRqsts + ll);
 
         /* Increment the ll */
         ll++;
@@ -416,40 +435,114 @@ STATUS DSLIM_Score::RXSizes(MPI_Request *rxRqsts)
 
 STATUS DSLIM_Score::TXResults(MPI_Request *txRqst, INT rawID)
 {
+    STATUS status = SLM_SUCCESS;
     INT mchID = rawID;
+    INT offset = 0;
 
-    /* Compute the mchID as:
-     * mchID = rawID +1 if >= myid
-     */
-    if (rawID >= (INT)params.myid)
+    if (txSizes[rawID] < 1)
     {
-        mchID = rawID + 1;
+        status = ERR_INVLD_SIZE;
     }
 
-    /* Transmit data to machine:
-     * @mch: mchID, @size: rxSizes[rawID] * INT in fResult
-     */
-    return MPI_Isend((INT *)TxValues, txSizes[rawID] * (sizeof(TxValues[0])/sizeof(INT)),
-                     MPI_INT, mchID, 0xDA2A, MPI_COMM_WORLD, txRqst);
+    if (status == SLM_SUCCESS)
+    {
+        /* Compute the mchID as:
+         * mchID = rawID +1 if >= myid
+         */
+        if (rawID >= (INT) params.myid)
+        {
+            mchID = rawID + 1;
+        }
+
+        /* Compute the buffer offset for RxValues */
+        for (INT kk = 0; kk < rawID; kk++)
+        {
+            offset += txSizes[kk];
+        }
+
+#ifdef DIAGNOSE2
+        cout << "TXValues: " << params.myid << " -> " << mchID << " " << offset << endl;
+#endif /* DIAGNOSE */
+
+        /* Transmit data to machine:
+         * @mch: mchID, @size: rxSizes[rawID] * INT in fResult
+         */
+        status = MPI_Isend((INT *)((fResult *)(TxValues + offset)),
+                           txSizes[rawID] * (sizeof(fResult) / sizeof(INT)),
+                           MPI_INT,
+                           mchID,
+                           0xDA2A,
+                           MPI_COMM_WORLD,
+                           txRqst);
+    }
+
+    return status;
 }
 
 STATUS DSLIM_Score::RXResults(MPI_Request *rxRqst, INT rawID)
 {
-   UINT mchID = rawID;
+    STATUS status = SLM_SUCCESS;
 
-    /* Compute the mchID as:
-     * mchID = rawID +1 if >= myid
-     */
-    if (rawID >= (INT)params.myid)
+    UINT mchID = rawID;
+    INT offset = 0;
+
+    /* Check the size */
+    if (rxSizes[rawID] < 1)
     {
-        mchID = rawID + 1;
+        status = ERR_INVLD_SIZE;
     }
 
-    /* Receive data from machine:
-     * @mch: mchID, @size: rxSizes[rawID] * INT in fResult
-     */
-    return MPI_Irecv((INT *)RxValues, rxSizes[rawID] * (sizeof(TxValues[0])/sizeof(INT)),
-                     MPI_INT, mchID, 0xDA2A, MPI_COMM_WORLD, rxRqst);
+    if (status == SLM_SUCCESS)
+    {
+        /* Compute the mchID as:
+         * mchID = rawID +1 if >= myid
+         */
+        if (rawID >= (INT) params.myid)
+        {
+            mchID = rawID + 1;
+        }
+
+        /* Compute the buffer offset for RxValues */
+        for (INT kk = 0; kk < rawID; kk++)
+        {
+            offset += rxSizes[kk];
+        }
+
+#ifdef DIAGNOSE2
+        cout << "RXValues: " << params.myid << " <- " << mchID << " " << offset << endl;
+#endif /* DIAGNOSE */
+
+        /* Receive data from machine:
+         * @mch: mchID, @size: rxSizes[rawID] * INT in fResult
+         */
+        status = MPI_Irecv((INT *)((fResult *)(RxValues + offset)),
+                           rxSizes[rawID] * (sizeof(fResult) / sizeof(INT)),
+                           MPI_INT,
+                           mchID,
+                           0xDA2A,
+                           MPI_COMM_WORLD,
+                           rxRqst);
+    }
+
+    return status;
+}
+
+STATUS DSLIM_Score::Wait4RX()
+{
+    /* Wait for score thread to complete */
+    VOID *ptr;
+
+    STATUS status = SLM_SUCCESS;
+
+    if (comm_thd != NULL)
+    {
+        status = pthread_join(*comm_thd, &ptr);
+
+        delete comm_thd;
+        comm_thd = NULL;
+    }
+
+    return status;
 }
 
 STATUS DSLIM_Score::DisplayResults()
@@ -473,22 +566,11 @@ STATUS DSLIM_Score::DisplayResults()
 VOID DSLIM_Score::Deinitialize()
 {
     /* Wait for score thread to complete */
-    VOID *ptr;
-
-    if (comm_thd != NULL)
-    {
-        pthread_join(*comm_thd, &ptr);
-    }
+    Wait4RX();
 
     nSpectra = 0;
     nBatches = 0;
     myRXsize = 0;
-
-    if (sizeArray != NULL)
-    {
-        delete[] sizeArray;
-        sizeArray = NULL;
-    }
 
     if (sizeArray != NULL)
     {
@@ -514,12 +596,6 @@ VOID DSLIM_Score::Deinitialize()
         heapArray = NULL;
     }
 
-    if (heapArray != NULL)
-    {
-        delete[] heapArray;
-        heapArray = NULL;
-    }
-
     if (resPtr != NULL)
     {
         delete[] resPtr;
@@ -536,12 +612,7 @@ VOID DSLIM_Score::Deinitialize()
     {
         delete[] TxValues;
         TxValues = NULL;
-    }
-
-    if (comm_thd != NULL)
-    {
-        delete comm_thd;
-        comm_thd = NULL;
+        RxValues = NULL;
     }
 
     return;

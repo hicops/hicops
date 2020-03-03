@@ -29,7 +29,9 @@
 //#undef _OPENMP
 
 /* Manually switch MPI */
-#define DISTMEM
+//#undef DISTMEM
+
+//#define DIAGNOSE
 
 /* Switch the benchmarking */
 //#define BENCHMARK

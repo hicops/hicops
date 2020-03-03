@@ -67,69 +67,67 @@ STATUS DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, BYICount *Score,
     return status;
 }
 
-INT TestBData()
-{
-    if (bdata != NULL)
-    {
-        cout << bdata->index[0].chunksize << endl;
-        cout << bdata->scPtr[0].res.bias << endl;
-        cout << bdata->heapArray[0].hyperscore << endl;
-        cout << bdata->fileArray[0] << endl;
-        cout << bdata->sizeArray[0] << endl;
-        cout << bdata->nBatches << endl;
-        cout << bdata->resPtr[0].N << endl;
-        cout << bdata->cPSMsize << endl;
-    }
-
-    return 0;
-}
-
 STATUS DSLIM_DistScoreManager()
 {
     STATUS status = SLM_SUCCESS;
 
     /* Check if parameters have been brought */
-    if (isCarried == false)
+    if (isCarried == false && params.nodes > 1)
     {
         status = ERR_INVLD_PARAM;
     }
 
-    /* Initialize the ScoreHandle */
-    if (status == SLM_SUCCESS)
+    /* No need to do anything if only 1 node */
+    if (params.nodes > 1)
     {
-        ScoreHandle = new DSLIM_Score(bdata);
-
-        if (ScoreHandle == NULL)
+        /* Initialize the ScoreHandle */
+        if (status == SLM_SUCCESS)
         {
-            status = ERR_INVLD_MEMORY;
+            ScoreHandle = new DSLIM_Score(bdata);
+
+            if (ScoreHandle == NULL)
+            {
+                status = ERR_INVLD_MEMORY;
+            }
         }
-    }
 
-    /* Distributed Scoring Algorithm */
-    if (status == SLM_SUCCESS)
-    {
-        status = ScoreHandle->ComputeDistScores();
-    }
-
-    /* Scatter the key-values to all machines */
-    if (status == SLM_SUCCESS)
-    {
-        status = ScoreHandle->ScatterScores();
-    }
-
-    /* Display results to files */
-    if (status == SLM_SUCCESS)
-    {
-        status = ScoreHandle->DisplayResults();
-    }
-
-    /* Destroy the ScoreHandle */
-    if (status == SLM_SUCCESS)
-    {
-        if (ScoreHandle != NULL)
+        /* Distributed Scoring Algorithm */
+        if (status == SLM_SUCCESS)
         {
-            delete ScoreHandle;
-            ScoreHandle = NULL;
+            status = ScoreHandle->ComputeDistScores();
+        }
+
+        /* Scatter the key-values to all machines */
+        if (status == SLM_SUCCESS)
+        {
+            status = ScoreHandle->ScatterScores();
+        }
+
+        if (status == SLM_SUCCESS)
+        {
+            status = ScoreHandle->Wait4RX();
+        }
+
+        /* Display results to files */
+        if (status == SLM_SUCCESS)
+        {
+            status = ScoreHandle->DisplayResults();
+        }
+
+        if (status == SLM_SUCCESS)
+        {
+            /* Wait for everyone to synchronize */
+            status = MPI_Barrier(MPI_COMM_WORLD);
+        }
+
+        /* Destroy the ScoreHandle */
+        if (status == SLM_SUCCESS)
+        {
+            if (ScoreHandle != NULL)
+            {
+                delete ScoreHandle;
+                ScoreHandle = NULL;
+            }
         }
     }
 
@@ -158,8 +156,10 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
     rxStats2 = rxStats + (nodes_1);
 
     /* Fill the rxStats with zeros - not available */
-    std::memset(rxStats, 0x0, (sizeof(rxStats[0]) * (2 * (nodes_1))));
-
+    for (INT kk = 0; kk < 2 * nodes_1; kk++)
+    {
+        rxStats[kk] = 0;
+    }
     /* Avoid race conditions by waiting for
      * ScoreHandle pointer to initialize */
     while ((VOID *)argv != (VOID *)ScoreHandle);
@@ -172,7 +172,7 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
         ScoreHandle->RXSizes(rxRqsts);
 
         /* Wait 500ms between each loop */
-        for (cumulate = 0; cumulate < (nodes_1); usleep(500000))
+        for (; cumulate < (nodes_1); usleep(500000))
         {
             for (INT ll = 0; ll < nodes_1; ll ++)
             {
@@ -186,7 +186,12 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
                      */
                     if (rxStats[ll])
                     {
-                        ScoreHandle->RXResults(rxRqsts2 + ll, ll);
+                        /* Set the rxStat if nothing to be received */
+                        if (ScoreHandle->RXResults(rxRqsts2 + ll, ll) == ERR_INVLD_SIZE)
+                        {
+                            rxStats2[ll] = 1;
+                        }
+
                         cumulate++;
                     }
                 }
@@ -194,8 +199,11 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
         }
 
         /* Wait 500ms between each loop */
-        for (cumulate = 0; cumulate < (nodes_1); usleep(500000))
+        for (; cumulate < (nodes_1); usleep(500000))
         {
+            /* Reset cumulate */
+            cumulate = 0;
+
             for (INT ll = 0; ll < nodes_1; ll ++)
             {
                 /* Only check if not already received */
@@ -210,6 +218,10 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
                     {
                         cumulate++;
                     }
+                }
+                else
+                {
+                    cumulate++;
                 }
             }
         }
@@ -232,3 +244,25 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
     /* Return the ScoreHandle back */
     return argv;
 }
+
+#ifdef DIAGNOSE
+INT DSLIM_TestBData()
+{
+    cout << "\nTesting BData object: " << endl;
+    if (bdata != NULL)
+    {
+        cout << bdata->index[0].pepCount << endl;
+        cout << bdata->scPtr[0].res.bias << endl;
+        cout << bdata->heapArray[0].hyperscore << endl;
+        cout << bdata->fileArray[0] << endl;
+        cout << bdata->sizeArray[0] << endl;
+        cout << bdata->nBatches << endl;
+        cout << bdata->resPtr[0].N << endl;
+        cout << bdata->cPSMsize << endl;
+    }
+
+    cout << "Testing BData: DONE " << endl;
+
+    return 0;
+}
+#endif /* DIAGNOSE */
