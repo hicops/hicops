@@ -337,7 +337,15 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     }
 
 #ifdef DISTMEM
-    status = MPI_Finalize();
+
+    if (status == SLM_SUCCESS && params.nodes > 1)
+    {
+        /* Wait for everyone to synchronize */
+        status = MPI_Barrier(MPI_COMM_WORLD);
+
+        status = MPI_Finalize();
+    }
+
 #endif /* DISTMEM */
 
     /* Print end time */
