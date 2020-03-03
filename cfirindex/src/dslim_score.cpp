@@ -153,105 +153,71 @@ DSLIM_Score::DSLIM_Score(BData *bd)
 
 DSLIM_Score::~DSLIM_Score()
 {
-    /* Wait for score thread to complete */
-    Wait4RX();
-
-    FreeDataTypes();
-
-    nSpectra = 0;
-    nBatches = 0;
-    myRXsize = 0;
-
     if (txSizes != NULL)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) txSizes << " txS@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
-
         delete[] txSizes;
         txSizes = NULL;
     }
 
     if (rxSizes != NULL)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) rxSizes << " rxS@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
         delete[] rxSizes;
         rxSizes = NULL;
     }
 
     if (sizeArray != NULL)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) sizeArray << " sA@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
         delete[] sizeArray;
         sizeArray = NULL;
     }
 
     if (fileArray != NULL)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) fileArray << " fA@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
         delete[] fileArray;
         fileArray = NULL;
     }
 
     if (scPtr != NULL)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) scPtr << "scA@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
         delete[] scPtr;
         scPtr = NULL;
     }
 
     if (heapArray != NULL)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) heapArray << " hA@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
         delete[] heapArray;
         heapArray = NULL;
     }
 
     if (resPtr != NULL)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) resPtr << " resPtr@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
         delete[] resPtr;
         resPtr = NULL;
     }
 
-    if (keys != NULL)
+    if (keys != NULL && myRXsize != 0)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) keys << " key@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
         delete[] keys;
         keys = NULL;
     }
 
-    if (TxValues != NULL)
+    if (TxValues != NULL && myRXsize != 0)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) TxValues << " key@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
         delete[] TxValues;
         TxValues = NULL;
     }
 
     if (RxValues != NULL)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) RxValues << " key@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
         delete[] RxValues;
         RxValues = NULL;
     }
+
+    nSpectra = 0;
+    nBatches = 0;
+    myRXsize = 0;
+
+    FreeDataTypes();
 
     return;
 }
@@ -487,7 +453,7 @@ STATUS DSLIM_Score::TXResults(MPI_Request *txRqsts, INT* txStats)
 #endif /* DIAGNOSE */
 
         /* Send an integer to all other machines */
-        status = MPI_Isend(TxValues + offset, txSizes[kk], MPI_INT, kk, 0x0, MPI_COMM_WORLD, txRqsts + kk);
+        status = MPI_Isend(TxValues + offset, txSizes[kk], resultF, kk, 0x1, MPI_COMM_WORLD, txRqsts + kk);
 
         offset += txSizes[kk];
 
@@ -516,7 +482,7 @@ STATUS DSLIM_Score::RXResults(MPI_Request *rxRqsts, INT *rxStats)
 #endif /* DIAGNOSE */
 
         /* Send an integer to all other machines */
-        status = MPI_Irecv(RxValues + offset, rxSizes[kk], MPI_INT, kk, 0x0, MPI_COMM_WORLD, rxRqsts + kk);
+        status = MPI_Irecv(RxValues + offset, rxSizes[kk], resultF, kk, 0x1, MPI_COMM_WORLD, rxRqsts + kk);
 
         offset += rxSizes[kk];
 

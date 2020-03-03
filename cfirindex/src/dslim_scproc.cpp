@@ -116,7 +116,6 @@ STATUS DSLIM_DistScoreManager()
 
         if (status == SLM_SUCCESS)
         {
-
             /* Wait for everyone to synchronize */
             status = MPI_Barrier(MPI_COMM_WORLD);
         }
