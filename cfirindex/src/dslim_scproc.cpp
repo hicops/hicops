@@ -116,6 +116,7 @@ STATUS DSLIM_DistScoreManager()
 
         if (status == SLM_SUCCESS)
         {
+
             /* Wait for everyone to synchronize */
             status = MPI_Barrier(MPI_COMM_WORLD);
         }
@@ -139,95 +140,89 @@ STATUS DSLIM_DistScoreManager()
 VOID *DSLIM_Score_Thread_Entry(VOID *argv)
 {
     /* Get the number of nodes - 1 */
-    INT nodes_1   = params.nodes - 1;
+    INT nodes   = params.nodes;
 
     /* MPI pointers */
     MPI_Request *rxRqsts  = NULL;
-    MPI_Request *rxRqsts2 = NULL;
     INT         *rxStats  = NULL;
-    INT         *rxStats2 = NULL;
 
     /* 2X per all other machines */
-    rxRqsts = new MPI_Request [2 * (nodes_1)];
-    rxStats = new INT[2 * (nodes_1)];
+    rxRqsts = new MPI_Request [nodes];
+    rxStats = new INT[nodes];
 
-    /* Set the pointers to the appropriate offset */
-    rxRqsts2 = rxRqsts + (nodes_1);
-    rxStats2 = rxStats + (nodes_1);
-
-    /* Fill the rxStats with zeros - not available */
-    for (INT kk = 0; kk < 2 * nodes_1; kk++)
+    /* Fill the rxStats with ones - available */
+    for (INT kk = 0; kk < nodes; kk++)
     {
-        rxStats[kk] = 0;
+        rxStats[kk] = 1;
     }
 
     /* Avoid race conditions by waiting for
      * ScoreHandle pointer to initialize */
     while ((VOID *)argv != (VOID *)ScoreHandle);
 
-    /* Check if everything is in order */
     if (rxRqsts != NULL && rxStats != NULL)
     {
-        INT cumulate = 0;
+        ScoreHandle->RXSizes(rxRqsts, rxStats);
+    }
 
-        ScoreHandle->RXSizes(rxRqsts);
+    /* Wait 500ms between each loop */
+    for (INT cumulate = 0; cumulate < nodes; usleep(500000))
+    {
+        cumulate = 0;
 
-        /* Wait 500ms between each loop */
-        for (; cumulate < (nodes_1); usleep(300000))
+        for (INT ll = 0; ll < nodes; ll++)
         {
-            for (INT ll = 0; ll < nodes_1; ll ++)
+            /* Only check if not already received */
+            if (!rxStats[ll])
             {
-                /* Only check if not already received */
-                if (!rxStats[ll])
-                {
-                    MPI_Test(rxRqsts + ll, &rxStats[ll], MPI_STATUS_IGNORE);
+                MPI_Test(rxRqsts + ll, &rxStats[ll], MPI_STATUS_IGNORE);
 
-                    /* If the RXsize has been received,
-                     * start the second RX request.
-                     */
-                    if (rxStats[ll])
-                    {
-                        cumulate++;
-                    }
-                }
-            }
-        }
-
-        /* All sizes have been received - Now do the actual Rx */
-        for (INT ll = 0; ll < nodes_1; ll++)
-        {
-            /* Set the rxStat if nothing to be received */
-            if (ScoreHandle->RXResults(rxRqsts2 + ll, ll) == ERR_INVLD_SIZE)
-            {
-                rxStats2[ll] = 1;
-            }
-        }
-
-        /* Wait 500ms between each loop */
-        for (; cumulate < (nodes_1); usleep(300000))
-        {
-            /* Reset cumulate */
-            cumulate = 0;
-
-            for (INT ll = 0; ll < nodes_1; ll ++)
-            {
-                /* Only check if not already received */
-                if (!rxStats2[ll])
-                {
-                    MPI_Test(rxRqsts2 + ll, &rxStats2[ll], MPI_STATUS_IGNORE);
-
-                    /* Check if the results
-                     * have been received
-                     */
-                    if (rxStats2[ll])
-                    {
-                        cumulate++;
-                    }
-                }
-                else
+                /* Check if the results
+                 * have been received
+                 */
+                if (rxStats[ll])
                 {
                     cumulate++;
                 }
+            }
+            else
+            {
+                cumulate++;
+            }
+        }
+    }
+
+    ScoreHandle->RXResults(rxRqsts, rxStats);
+
+    /* Fill the rxStats with ones - available */
+    for (INT kk = 0; kk < nodes; kk++)
+    {
+        rxStats[kk] = 1;
+    }
+
+    /* Wait 500ms between each loop */
+    for (INT cumulate = 0; cumulate < nodes; usleep(500000))
+    {
+        cumulate = 0;
+
+        for (INT ll = 0; ll < nodes; ll++)
+        {
+            /* Only check if not already received */
+            if (!rxStats[ll])
+            {
+                MPI_Test(rxRqsts + ll, &rxStats[ll], MPI_STATUS_IGNORE);
+
+                /* Check if the results
+                 * have been received
+                 */
+                if (rxStats[ll])
+                {
+                    cumulate++;
+                }
+            }
+            else
+            {
+                cumulate++;
             }
         }
     }

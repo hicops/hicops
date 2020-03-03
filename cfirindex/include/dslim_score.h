@@ -70,11 +70,11 @@ public:
 
     STATUS   ScatterScores();
 
-    STATUS   TXSizes(MPI_Request *);
-    STATUS   RXSizes(MPI_Request *);
+    STATUS   TXSizes(MPI_Request *, INT *);
+    STATUS   RXSizes(MPI_Request *, INT *);
 
-    STATUS   TXResults(MPI_Request *, INT);
-    STATUS   RXResults(MPI_Request *, INT);
+    STATUS   TXResults(MPI_Request *, INT*);
+    STATUS   RXResults(MPI_Request *, INT*);
 
     STATUS   DisplayResults();
 

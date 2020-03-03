@@ -29,7 +29,7 @@ extern VOID *DSLIM_Score_Thread_Entry(VOID *);
 
 DSLIM_Score::DSLIM_Score()
 {
-    INT nodes_1 = params.nodes - 1;
+    INT nodes = params.nodes;
 
     threads = params.threads;
 
@@ -48,12 +48,12 @@ DSLIM_Score::DSLIM_Score()
 
     /* Data size that I expect to
      * receive from other processes */
-    rxSizes = new INT[nodes_1];
-    txSizes = new INT[nodes_1];
+    rxSizes = new INT[nodes];
+    txSizes = new INT[nodes];
 
     /* Set all to zero */
-    std::memset(rxSizes, 0x0, (sizeof(rxSizes[0]) * (nodes_1)));
-    std::memset(rxSizes, 0x0, (sizeof(txSizes[0]) * (nodes_1)));
+    std::memset(rxSizes, 0x0, (sizeof(INT) * (nodes)));
+    std::memset(txSizes, 0x0, (sizeof(INT) * (nodes)));
 
     /* key-values */
     keys     = NULL;
@@ -73,7 +73,7 @@ DSLIM_Score::DSLIM_Score()
 
 DSLIM_Score::DSLIM_Score(BData *bd)
 {
-    INT nodes_1 = params.nodes - 1;
+    INT nodes = params.nodes;
 
     threads = params.threads;
 
@@ -89,41 +89,25 @@ DSLIM_Score::DSLIM_Score(BData *bd)
     index = bd->index;
     resPtr = bd->resPtr;
 
-
     /* Data size that I expect to
      * receive from other processes */
-    rxSizes = new INT[nodes_1];
-    txSizes = new INT[nodes_1];
+    rxSizes = new INT[nodes];
+    txSizes = new INT[nodes];
 
-    /* Set all to zero */
-    std::memset(rxSizes, 0x0, (sizeof(rxSizes[0]) * (nodes_1)));
-    std::memset(rxSizes, 0x0, (sizeof(txSizes[0]) * (nodes_1)));
-
-    myRXsize = 0;
-
-    for (INT kk = 0; kk < nBatches; kk++)
+    if (rxSizes != NULL && txSizes != NULL)
     {
-        myRXsize += sizeArray[kk];
+        /* Set all to zero */
+        std::memset(rxSizes, 0x0, (sizeof(INT) * nodes));
+        std::memset(txSizes, 0x0, (sizeof(INT) * nodes));
+    }
+    else
+    {
+        throw "FATAL: rxSizes or txSizes == NULL\n";
     }
 
-    /* Allocate for Tx and Rx */
-    TxValues = new fResult[myRXsize + nSpectra];
-    RxValues = TxValues + myRXsize;
-
-#ifdef DIAGNOSE2
-    cout << "myRXsize = " << myRXsize << " @: " << params.myid << endl;
-    cout << "nSpectra = " << nSpectra << " @: " << params.myid << endl;
-    cout << "nSpectra + myRXsize = " << nSpectra + myRXsize << " @: " << params.myid << endl;
-
-    fResult *ptr = TxValues + nSpectra + myRXsize;
-
-    cout << (void *) TxValues << " TxV@: " << params.myid << endl;
-    cout << (void *) RxValues << " RxV@: " << params.myid << endl;
-    cout << (void *) ptr << " TxEnd@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
-
     myRXsize = 0;
 
+    /* Compute myRXsize */
     for (INT kk = 0; kk < nBatches; kk++)
     {
         myRXsize += sizeArray[kk];
@@ -143,6 +127,18 @@ DSLIM_Score::DSLIM_Score(BData *bd)
         TxValues = NULL;
         keys = NULL;
     }
+
+#ifdef DIAGNOSE2
+    cout << "myRXsize = " << myRXsize << " @: " << params.myid << endl;
+    cout << "nSpectra = " << nSpectra << " @: " << params.myid << endl;
+    cout << "nSpectra + myRXsize = " << myRXsize << " @: " << params.myid << endl;
+
+    fResult *ptr = TxValues + myRXsize;
+
+    cout << (void *) TxValues << " TxV@: " << params.myid << endl;
+    cout << (void *) RxValues << " RxV@: " << params.myid << endl;
+    cout << (void *) ptr << " TxEnd@: " << params.myid << endl;
+#endif /* DIAGNOSE2 */
 
     InitDataTypes();
 
@@ -270,7 +266,7 @@ STATUS DSLIM_Score::ComputeDistScores()
     /* FIXME Only stub implementation */
     for (UINT jj = 0; jj < params.nodes - 1; jj++)
     {
-        txSizes[jj] = (this->myRXsize)/(params.nodes - 1);
+        txSizes[jj] = (this->myRXsize)/(params.nodes);
     }
 
 #if 0
@@ -303,34 +299,23 @@ STATUS DSLIM_Score::ScatterScores()
     STATUS status = SLM_SUCCESS;
 
     /* Get the number of nodes - 1 */
-    INT nodes_1   = params.nodes - 1;
+    INT nodes   = params.nodes;
     INT cumulate = 0;
 
     /* MPI pointers */
-    MPI_Request *txRqsts  = NULL;
-    MPI_Request *txRqsts2 = NULL;
-    INT         *txStats  = NULL;
-    INT         *txStats2 = NULL;
-
-    /* 2X per all other machines */
-    txRqsts = new MPI_Request [2 * (nodes_1)];
-    txStats = new INT[2 * (nodes_1)];
-
-    /* Set the pointers to the appropriate offset */
-    txRqsts2 = txRqsts + (nodes_1);
-    txStats2 = txStats + (nodes_1);
+    MPI_Request *txRqsts  = new MPI_Request [nodes];
+    INT         *txStats  = new INT[nodes];
 
     /* Fill the txStats with zeros - not available */
-    for (INT kk = 0; kk < 2 * nodes_1; kk++)
+    for (INT kk = 0; kk < nodes; kk++)
     {
-        txStats[kk] = 0;
+        txStats[kk] = 1;
     }
 
     /* Check if everything is in order */
     if (txRqsts != NULL && txStats != NULL)
     {
-        status = TXSizes(txRqsts);
-
+        status = TXSizes(txRqsts, txStats);
     }
     else
     {
@@ -340,56 +325,72 @@ STATUS DSLIM_Score::ScatterScores()
     if (status == SLM_SUCCESS)
     {
         /* Wait 500ms between each loop */
-        for (; cumulate < (nodes_1); usleep(300000))
+         for (INT cumulate = 0; cumulate < nodes; usleep(500000))
+         {
+             cumulate = 0;
+
+             for (INT ll = 0; ll < nodes; ll ++)
+             {
+                 /* Only check if not already received */
+                 if (!txStats[ll])
+                 {
+ #ifdef DIAGNOSE2
+                     cout << " MPI_Test@ " << params.myid << "Stat: " << txStats2[ll] << " ll: " << ll << endl;
+ #endif /* DIAGNOSE2 */
+
+                     status = MPI_Test(txRqsts + ll, &txStats[ll], MPI_STATUS_IGNORE);
+
+                     /* Check if the results
+                      * have been sent
+                      */
+                     if (txStats[ll])
+                     {
+                         cumulate++;
+                     }
+                 }
+                 else
+                 {
+                     cumulate++;
+                 }
+             }
+         }
+
+    }
+
+    if (status == SLM_SUCCESS)
+    {
+        /* Fill the txStats with zeros - not available */
+        for (INT kk = 0; kk < nodes; kk++)
         {
-            for (INT ll = 0; ll < nodes_1; ll ++)
-            {
-                /* Only check if not already received */
-                if (!txStats[ll])
-                {
-                    status = MPI_Test(txRqsts + ll, &txStats[ll], MPI_STATUS_IGNORE);
-
-                    /* If the TXsize has been sent,
-                     * start the TX request.
-                     */
-                    if (txStats[ll])
-                    {
-                        /* Check if need to send */
-                        if (TXResults(txRqsts2 + ll, ll) == ERR_INVLD_SIZE)
-                        {
-                            txStats2[ll] = 1;
-                        }
-
-                        cumulate++;
-                    }
-                }
-            }
+            txStats[kk] = 1;
         }
+
+        status = TXResults(txRqsts, txStats);
     }
 
     if (status == SLM_SUCCESS)
     {
         /* Wait 500ms between each loop */
-        for (; cumulate < (nodes_1); usleep(300000))
+        for (; cumulate < nodes; usleep(500000))
         {
             /* Reset cumulate to 0 */
             cumulate = 0;
 
-            for (INT ll = 0; ll < nodes_1; ll ++)
+            for (INT ll = 0; ll < nodes; ll ++)
             {
                 /* Only check if not already received */
-                if (!txStats2[ll])
+                if (!txStats[ll])
                 {
 #ifdef DIAGNOSE2
                     cout << " MPI_Test@ " << params.myid << "Stat: " << txStats2[ll] << " ll: " << ll << endl;
 #endif /* DIAGNOSE2 */
 
-                    status = MPI_Test(txRqsts2 + ll, &txStats2[ll], MPI_STATUS_IGNORE);
+                    status = MPI_Test(txRqsts + ll, &txStats[ll], MPI_STATUS_IGNORE);
 
                     /* Check if the results
                      * have been sent
                      */
-                    if (txStats2[ll])
+                    if (txStats[ll])
                     {
                         cumulate++;
                     }
@@ -419,11 +420,9 @@ STATUS DSLIM_Score::ScatterScores()
     return status;
 }
 
-STATUS DSLIM_Score::TXSizes(MPI_Request *txRqsts)
+STATUS DSLIM_Score::TXSizes(MPI_Request *txRqsts, INT *txStats)
 {
     STATUS status = SLM_SUCCESS;
-
-    UINT ll = 0;
 
     for (UINT kk = 0; kk < params.nodes; kk++)
     {
@@ -432,26 +431,22 @@ STATUS DSLIM_Score::TXSizes(MPI_Request *txRqsts)
         {
             continue;
         }
-
 #ifdef DIAGNOSE2
         cout << "TXSIZE: " << params.myid << " -> " << kk << " Size: "<< txSizes[ll] << endl;
 #endif /* DIAGNOSE */
 
         /* Send an integer to all other machines */
-        status = MPI_Isend((INT *)txSizes + ll, 1, MPI_INT, kk, 0x5125, MPI_COMM_WORLD, txRqsts + ll);
+        status = MPI_Isend(txSizes + kk, 1, MPI_INT, kk, 0x0, MPI_COMM_WORLD, txRqsts + kk);
 
-        /* Increment the ll variable */
-        ll++;
+        txStats[kk] = 0;
     }
 
     return status;
 }
 
-STATUS DSLIM_Score::RXSizes(MPI_Request *rxRqsts)
+STATUS DSLIM_Score::RXSizes(MPI_Request *rxRqsts, INT *rxStats)
 {
     STATUS status = SLM_SUCCESS;
-
-    UINT ll = 0;
 
     for (UINT kk = 0; kk < params.nodes; kk++)
     {
@@ -460,130 +455,72 @@ STATUS DSLIM_Score::RXSizes(MPI_Request *rxRqsts)
         {
             continue;
         }
-
 #ifdef DIAGNOSE2
-        cout << "RXSIZE: " << params.myid << " <- " << kk << endl;
+        cout << "RXSIZE: " << params.myid << " -> " << kk << " Size: "<< txSizes[ll] << endl;
 #endif /* DIAGNOSE */
 
-        /* Receive an integer from all other machines */
-        status = MPI_Irecv((INT *)rxSizes + ll, 1, MPI_INT, kk, 0x5125, MPI_COMM_WORLD, rxRqsts + ll);
+        /* Send an integer to all other machines */
+        status = MPI_Irecv(rxSizes + kk, 1, MPI_INT, kk, 0x0, MPI_COMM_WORLD, rxRqsts + kk);
 
-        /* Increment the ll */
-        ll++;
+        rxStats[kk] = 0;
     }
 
     return status;
 }
 
-STATUS DSLIM_Score::TXResults(MPI_Request *txRqst, INT rawID)
+STATUS DSLIM_Score::TXResults(MPI_Request *txRqsts, INT* txStats)
 {
     STATUS status = SLM_SUCCESS;
-    INT mchID = rawID;
+
     INT offset = 0;
 
-    if (txSizes[rawID] < 1)
+    for (UINT kk = 0; kk < params.nodes; kk++)
     {
-        status = ERR_INVLD_SIZE;
-    }
-
-    if (status == SLM_SUCCESS)
-    {
-        /* Compute the mchID as:
-         * mchID = rawID +1 if >= myid
-         */
-        if (rawID >= (INT) params.myid)
+        /* If myself then no RX */
+        if (kk == params.myid || txSizes[kk] == 0)
         {
-            mchID = rawID + 1;
-        }
-
-        /* Compute the buffer offset for RxValues */
-        for (INT kk = 0; kk < rawID; kk++)
-        {
-            offset += txSizes[kk];
+            continue;
         }
 
 #ifdef DIAGNOSE2
-        cout << "TXValues: " << params.myid << " -> " << mchID << " " << offset << endl;
-        cout << (void *) ((fResult *)(TxValues + offset)) << " TxV+off @ " << params.myid << endl;
+        cout << "RXSIZE: " << params.myid << " -> " << kk << " Size: "<< txSizes[ll] << endl;
 #endif /* DIAGNOSE */
 
-        if (offset + rxSizes[rawID] > nSpectra)
-        {
-            cout << "FATAL: Tx overflow @: " << params.myid << endl;
-            status = ERR_INVLD_SIZE;
-        }
+        /* Send an integer to all other machines */
+        status = MPI_Isend(TxValues + offset, txSizes[kk], MPI_INT, kk, 0x0, MPI_COMM_WORLD, txRqsts + kk);
 
-        /* Transmit data to machine:
-         * @mch: mchID, @size: rxSizes[rawID] * INT in fResult
-         */
-        if (status == SLM_SUCCESS)
-        {
-            status = MPI_Isend((fResult *)(TxValues + offset),
-                               txSizes[rawID],
-                               resultF,
-                               mchID,
-                               0xDA2A,
-                               MPI_COMM_WORLD,
-                               txRqst);
-        }
+        offset += txSizes[kk];
+
+        txStats[kk] = 0;
     }
 
     return status;
 }
 
-STATUS DSLIM_Score::RXResults(MPI_Request *rxRqst, INT rawID)
+STATUS DSLIM_Score::RXResults(MPI_Request *rxRqsts, INT *rxStats)
 {
     STATUS status = SLM_SUCCESS;
 
-    UINT mchID = rawID;
     INT offset = 0;
 
-    /* Check the size */
-    if (rxSizes[rawID] < 1)
+    for (UINT kk = 0; kk < params.nodes; kk++)
     {
-        status = ERR_INVLD_SIZE;
-    }
-
-    if (status == SLM_SUCCESS)
-    {
-        /* Compute the mchID as:
-         * mchID = rawID +1 if >= myid
-         */
-        if (rawID >= (INT) params.myid)
+        /* If myself then no RX */
+        if (kk == params.myid || rxSizes[kk] == 0)
         {
-            mchID = rawID + 1;
-        }
-
-        /* Compute the buffer offset for RxValues */
-        for (INT kk = 0; kk < rawID; kk++)
-        {
-            offset += rxSizes[kk];
+            continue;
         }
 
 #ifdef DIAGNOSE2
-        cout << "RXValues: " << params.myid << " <- " << mchID << " " << offset << endl;
-        cout << (void *) ((fResult *)(RxValues + offset)) << " RxV+off @ " << params.myid << endl;
+        cout << "RXSIZE: " << params.myid << " -> " << kk << " Size: "<< txSizes[ll] << endl;
 #endif /* DIAGNOSE */
 
-        if (offset + rxSizes[rawID] > nSpectra)
-        {
-            cout << "FATAL: Rx overflow @: " << params.myid << endl;
-            status = ERR_INVLD_SIZE;
-        }
+        /* Send an integer to all other machines */
+        status = MPI_Irecv(RxValues + offset, rxSizes[kk], MPI_INT, kk, 0x0, MPI_COMM_WORLD, rxRqsts + kk);
 
-        /* Receive data from machine:
-         * @mch: mchID, @size: rxSizes[rawID] * INT in fResult
-         */
-        if (status == SLM_SUCCESS)
-        {
-            status = MPI_Irecv((fResult *)(RxValues + offset),
-                               rxSizes[rawID],
-                               resultF,
-                               mchID,
-                               0xDA2A,
-                               MPI_COMM_WORLD,
-                               rxRqst);
-        }
+        offset += rxSizes[kk];
+
+        rxStats[kk] = 0;
     }
 
     return status;
