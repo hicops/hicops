@@ -174,7 +174,7 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
             /* Only check if not already received */
             if (rxStats[ll] == 0 && ll != (INT) params.myid)
             {
-				//cout << (void *)((MPI_Request*)(rxRqsts + ll)) << " rxRqsts@:" << params.myid << endl;
+                //cout << (void *)((MPI_Request*)(rxRqsts + ll)) << " rxRqsts@:" << params.myid << endl;
                 MPI_Test(rxRqsts + ll, &rxStats[ll], MPI_STATUS_IGNORE);
 
                 /* Check if the results
@@ -210,7 +210,7 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
             /* Only check if not already received */
             if (rxStats[ll] == 0 && ll != (INT) params.myid)
             {
-				//cout << (void *)((MPI_Request*)(rxRqsts + ll)) << " rxRqsts@:" << params.myid << endl;
+                //cout << (void *)((MPI_Request*)(rxRqsts + ll)) << " rxRqsts@:" << params.myid << endl;
                 MPI_Test(rxRqsts + ll, &rxStats[ll], MPI_STATUS_IGNORE);
 
                 /* Check if the results

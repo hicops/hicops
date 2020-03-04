@@ -432,7 +432,6 @@ STATUS DSLIM_Score::TXSizes(MPI_Request *txRqsts, INT *txStats)
         if (kk == params.myid)
         {
             txStats[kk] = 1;
-            continue;
         }
         else
         {
@@ -441,13 +440,14 @@ STATUS DSLIM_Score::TXSizes(MPI_Request *txRqsts, INT *txStats)
             cout << "TXSIZE: " << params.myid << " -> " << kk << " Size: "<< txSizes[ll] << endl;
 #endif /* DIAGNOSE */
 
-            while (txSizes == NULL || txRqsts == NULL)
+            if (txSizes == NULL || txRqsts == NULL)
             {
                 cout << "FATAL: txSizes = NULL @: " << params.myid << endl;
                 exit(-1);
             }
 
             //cout << (void *)((INT*)(txSizes + kk)) << " txSizes@:" << params.myid << endl;
+
             /* Send an integer to all other machines */
             status = MPI_Isend(txSizes + kk, 1, MPI_INT, kk, 0x0, MPI_COMM_WORLD, txRqsts + kk);
 
@@ -468,8 +468,6 @@ STATUS DSLIM_Score::RXSizes(MPI_Request *rxRqsts, INT *rxStats)
         if (kk == params.myid)
         {
             rxStats[kk] = 1;
-
-            continue;
         }
         else
         {
@@ -478,13 +476,14 @@ STATUS DSLIM_Score::RXSizes(MPI_Request *rxRqsts, INT *rxStats)
             cout << "RXSIZE: " << params.myid << " -> " << kk << " Size: "<< txSizes[ll] << endl;
 #endif /* DIAGNOSE */
 
-            while (rxSizes == NULL || rxRqsts == NULL)
+            if (rxSizes == NULL || rxRqsts == NULL)
             {
                 cout << "FATAL: rxSizes = NULL @: " << params.myid << endl;
                 exit(-1);
             }
 
             //cout << (void *)((INT*)(rxSizes + kk)) << " rxSizes@:" << params.myid << endl;
+
             /* Send an integer to all other machines */
             status = MPI_Irecv(rxSizes + kk, 1, MPI_INT, kk, 0x0, MPI_COMM_WORLD, rxRqsts + kk);
 
@@ -507,7 +506,6 @@ STATUS DSLIM_Score::TXResults(MPI_Request *txRqsts, INT* txStats)
         if (kk == params.myid || txSizes[kk] == 0)
         {
             txStats[kk] = 1;
-            continue;
         }
         else
         {
@@ -515,20 +513,21 @@ STATUS DSLIM_Score::TXResults(MPI_Request *txRqsts, INT* txStats)
         cout << "RXSIZE: " << params.myid << " -> " << kk << " Size: "<< txSizes[ll] << endl;
 #endif /* DIAGNOSE */
 
-            while (TxValues == NULL || txRqsts == NULL)
+            if (TxValues == NULL || txRqsts == NULL || offset + txSizes[kk] > myRXsize)
             {
-                cout << "FATAL: TxValues = NULL @: " << params.myid << endl;
+                cout << "FATAL: TxValues Failed @: " << params.myid << endl;
                 exit(-1);
             }
 
             //cout << (void *)((fResult*)(TxValues + offset)) << " TxValues@:" << params.myid << endl;
+
             /* Send an integer to all other machines */
             status = MPI_Isend(TxValues + offset, txSizes[kk], resultF, kk, 0x1, MPI_COMM_WORLD, txRqsts + kk);
 
-            offset += txSizes[kk];
-
             txStats[kk] = 0;
         }
+
+        offset += txSizes[kk];
     }
 
     return status;
@@ -546,7 +545,6 @@ STATUS DSLIM_Score::RXResults(MPI_Request *rxRqsts, INT *rxStats)
         if (kk == params.myid || rxSizes[kk] == 0)
         {
             rxStats[kk] = 1;
-            continue;
         }
         else
         {
@@ -555,13 +553,14 @@ STATUS DSLIM_Score::RXResults(MPI_Request *rxRqsts, INT *rxStats)
             cout << "RXSIZE: " << params.myid << " -> " << kk << " Size: "<< txSizes[ll] << endl;
 #endif /* DIAGNOSE */
 
-            while (RxValues == NULL || rxRqsts == NULL)
+            if (RxValues == NULL || rxRqsts == NULL || offset + rxSizes[kk] > nSpectra)
             {
-                cout << "FATAL: RxValues = NULL @: " << params.myid << endl;
+                cout << "FATAL: RxValues failed @: " << params.myid << endl;
                 exit(-1);
             }
 
             //cout << (void *)((fResult*)(RxValues + offset)) << " RxValues@:" << params.myid << endl;
+
             /* Send an integer to all other machines */
             status = MPI_Irecv(RxValues + offset, rxSizes[kk], resultF, kk, 0x1, MPI_COMM_WORLD, rxRqsts + kk);
 
@@ -597,14 +596,14 @@ STATUS DSLIM_Score::DisplayResults()
     STATUS status = SLM_SUCCESS;
 
     /* Initialize the file handles */
-    status = DFile_InitFiles();
+    //status = DFile_InitFiles();
 
     /* TODO: Implement stuff here */
 
     /* Close the files and deallocate objects */
     if (status == SLM_SUCCESS)
     {
-        status = DFile_DeinitFiles();
+        //status = DFile_DeinitFiles();
     }
 
     return status;

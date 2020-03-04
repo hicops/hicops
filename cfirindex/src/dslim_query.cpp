@@ -216,6 +216,11 @@ STATUS DSLIM_SearchManager(Index *index)
         status = sem_init(&ioQlock, 0, 1);
     }
 
+    if (status == SLM_SUCCESS && params.nodes == 1)
+    {
+        status = DFile_InitFiles();
+    }
+
     /* Initialize the Comm module */
 #ifdef DISTMEM
 
@@ -404,6 +409,11 @@ STATUS DSLIM_SearchManager(Index *index)
     }
 #endif /* DISTMEM */
 
+    if (status == SLM_SUCCESS && params.nodes == 1)
+    {
+        status = DFile_DeinitFiles();
+    }
+
     /* Return the status of execution */
     return status;
 }
@@ -444,7 +454,8 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
     duration = omp_get_wtime();
 #endif /* BENCHMARK */
 
-    if (Score == NULL || txArray == NULL)
+    /* Sanity checks */
+    if (Score == NULL || (txArray == NULL && params.nodes > 1))
     {
         status = ERR_INVLD_MEMORY;
     }
@@ -597,6 +608,8 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 }
             }
 
+            /* Search done - Handle results in one node
+             *               and multi node modes */
             if (params.nodes > 1)
             {
                 /* Extract the top result
@@ -609,28 +622,61 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 {
                     CandidatePSMS[spectrumID + queries] = 0;
                 }
-            }
 
-            /* FIXME: How to set the params.min_cpsm? */
-            if (resPtr->cpsms > 1 /*params.min_cpsm*/)
-            {
-                /* Compute expect score if there
-                 * are any candidate PSMs */
-                status = DSLIM_ModelSurvivalFunction(resPtr);
+                /* FIXME: How to set the params.min_cpsm in dist mem? */
+                if (resPtr->cpsms > 1 /*params.min_cpsm*/)
+                {
+                    /* Compute expect score if there
+                     * are any candidate PSMs */
+                    status = DSLIM_ModelSurvivalFunction(resPtr);
 
-                /* Fill in the Tx array cells */
-                txArray[queries].b = (INT)(resPtr->bias * 1000);
-                txArray[queries].m = (INT)(resPtr->weight * 1000);
-                txArray[queries].min = resPtr->minhypscore;
-                txArray[queries].max2 = resPtr->nexthypscore;
-                txArray[queries].max = resPtr->maxhypscore;
+                    /* Fill in the Tx array cells */
+                    txArray[queries].b = (INT)(resPtr->bias * 1000);
+                    txArray[queries].m = (INT)(resPtr->weight * 1000);
+                    txArray[queries].min = resPtr->minhypscore;
+                    txArray[queries].max2 = resPtr->nexthypscore;
+                    txArray[queries].max = resPtr->maxhypscore;
+                }
+                else
+                {
+                    /* Get the handle to the txArr
+                     * Fill it up and move on */
+                    txArray[queries] = 0;
+                    txArray[queries].max = resPtr->maxhypscore;
+                }
             }
             else
             {
-                /* Get the handle to the txArr
-                 * Fill it up and move on */
-                txArray[queries] = 0;
-                txArray[queries].max = resPtr->maxhypscore;
+                /* Check for minimum number of PSMs */
+                if (resPtr->cpsms > params.min_cpsm)
+                {
+                    /* Extract the top PSM */
+                    hCell psm = resPtr->topK.getMax();
+
+                    /* Compute expect score if there
+                     * are any candidate PSMs */
+                    status = DSLIM_ModelSurvivalFunction(resPtr);
+
+                    /* Estimate the log (s(x)); x = log(hyperscore) */
+                    DOUBLE lgs_x = resPtr->weight * (psm.hyperscore * 10 + 0.5) + resPtr->bias;
+
+                    /* Compute the s(x) */
+                    DOUBLE s_x = pow(10, lgs_x);
+
+                    /* e(x) = n * s(x) */
+                    DOUBLE e_x = resPtr->cpsms * s_x;
+
+                    /* Do not print any scores just yet */
+                    if (e_x < params.expect_max)
+                    {
+                #ifndef ANALYSIS
+                        /* Printing the scores in OpenMP mode */
+                        status = DFile_PrintScore(index, queries, pmass, &psm, e_x, resPtr->cpsms);
+                #else
+                        status = DFile_PrintPartials(queries, resPtr);
+                #endif /* ANALYSIS */
+                    }
+                }
             }
 
             /* Reset the results */
@@ -641,7 +687,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 #endif
         }
 
-        /* Add how much spectra have been queried */
+        /* Update the number of queried spectra */
         spectrumID += ss->numSpecs;
     }
 
