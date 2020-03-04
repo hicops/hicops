@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Muhammad Haseeb
+ * Copyright (C) 2019 Muhammad Haseeb, Fahad Saeed
  * Florida International University, Miami, FL
  *
  * This program is free software: you can redistribute it and/or modify
@@ -31,7 +31,5 @@ STATUS    DFile_PrintScore(Index *index, UINT specid, FLOAT pmass,
                            hCell* psm, DOUBLE e_x, UINT npsms);
 STATUS    DFile_InitFiles();
 STATUS    DFile_DeinitFiles();
-ULONGLONG DFile_Factorial(ULONGLONG n);
-STRING    DFile_Datetime();
 
 #endif /* DSLIM_FILEOUT */

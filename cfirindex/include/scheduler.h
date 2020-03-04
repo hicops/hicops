@@ -84,7 +84,6 @@ public:
     BOOL   checkPreempt();
     STATUS takeControl(VOID *argv);
     STATUS runManager(DOUBLE yt, INT dec);
-    //STATUS runManager(DOUBLE yt, INT qchunk);
     VOID   waitForCompletion();
     BOOL   checkSignal();
 };

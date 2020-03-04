@@ -29,6 +29,8 @@ BOOL FilesInit = false;
 /* Data structures for the output file */
 std::ofstream *tsvs = NULL; /* The output files */
 
+static STRING    DFile_Datetime();
+
 /*
  * FUNCTION: DFile_InitFile
  *
@@ -154,22 +156,6 @@ STATUS DFile_PrintScore(Index *index, UINT specid, FLOAT pmass, hCell* psm, DOUB
 }
 
 /*
- * FUNCTION: DFile_Factorial
- *
- * DESCRIPTION: Calculate the factorial of a number
- *
- * INPUT:
- * @n : input value for which to calculate factorial
- *
- * OUTPUT:
- * @factorial : the factorial of the input number n
- */
-ULONGLONG DFile_Factorial(ULONGLONG n)
-{
-    return (n == 1 || n == 0) ? 1 : DFile_Factorial(n - 1) * n;
-}
-
-/*
  * FUNCTION: DFile_Datetime
  *
  * DESCRIPTION: Get the date time in a readable format.
@@ -179,7 +165,7 @@ ULONGLONG DFile_Factorial(ULONGLONG n)
  * OUTPUT:
  * @datetime : date & time in string format
  */
-STRING DFile_Datetime()
+static STRING DFile_Datetime()
 {
     time_t rawtime;
     struct tm * timeinfo;

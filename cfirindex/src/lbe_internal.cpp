@@ -282,10 +282,7 @@ STATUS LBE_GeneratePeps(Index *index)
  */
 STATUS LBE_Deinitialize(Index *index)
 {
-    (VOID) DSLIM_Deinitialize(index);
-    (VOID) DSLIM_DeallocateSC();
-
-    return SLM_SUCCESS;
+    return DSLIM_Deinitialize(index);
 }
 
 /*

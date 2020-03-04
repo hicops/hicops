@@ -279,6 +279,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         status = DSLIM_DeallocateSpecArr();
     }
 
+    /* Initialize the Scorecard */
     if (status == SLM_SUCCESS)
     {
         status = DSLIM_InitializeScorecard(slm_index, (maxlen - minlen + 1));
@@ -290,19 +291,61 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         cout << "Indexing Time: " << elapsed_seconds.count() << "s" << endl;
     }
 
-    /* Query the index */
+    /* Perform the distributed database search */
     if (status == SLM_SUCCESS)
     {
         status = DSLIM_SearchManager(slm_index);
     }
 
+    /* Deinitialize the scorecard */
+    if (status == SLM_SUCCESS)
+    {
+        /* Deallocate the scorecard */
+        status = DSLIM_DeallocateSC();
+    }
+
+    /* De-initialize the ion index */
     for (UINT peplen = minlen; peplen <= maxlen; peplen++)
     {
-        status = LBE_Deinitialize(slm_index + peplen - minlen);
+        status = DSLIM_DeallocateIonIndex(slm_index + peplen - minlen);
+    }
+
+    /* Compute the distributed scores */
+    if (status == SLM_SUCCESS)
+    {
+        status = DSLIM_DistScoreManager();
+    }
+
+    /* De-initialize the remaining index */
+    if (status == SLM_SUCCESS)
+    {
+        for (UINT peplen = minlen; peplen <= maxlen; peplen++)
+        {
+            status = DSLIM_DeallocatePepIndex(slm_index + peplen - minlen);
+        }
+    }
+
+#ifdef DIAGNOSE2
+        cout << "SCProc DONE@ " << params.myid << endl;
+#endif /* DIAGNOSE2 */
+
+    /* Delete the index Handle */
+    if (status == SLM_SUCCESS)
+    {
+        delete [] slm_index;
+        slm_index = NULL;
     }
 
 #ifdef DISTMEM
-    status = MPI_Finalize();
+
+    if (status == SLM_SUCCESS && params.nodes > 1)
+    {
+        /* Wait for everyone to synchronize */
+        status = MPI_Barrier(MPI_COMM_WORLD);
+
+        status = MPI_Finalize();
+    }
+
 #endif /* DISTMEM */
 
     /* Print end time */
@@ -329,12 +372,13 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 
 #ifdef _PROFILE
     ProfilerFlush();
-	ProfilerStop();
+    ProfilerStop();
 #endif /* _PROFILE */
 
     /* Make sure stdout is empty at the end */
     fflush(stdout);
 
+    /* Return the status of execution */
     return status;
 }
 
@@ -536,8 +580,8 @@ static STATUS ParseParams(CHAR* paramfile)
         status = MPI_Comm_rank(MPI_COMM_WORLD, (INT *)&params.myid);
         status = MPI_Comm_size(MPI_COMM_WORLD, (INT *)&params.nodes);
 #else
-        params.myid = 0;
-        params.nodes = 1;
+        params.myid = 1;
+        params.nodes = 4;
 
 #endif /* DISTMEM */
 

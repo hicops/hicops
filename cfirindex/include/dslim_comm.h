@@ -57,6 +57,15 @@ private:
     /* Rx array */
     partRes *rxArr;
 
+    /* Array to keep track of sizes
+     * of buffers received
+     */
+    INT     *sizeArray;
+    INT     *fileArray;
+
+    /* currPtr */
+    INT  sizeOffset;
+
     /* Semaphore for Rx array */
     LOCK rxLock;
 
@@ -92,7 +101,6 @@ private:
 
     /* Handle for Rx request(S) */
     MPI_Request *RxRqsts;
-
 
     INT *RxStat;
 
@@ -134,6 +142,9 @@ public:
     /* Destructor */
     virtual ~DSLIM_Comm();
 
+    friend STATUS DSLIM_CarryForward(Index *, DSLIM_Comm *,
+                                     BYICount *, hCell *, INT);
+
     partRes *getTxBuffer(INT batchtag, INT batchsize, INT&);
 
     STATUS Tx(INT, INT, INT);
@@ -146,27 +157,31 @@ public:
 
     STATUS Wait4Event();
 
-    STATUS Wait4Rx();
-
-    STATUS CheckRx();
-
     STATUS SignalExit();
 
     STATUS SignalWakeup();
 
-    BOOL checkExitSignal();
+    BOOL   checkExitSignal();
 
-    BOOL checkWakeup();
+    BOOL   checkWakeup();
 
-    BOOL getRxReadyPermission();
+    BOOL   getRxReadyPermission();
 
-    BOOL checkMismatch();
+    BOOL   checkMismatch();
 
-    BOOL checkEndCondition();
+    BOOL   checkEndCondition();
 
     STATUS Wait4Completion();
 
-    STATUS AddBufferEntry(INT);
+    STATUS AddBufferEntry(INT, INT);
+
+    INT    getRxBufferSize();
+
+#if 0
+    STATUS Wait4Rx();
+
+    STATUS CheckRx();
+#endif
 
 };
 

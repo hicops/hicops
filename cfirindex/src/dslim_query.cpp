@@ -17,6 +17,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
+
 #include <pthread.h>
 #include <semaphore.h>
 #include <unistd.h>
@@ -39,13 +40,14 @@ FLOAT *hyperscores = NULL;
 UCHAR *sCArr = NULL;
 BOOL ExitSignal = false;
 
-DSLIM_Comm *CommHandle = NULL;
-Scheduler *SchedHandle = NULL;
+DSLIM_Comm *CommHandle    = NULL;
+Scheduler  *SchedHandle   = NULL;
+hCell      *CandidatePSMS = NULL;
 
 /* Lock for query file vector and thread manager */
 LOCK qfilelock;
-
 INT qfid = 0;
+INT spectrumID = 0;
 
 /****************************************************************/
 
@@ -76,6 +78,7 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv);
 
 VOID *DSLIM_IO_Threads_Entry(VOID *argv);
 
+/* Static function */
 static VOID DSLIM_BinarySearch(Index *, FLOAT, INT&, INT&);
 static INT  DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max);
 static INT  DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max);
@@ -138,13 +141,6 @@ static inline STATUS DSLIM_WaitFor_IO(INT &batchsize)
     }
 
     return status;
-}
-
-STATUS DSLIM_Process_RxData()
-{
-    //partRes *rxData = CommHandle->getRxArray()
-
-    return SLM_SUCCESS;
 }
 
 /* FUNCTION: DSLIM_SearchManager
@@ -220,6 +216,11 @@ STATUS DSLIM_SearchManager(Index *index)
         status = sem_init(&ioQlock, 0, 1);
     }
 
+    if (status == SLM_SUCCESS && params.nodes == 1)
+    {
+        status = DFile_InitFiles();
+    }
+
     /* Initialize the Comm module */
 #ifdef DISTMEM
 
@@ -236,7 +237,18 @@ STATUS DSLIM_SearchManager(Index *index)
                 status = ERR_BAD_MEM_ALLOC;
             }
         }
+
+        if (status == SLM_SUCCESS)
+        {
+            CandidatePSMS = new hCell[CommHandle->getRxBufferSize()];
+
+            if (CandidatePSMS == NULL)
+            {
+                status = ERR_BAD_MEM_ALLOC;
+            }
+        }
     }
+
 #endif /* DISTMEM */
 
     /* Create a new Scheduler handle */
@@ -249,12 +261,6 @@ STATUS DSLIM_SearchManager(Index *index)
         {
             status = ERR_BAD_MEM_ALLOC;
         }
-    }
-
-    /* Initialize the file handles */
-    if (status == SLM_SUCCESS)
-    {
-        status = DFile_InitFiles();
     }
 
     /**************************************************************************/
@@ -278,7 +284,7 @@ STATUS DSLIM_SearchManager(Index *index)
 #ifndef DIAGNOSE
         if (params.myid == 0)
         {
-            cout << "PENALTY: " << penalty.count() << endl;
+            std::cout << "PENALTY: " << penalty.count() << endl;
         }
 #endif /* DIAGNOSE */
 
@@ -298,7 +304,7 @@ STATUS DSLIM_SearchManager(Index *index)
 
             if ((batchnum % params.nodes) != params.myid && buffernum == -1)
             {
-                cout << "FATAL: Check getTxBuffer @node: " << params.myid << endl;
+                std::cout << "FATAL: Check getTxBuffer @node: " << params.myid << endl;
                 exit(-1);
             }
 
@@ -308,7 +314,7 @@ STATUS DSLIM_SearchManager(Index *index)
 #ifndef DIAGNOSE
         if (params.myid == 0)
         {
-            cout << "Querying: \n" << endl;
+            std::cout << "Querying: \n" << endl;
         }
 #endif /* DIAGNOSE */
 
@@ -333,7 +339,6 @@ STATUS DSLIM_SearchManager(Index *index)
 
             batchnum++;
         }
-
 #endif /* DISTMEM */
 
         status = qPtrs->lockw_();
@@ -352,8 +357,8 @@ STATUS DSLIM_SearchManager(Index *index)
         if (params.myid == 0)
         {
             /* Compute Duration */
-            cout << "Query Time: " << qtime.count() << "s" << endl;
-            cout << "Queried with status:\t\t" << status << endl << endl;
+            std::cout << "Query Time: " << qtime.count() << "s" << endl;
+            std::cout << "Queried with status:\t\t" << status << endl << endl;
         }
 #endif /* DIAGNOSE */
 
@@ -377,19 +382,24 @@ STATUS DSLIM_SearchManager(Index *index)
     if (params.nodes > 1)
     {
 #ifdef DIAGNOSE
-       cout << "Wait4Completion: " << params.myid << endl;
+       std::cout << "Wait4Completion: " << params.myid << endl;
 #endif /* DIAGNOSE */
 
         /* Wait for CommHandle to complete its work */
         status = CommHandle->Wait4Completion();
 
 #ifdef DIAGNOSE
-        cout << "ExitSignal: " << params.myid << endl;
+        std::cout << "ExitSignal: " << params.myid << endl;
 #endif /* DIAGNOSE */
+
+        /* Wait for everyone to synchronize */
         status = MPI_Barrier(MPI_COMM_WORLD);
 
-        /* Post the exit signal to Comm Handle */
+        /* Post the exit signal to Communication Handle */
         CommHandle->SignalExit();
+
+        /* Carry forward the data to the distributed scoring module */
+        status = DSLIM_CarryForward(index, CommHandle, Score, CandidatePSMS, spectrumID);
 
         /* Delete the instance of CommHandle */
         delete CommHandle;
@@ -398,6 +408,11 @@ STATUS DSLIM_SearchManager(Index *index)
 
     }
 #endif /* DISTMEM */
+
+    if (status == SLM_SUCCESS && params.nodes == 1)
+    {
+        status = DFile_DeinitFiles();
+    }
 
     /* Return the status of execution */
     return status;
@@ -439,7 +454,8 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
     duration = omp_get_wtime();
 #endif /* BENCHMARK */
 
-    if (Score == NULL || txArray == NULL)
+    /* Sanity checks */
+    if (Score == NULL || (txArray == NULL && params.nodes > 1))
     {
         status = ERR_INVLD_MEMORY;
     }
@@ -456,7 +472,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
         if (params.myid == 0)
         {
             /* Print the number of query threads */
-            cout << "\n#QThds: " << threads << endl;
+            std::cout << "\n#QThds: " << threads << endl;
         }
 #endif /* DIAGNOSE */
 
@@ -530,11 +546,13 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                                 if (ppid >= minlimit && ppid <= maxlimit)
                                 {
                                     /* Update corresponding scorecard entries */
+                                    /* b-ion matched */
                                     if ((raw % speclen) < speclen / 2)
                                     {
                                         bycPtr[ppid].bc += 1;
                                         ibycPtr[ppid].ibc += iPtr[k];
                                     }
+                                    /* y-ion matched */
                                     else
                                     {
                                         bycPtr[ppid].yc += 1;
@@ -546,10 +564,13 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                         }
                     }
 
+                    /* Compute the chunksize to look further into */
                     INT csize = maxlimit - minlimit;
 
+                    /* Look for candidate PSMs */
                     for (INT it = minlimit; it < maxlimit; it++)
                     {
+                        /* Filter by the min shared peaks */
                         if (bycPtr[it].bc + bycPtr[it].yc >= params.min_shp)
                         {
                             /* Create a heap cell */
@@ -557,8 +578,8 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 
                             /* Fill in the information */
                             cell.hyperscore = log10(0.001 +
-                                                    DFile_Factorial(ULONGLONG(bycPtr[it].bc)) *
-                                                    DFile_Factorial(ULONGLONG(bycPtr[it].yc)) *
+                                                    UTILS_Factorial(ULONGLONG(bycPtr[it].bc)) *
+                                                    UTILS_Factorial(ULONGLONG(bycPtr[it].yc)) *
                                                     ibycPtr[it].ibc *
                                                     ibycPtr[it].iyc);
 
@@ -569,6 +590,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                                 cell.psid = it;
                                 cell.sharedions = bycPtr[it].bc + bycPtr[it].yc;
                                 cell.totalions = speclen;
+                                cell.pmass = pmass;
 
                                 /* Insert the cell in the heap dst */
                                 resPtr->topK.insert(cell);
@@ -586,42 +608,75 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 }
             }
 
-            /* Compute expect score if there are any candidate PSMs */
-            if (resPtr->cpsms > params.min_cpsm)
+            /* Search done - Handle results in one node
+             *               and multi node modes */
+            if (params.nodes > 1)
             {
-                status = DSLIM_ModelSurvivalFunction(resPtr);
-
-                hCell psm = resPtr->topK.getMax();
-
-                /* Fill in the Tx array cells */
-//                txArray[queries].b = resPtr->bias;
-//                txArray[queries].m = resPtr->weight;
-//                txArray[queries].min = resPtr->minhypscore;
-//                txArray[queries].max = resPtr->nexthypscore;
-
-                /* Estimate the log (s(x)); x = log(hyperscore) */
-                DOUBLE lgs_x = resPtr->weight * (psm.hyperscore * 10 + 0.5) + resPtr->bias;
-
-                /* Compute the s(x) */
-                DOUBLE s_x = pow(10, lgs_x);
-
-                /* e(x) = n * s(x) */
-                DOUBLE e_x = resPtr->cpsms * s_x;
-
-                if (e_x < params.expect_max)
+                /* Extract the top result
+                 * and put it in the list */
+                if (resPtr->cpsms > 0)
                 {
-#ifndef ANALYSIS
+                    CandidatePSMS[spectrumID + queries] = resPtr->topK.getMax();
+                }
+                else
+                {
+                    CandidatePSMS[spectrumID + queries] = 0;
+                }
 
-                    /* Printing the scores in OpenMP mode */
-                    status = DFile_PrintScore(index, queries, pmass, &psm, e_x, resPtr->cpsms);
-#else
-                    status = DFile_PrintPartials(queries, resPtr);
-#endif /* ANALYSIS */
+                /* FIXME: How to set the params.min_cpsm in dist mem? */
+                if (resPtr->cpsms > 1 /*params.min_cpsm*/)
+                {
+                    /* Compute expect score if there
+                     * are any candidate PSMs */
+                    status = DSLIM_ModelSurvivalFunction(resPtr);
+
+                    /* Fill in the Tx array cells */
+                    txArray[queries].b = (INT)(resPtr->bias * 1000);
+                    txArray[queries].m = (INT)(resPtr->weight * 1000);
+                    txArray[queries].min = resPtr->minhypscore;
+                    txArray[queries].max2 = resPtr->nexthypscore;
+                    txArray[queries].max = resPtr->maxhypscore;
+                }
+                else
+                {
+                    /* Get the handle to the txArr
+                     * Fill it up and move on */
+                    txArray[queries] = 0;
+                    txArray[queries].max = resPtr->maxhypscore;
                 }
             }
             else
             {
-                /* Get the handle to the txArr - Fill it up and move on */
+                /* Check for minimum number of PSMs */
+                if (resPtr->cpsms > params.min_cpsm)
+                {
+                    /* Extract the top PSM */
+                    hCell psm = resPtr->topK.getMax();
+
+                    /* Compute expect score if there
+                     * are any candidate PSMs */
+                    status = DSLIM_ModelSurvivalFunction(resPtr);
+
+                    /* Estimate the log (s(x)); x = log(hyperscore) */
+                    DOUBLE lgs_x = resPtr->weight * (psm.hyperscore * 10 + 0.5) + resPtr->bias;
+
+                    /* Compute the s(x) */
+                    DOUBLE s_x = pow(10, lgs_x);
+
+                    /* e(x) = n * s(x) */
+                    DOUBLE e_x = resPtr->cpsms * s_x;
+
+                    /* Do not print any scores just yet */
+                    if (e_x < params.expect_max)
+                    {
+                #ifndef ANALYSIS
+                        /* Printing the scores in OpenMP mode */
+                        status = DFile_PrintScore(index, queries, pmass, &psm, e_x, resPtr->cpsms);
+                #else
+                        status = DFile_PrintPartials(queries, resPtr);
+                #endif /* ANALYSIS */
+                    }
+                }
             }
 
             /* Reset the results */
@@ -631,64 +686,28 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
             tcons[thno] += omp_get_wtime() - stime;
 #endif
         }
-    }
 
-    std::cout << '\n';
+        /* Update the number of queried spectra */
+        spectrumID += ss->numSpecs;
+    }
 
 #ifdef BENCHMARK
     compute += omp_get_wtime() - duration;
 
     for (unsigned int thd = 0; thd < params.threads; thd++)
     {
-        std::cout << "Thread #: " << thd << "\t" << tcons[thd] << std::endl;
+        std::cout << "\nThread #: " << thd << "\t" << tcons[thd];
     }
 #endif
 
 #ifndef DIAGNOSE
     if (params.myid == 1)
     {
-        cout << "Queried Spectra:\t\t" << workPtr->numSpecs << endl;
+        std::cout << "\nQueried Spectra:\t\t" << workPtr->numSpecs << endl;
     }
 #endif /* DIAGNOSE */
 
     return status;
-}
-
-/*
- * FUNCTION: DSLIM_DeallocateSC
- *
- * DESCRIPTION:
- *
- * INPUT:
- * none
- *
- * OUTPUT:
- * @status: status of execution
- */
-STATUS DSLIM_DeallocateSC()
-{
-    /* Free the Scorecard memory */
-    if (Score != NULL)
-    {
-        for (UINT thd = 0; thd < params.threads; thd++)
-        {
-            delete[] Score[thd].byc;
-            delete[] Score[thd].ibyc;
-            delete[] Score[thd].res.survival;
-            delete[] Score[thd].res.xaxis;
-
-            Score[thd].byc = NULL;
-            Score[thd].ibyc = NULL;
-            Score[thd].res.survival = NULL;
-            Score[thd].res.xaxis = NULL;
-        }
-
-        delete[] Score;
-        Score = NULL;
-
-    }
-
-    return SLM_SUCCESS;
 }
 
 /*
@@ -854,7 +873,7 @@ STATUS DSLIM_ModelSurvivalFunction(Results *resPtr)
     UINT N = resPtr->cpsms;
 
     /* Choosing the kneePt and endPt to be
-     * at 70.7% and 99% respectively */
+     * at 70.7% aspectrumIDnd 99% respectively */
     UINT kneePt = N - (UINT)((float)N * 0.707);
 
 #ifndef ANALYSIS
@@ -1050,17 +1069,17 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
         {
             status = ERR_INVLD_PARAM;
 
-            cout << "COMM THD: Something went wrong on node: " << params.myid << endl;
+            std::cout << "COMM THD: Something went wrong on node: " << params.myid << endl;
         }
 
         /* Check if everything is successful */
         if (status != SLM_SUCCESS)
         {
             /* Should never reach here */
-            cout << "Status from Comm. Thread: " << status << " on node: "
+            std::cout << "Status from Comm. Thread: " << status << " on node: "
                  << params.myid << endl;
 
-            cout << "Aborting..." << endl;
+            std::cout << "Aborting..." << endl;
 
             break;
         }
@@ -1087,6 +1106,7 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv)
 VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 {
     STATUS status = SLM_SUCCESS;
+    UINT qfid_lcl = 0;
     auto start = chrono::system_clock::now();
     auto end   = chrono::system_clock::now();
     chrono::duration<double> elapsed_seconds = end - start;
@@ -1133,7 +1153,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
             /* lock the query file */
             sem_wait(&qfilelock);
 
-            UINT qfid_lcl = qfid;
+            qfid_lcl = qfid;
 
             /* Check if anymore queryfiles */
             if (qfid_lcl < queryfiles.size())
@@ -1158,12 +1178,12 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
                 Query = new MSQuery;
 
                 /* Initialize Query MS/MS file */
-                status = Query->InitQueryFile(&queryfiles[qfid_lcl]);
+                status = Query->InitQueryFile(&queryfiles[qfid_lcl], qfid_lcl);
 #ifndef DIAGNOSE
                 if (params.myid == 1)
                 {
-                    cout << "\nQuery File: " << queryfiles[qfid_lcl] << endl;
-                    cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                    std::cout << "\nQuery File: " << queryfiles[qfid_lcl] << endl;
+                    std::cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
                 }
 #endif /* DIAGNOSE */
 
@@ -1238,7 +1258,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
             if (params.nodes > 1)
             {
                 /* Add an entry of the added buffer to the CommHandle */
-                status = CommHandle->AddBufferEntry(ioPtr->numSpecs);
+                status = CommHandle->AddBufferEntry(ioPtr->numSpecs, Query->getQfileIndex());
             }
 
             /* Lock the ready queue */
@@ -1263,8 +1283,8 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 #ifndef DIAGNOSE
             if (params.myid == 0)
             {
-                cout << "\nExtracted Spectra :\t\t" << ioPtr->numSpecs << endl;
-                cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                std::cout << "\nExtracted Spectra :\t\t" << ioPtr->numSpecs << endl;
+                std::cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
             }
 #endif /* DIAGNOSE */
 
@@ -1280,10 +1300,10 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
                 }
             }
         }
-		else
-		{
-            cout << "ALERT: IOTHD @" << params.myid << endl;
-		}
+        else
+        {
+            std::cout << "ALERT: IOTHD @" << params.myid << endl;
+        }
     }
 
     /* Check if we ran out of files */

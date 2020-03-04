@@ -35,6 +35,7 @@ VOID DSLIM_Comm::InitRx()
     /* We may need N-1 RxRequests at any time */
     RxRqsts = new MPI_Request[params.nodes - 1];
 
+    /* Status variables for RxRqsts */
     RxStat = new INT[params.nodes - 1];
 
     for (UINT jj = 0; jj < params.nodes - 1; jj++)
@@ -104,6 +105,15 @@ DSLIM_Comm::DSLIM_Comm()
     /* However may can fit in the RXBUFFERSIZE memory */
     rxbuffsize = RXBUFFERSIZE / (QCHUNK * sizeof(partRes));
 
+    /* Initialize the sizeArray and fileArray */
+    sizeArray = new INT[rxbuffsize];
+
+    fileArray = new INT[rxbuffsize];
+
+    sizeOffset  = 0;
+
+    /* Product rxbuffsize by QCHUNK
+     * to get max num spectra */
     rxbuffsize *= QCHUNK;
 
     /* Initialize the wakeup signal to zero */
@@ -145,10 +155,39 @@ DSLIM_Comm::~DSLIM_Comm()
 
     Wake4mIO = false;
 
+    sizeOffset = 0;
+
     /* Destroy semaphores */
     sem_destroy(&wakeup);
 
     sem_destroy(&control);
+
+/*
+    if (sizeArray != NULL)
+    {
+        delete[] sizeArray;
+
+        sizeArray = NULL;
+    }
+
+    if (fileArray != NULL)
+    {
+        delete[] fileArray;
+
+        fileArray = NULL;
+    }
+
+    * Deallocate the Rx array *
+    if (rxArr != NULL)
+    {
+        delete[] rxArr;
+        rxArr = NULL;
+    }
+*/
+
+    sizeArray = NULL;
+    fileArray = NULL;
+    rxArr = NULL;
 
     /* Destroy the Rx queue */
     if (rxQueue != NULL)
@@ -156,13 +195,6 @@ DSLIM_Comm::~DSLIM_Comm()
         delete rxQueue;
 
         rxQueue  = NULL;
-    }
-
-    /* Deallocate the Rx array */
-    if (rxArr != NULL)
-    {
-        delete[] rxArr;
-        rxArr = NULL;
     }
 
     /* Deallocate the txArrays */
@@ -196,7 +228,6 @@ DSLIM_Comm::~DSLIM_Comm()
 
     /* Decommit the MPI DataTypes */
     FreeComm_DataTypes();
-
 }
 
 STATUS DSLIM_Comm::InitComm_DataTypes()
@@ -237,7 +268,7 @@ STATUS DSLIM_Comm::Tx(INT batchtag, INT batchsize, INT buff)
     TxStat[buff] = 0;
 
 #ifdef DIAGNOSE
-    cout << "TX DONE: " << batchtag << " " << params.myid << "->" << (batchtag % params.nodes) << ", BUFF:" << buff << endl;
+    cout << "TXDONE: " << batchtag << " " << params.myid << "->" << (batchtag % params.nodes) << ", BUFF:" << buff << endl;
 #endif /* DIAGNOSE */
 
     return status;
@@ -254,7 +285,7 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
 
 #ifdef DIAGNOSE
     /* Print the diagnostics */
-    cout << "RXINIT: " << batchtag << " @node: " << params.myid << endl;
+    cout << "RX: " << batchtag << " @node: " << params.myid << endl;
 #endif /* DIAGNOSE */
 
     /* Lock the rxArray */
@@ -296,7 +327,9 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
     /* Unlock the rxArray */
     sem_post(&rxLock);
 
-    //cout << "IRECV: " << batchtag << " @node: " << params.myid << endl;
+#ifdef DIAGNOSE
+    cout << "iRECV: " << batchtag << " @node: " << params.myid << endl;
+#endif /* DIAGNOSE */
 
     /* Wait for all Rx to complete */
     for (;cumulative != (INT)params.nodes -1; usleep(500000))
@@ -305,7 +338,14 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
         {
             if (!RxStat[rqst])
             {
-                status = MPI_Test(RxRqsts + rqst, &RxStat[rqst], MPI_STATUS_IGNORE);
+                try
+                {
+                    status = MPI_Test(RxRqsts + rqst, &RxStat[rqst], MPI_STATUS_IGNORE);
+                }
+                catch (std::exception& e)
+                {
+                    std::cerr << "FATAL: Excepting in RX MPI_Test: " << e.what() << " on: " << params.myid << endl;
+                }
 
                 if (RxStat[rqst])
                 {
@@ -323,12 +363,15 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
     return status;
 }
 
-/* An event is detected when the wakeup semaphore is signaled */
 STATUS DSLIM_Comm::Wait4Event()
 {
+    /* An event is detected when the
+     * wakeup semaphore is signaled
+     */
     return sem_wait(&wakeup);
 }
 
+#if 0
 STATUS DSLIM_Comm::Wait4Rx()
 {
     STATUS status = MPI_SUCCESS;
@@ -354,7 +397,6 @@ STATUS DSLIM_Comm::CheckRx()
 {
     STATUS status = MPI_SUCCESS;
 
-#if 0
     UINT cumulate = 0;
 
     /* Check the Rx status */
@@ -396,10 +438,11 @@ STATUS DSLIM_Comm::CheckRx()
 
         sem_post(&control);
     }
-#endif
+
 
     return status;
 }
+#endif
 
 STATUS DSLIM_Comm::SignalExit()
 {
@@ -526,7 +569,7 @@ BOOL DSLIM_Comm::checkMismatch()
     return state;
 }
 
-STATUS DSLIM_Comm::AddBufferEntry(INT bsize)
+STATUS DSLIM_Comm::AddBufferEntry(INT bsize, INT fno)
 {
     STATUS status = SLM_SUCCESS;
 
@@ -535,6 +578,10 @@ STATUS DSLIM_Comm::AddBufferEntry(INT bsize)
     {
         /* Push the batchsize to the rxQueue */
         rxQueue->push(bsize);
+
+        /* Add the size to sizeArray */
+        sizeArray[sizeOffset] = bsize;
+        fileArray[sizeOffset++] = fno;
 
         sem_wait(&control);
 
@@ -564,7 +611,14 @@ partRes *DSLIM_Comm::getTxBuffer(INT batchtag, INT batchsize, INT &buffer)
         {
             if (!TxStat[lbuff])
             {
-                MPI_Test(TxRqsts + lbuff, &TxStat[lbuff], MPI_STATUS_IGNORE);
+                try
+                {
+                    MPI_Test(TxRqsts + lbuff, &TxStat[lbuff], MPI_STATUS_IGNORE);
+                }
+                catch (std::exception& e)
+                {
+                    std::cerr << "FATAL: Excepting in TX MPI_Test: " << e.what() << " on: " << params.myid << endl;
+                }
             }
             else
             {
@@ -574,68 +628,13 @@ partRes *DSLIM_Comm::getTxBuffer(INT batchtag, INT batchsize, INT &buffer)
 
         buffer = lbuff;
         ptr = txArr[lbuff];
-
-#if 0
-        /* Wait for an empty buffer */
-        for (;;)
-        {
-            //cout << "MPI_Test@: " << params.myid << endl;
-
-            /* Loop through all available buffers */
-            for (INT cnt = 0; cnt < TXARRAYS; cnt++, buff= ((buff+1) % TXARRAYS))
-            {
-                /* Only check if it's not available by status */
-                if (!TxStat[buff])
-                {
-                    MPI_Test(TxRqsts + buff, &TxStat[buff], MPI_STATUS_IGNORE);
-
-                    if (TxStat[buff])
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    break;
-                }
-
-            }
-            //cout << "MPI_Done@: " << params.myid << endl;
-
-            /* Check again if really empty */
-            if (TxStat[buff])
-            {
-                /* Set the return pointer to txArr[buff] */
-                ptr = txArr[buff];
-
-                /* Set the TxStat to false - Used henceforth */
-                TxStat[buff] = false;
-
-                buffer = buff;
-
-                break;
-            }
-
-            /* Check for any Rx meanwhile */
-            this->SignalWakeup();
-
-            /* No free buffer found - Wait 500ms */
-            sleep(0.5);
-        }
-#endif /* 0 */
     }
     else
     {
         sem_wait(&rxLock);
 
-        try
-        {
         /* Set the offset to this */
-        ptr = rxArr + currRxOffset;}
-        catch (std::exception& e)
-        {
-            std::cerr << "Exception caught : " << e.what() << " on: " << params.myid << endl;
-        }
+        ptr = rxArr + currRxOffset;
 
         /* Update the currRxOffset */
         currRxOffset += batchsize;
@@ -643,8 +642,7 @@ partRes *DSLIM_Comm::getTxBuffer(INT batchtag, INT batchsize, INT &buffer)
         sem_post(&rxLock);
     }
 
-    //cout << "GOTTxBuffer: " << params.myid << " BATCH: " << batchtag << endl;
-
+    /* Return the ptr */
     return ptr;
 }
 
@@ -652,10 +650,11 @@ STATUS DSLIM_Comm::Wait4Completion()
 {
     STATUS status = SLM_SUCCESS;
 
-    /* Wait until there is no mismatch
-     * i.e. Rx is complete
+    /* Wait until all Tx
+     * and Rx is complete
      */
     INT cumulate = 0;
+
     BOOL txDone = false;
 
     BOOL rxDone = false;
@@ -682,21 +681,27 @@ STATUS DSLIM_Comm::Wait4Completion()
                     cumulate++;
                 }
             }
-
+            /* Is all Tx done? */
             if (cumulate == TXARRAYS)
             {
                 txDone = true;
             }
         }
-
+        /* Is all Rx done? */
         if (checkEndCondition())
         {
             rxDone = true;
         }
-
     }
 
     return status;
+}
+
+INT DSLIM_Comm::getRxBufferSize()
+{
+
+    return this->rxbuffsize;
+
 }
 
 #endif /* DISTMEM */

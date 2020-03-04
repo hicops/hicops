@@ -29,12 +29,12 @@
 //#undef _OPENMP
 
 /* Manually switch MPI */
-//#define DISTMEM
+//#undef DISTMEM
+
+//#define DIAGNOSE
 
 /* Switch the benchmarking */
 //#define BENCHMARK
-
-//#define DIAGNOSE
 
 #define MAX_SEQ_LEN              60
 

@@ -34,6 +34,7 @@ MSQuery::MSQuery()
     curr_chunk = 0;
     running_count = 0;
     spectrum.intn = NULL;
+    qfileIndex = 0;
     spectrum.mz = NULL;
     spectrum.SpectrumSize = 0;
     spectrum.prec_mz = 0;
@@ -45,6 +46,7 @@ MSQuery::~MSQuery()
     currPtr = 0;
     QAcount = 0;
     nqchunks = 0;
+    qfileIndex = 0;
     curr_chunk = 0;
     running_count = 0;
     maxslen = 0;
@@ -89,7 +91,7 @@ MSQuery::~MSQuery()
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS MSQuery::InitQueryFile(STRING *filename)
+STATUS MSQuery::InitQueryFile(STRING *filename, INT fno)
 {
     STATUS status = SLM_SUCCESS;
 
@@ -157,7 +159,7 @@ STATUS MSQuery::InitQueryFile(STRING *filename)
             curr_chunk = 0;
             running_count = 0;
             nqchunks = std::ceil(((double) QAcount / QCHUNK));
-
+            qfileIndex = fno;
             maxslen = largestspec;
 
             /* Initialize to largest spectrum in file */
@@ -448,6 +450,7 @@ STATUS MSQuery::DeinitQueryFile()
     nqchunks = 0;
     curr_chunk = 0;
     running_count = 0;
+    qfileIndex = 0;
     maxslen = 0;
 
     if (qfile != NULL)
@@ -493,10 +496,15 @@ MSQuery& MSQuery::operator=(const MSQuery &rhs)
     this->qfile = rhs.qfile;
     this->running_count = rhs.running_count;
     this->spectrum = rhs.spectrum;
+    this->qfileIndex = rhs.qfileIndex;
 
     return *this;
 }
 
+UINT MSQuery::getQfileIndex()
+{
+    return qfileIndex;
+}
 
 UINT MSQuery::getQAcount()
 {

@@ -421,33 +421,6 @@ STATUS Scheduler::runManager(DOUBLE yt, INT dec)
     return status;
 }
 
-#if 0
-STATUS Scheduler::runManager(DOUBLE yt, INT qchunk)
-{
-    STATUS status = SLM_SUCCESS;
-
-    // FIXME: The max qchunk size can be 50000 = 2.5
-    DOUBLE dS = qchunk / QCHUNK;
-
-    /* Use double exponential smoothing forecasting
-     * (LASP) to predict future */
-    (VOID) this->forecastLASP(yt, dS);
-
-    sem_wait(&manage);
-
-    /* Make decisions */
-    if (this->makeDecisions(yt))
-    {
-        status = dispatchThread();
-        waitSincelast = 0;
-    }
-
-    sem_post(&manage);
-
-    return status;
-}
-#endif
-
 INT Scheduler::getNumActivThds()
 {
     sem_wait(&manage);

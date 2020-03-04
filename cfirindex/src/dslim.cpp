@@ -394,7 +394,7 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
             {
                 /* Fill zeros for illegal peptides
                  * FIXME: Should not be filled into the chunk
-                 *        and be removed from SPI as well
+                 *  and be removed from peptide index as well
                  */
                 std::memset(&SpecArr[nfilled], 0x0, sizeof(UINT) * speclen);
                 bAPtr[0] += speclen; // Update the BA counter
@@ -528,7 +528,8 @@ STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs)
         for (UINT thd = 0; thd < params.threads; thd++)
         {
             Score[thd].byc = new BYC[sAize];
-            memset(Score[thd].byc, 0x0, 2 * sizeof(UCHAR) * sAize);
+            memset(Score[thd].byc, 0x0, 2 * sizeof(USHORT) * sAize);
+
             Score[thd].ibyc = new iBYC[sAize];
             memset(Score[thd].ibyc, 0x0, 2 * sizeof(UINT) * sAize);
 
@@ -780,8 +781,17 @@ STATUS DSLIM_Deinitialize(Index *index)
 {
     STATUS status = SLM_SUCCESS;
 
-    status = DSLIM_DeallocateSC();
+    /* Deallocate the Ion Index */
+    status = DSLIM_DeallocateIonIndex(index);
 
+    /* Deallocate the peptide index */
+    status = DSLIM_DeallocatePepIndex(index);
+
+    return status;
+}
+
+STATUS DSLIM_DeallocateIonIndex(Index *index)
+{
     /* Deallocate all the DSLIM chunks */
     for (UINT chno = 0; chno < index->nChunks; chno++)
     {
@@ -806,6 +816,18 @@ STATUS DSLIM_Deinitialize(Index *index)
         index->ionIndex = NULL;
     }
 
+    /* Set the chunking to zero */
+    index->nChunks = 0;
+    index->chunksize = 0;
+    index->lastchunksize = 0;
+
+    /* Nothing really to return
+     * so success */
+    return SLM_SUCCESS;
+}
+
+STATUS DSLIM_DeallocatePepIndex(Index *index)
+{
     if (index->pepEntries != NULL)
     {
         delete[] index->pepEntries;
@@ -818,26 +840,25 @@ STATUS DSLIM_Deinitialize(Index *index)
         index->pepIndex.seqs = NULL;
     }
 
-    /* Reset Index Variables */
-    index->nChunks = 0;
+    /* Reset peptide Index Variables */
     index->pepCount = 0;
     index->modCount = 0;
     index->totalCount = 0;
-    index->chunksize = 0;
-    index->lastchunksize = 0;
 
     index->pepIndex.AAs = 0;
     index->pepIndex.peplen = 0;
 
-    return status;
+    /* Nothing really to return
+     * so success */
+    return SLM_SUCCESS;
 }
 
 STATUS DSLIM_DeallocateSpecArr()
 {
-
 #ifdef BENCHMARK
     duration = omp_get_wtime();
 #endif
+
     if (SpecArr != NULL)
     {
         delete[] SpecArr;
@@ -847,6 +868,49 @@ STATUS DSLIM_DeallocateSpecArr()
 #ifdef BENCHMARK
     memory += omp_get_wtime() - duration;
 #endif
+
+    /* Nothing really to return
+     * so success */
+    return SLM_SUCCESS;
+}
+
+/*
+ * FUNCTION: DSLIM_DeallocateSC
+ *
+ * DESCRIPTION:
+ *
+ * INPUT:
+ * none
+ *
+ * OUTPUT:
+ * @status: status of execution
+ */
+STATUS DSLIM_DeallocateSC()
+{
+    /* Free the Scorecard memory */
+    if (Score != NULL)
+    {
+        for (UINT thd = 0; thd < params.threads; thd++)
+        {
+            delete[] Score[thd].byc;
+            delete[] Score[thd].ibyc;
+            /*
+            delete[] Score[thd].res.survival;
+            delete[] Score[thd].res.xaxis;
+             */
+            Score[thd].byc = NULL;
+            Score[thd].ibyc = NULL;
+            /*
+            Score[thd].res.survival = NULL;
+            Score[thd].res.xaxis = NULL;
+            */
+        }
+/*
+        delete[] Score;
+        Score = NULL;
+*/
+    }
+
     return SLM_SUCCESS;
 }
 

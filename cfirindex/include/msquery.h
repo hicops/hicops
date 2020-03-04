@@ -58,6 +58,7 @@ private:
     UINT running_count;
     UINT maxslen;
     std::ifstream *qfile;
+    UINT qfileIndex;
     STRING *MS2file;
     Spectrum spectrum;
 
@@ -69,11 +70,11 @@ public:
     MSQuery();
     virtual ~MSQuery();
     UINT getQAcount();
-    STATUS InitQueryFile(STRING *filename);
+    STATUS InitQueryFile(STRING *filename, INT fno);
     STATUS ExtractQueryChunk(UINT count, Queries *expSpecs, INT &rem);
     STATUS DeinitQueryFile();
     BOOL isDeInit();
-
+    UINT getQfileIndex();
     MSQuery &operator=(const MSQuery &rhs);
 
 };
