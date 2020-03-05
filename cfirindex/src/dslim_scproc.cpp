@@ -94,13 +94,23 @@ STATUS DSLIM_DistScoreManager()
         /* Distributed Scoring Algorithm */
         if (status == SLM_SUCCESS)
         {
-            status = ScoreHandle->ComputeDistScores();
+            status = ScoreHandle->ComputegGumbalDistribution();
+
+            if (params.myid == 0)
+            {
+                cout << endl << "ComputegGumbal with status:\t" << status << endl;
+            }
         }
 
         /* Scatter the key-values to all machines */
         if (status == SLM_SUCCESS)
         {
             status = ScoreHandle->ScatterScores();
+
+            if (params.myid == 0)
+            {
+                cout << "ScatterScores with status:\t" << status << endl;
+            }
         }
 
         if (status == SLM_SUCCESS)
@@ -112,6 +122,11 @@ STATUS DSLIM_DistScoreManager()
         if (status == SLM_SUCCESS)
         {
             status = ScoreHandle->DisplayResults();
+
+            if (params.myid == 0)
+            {
+                cout << "DisplayResults with status:\t" << status << endl;
+            }
         }
 
         if (status == SLM_SUCCESS)

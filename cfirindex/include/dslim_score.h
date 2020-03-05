@@ -66,7 +66,7 @@ public:
     DSLIM_Score(BData *bd);
     virtual  ~DSLIM_Score();
 
-    STATUS   ComputeDistScores();
+    STATUS   ComputegGumbalDistribution();
 
     STATUS   ScatterScores();
 

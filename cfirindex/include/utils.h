@@ -230,6 +230,10 @@ FLOAT UTILS_CalculateModMass(AA *seq, UINT len, UINT vModInfo);
  */
 FLOAT UTILS_GenerateModSpectrum(CHAR *seq, UINT len, UINT *Spectrum, modAA modInfo);
 
+STATUS UTILS_ModelSurvivalFunction(Results *resPtr);
+
+STATUS UTILS_ModelpGumbalDistribution(Results *resPtr);
+
 void UTILS_LinearRegression(INT n, DOUBLE x[], DOUBLE y[], DOUBLE &a, DOUBLE &b);
 
 #endif /* VMODS */

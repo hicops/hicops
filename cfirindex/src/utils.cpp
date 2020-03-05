@@ -33,10 +33,8 @@
 /* Not an Amino Acid (NAA) mass */
 #define NAA                      -20000
 
-#ifdef VMODS
 /* Global Mods Info  */
 SLM_vMods      gModInfo;
-#endif /* VMODS */
 
 extern gParams params;
 
@@ -307,8 +305,6 @@ FLOAT UTILS_CalculatePepMass(AA *seq, UINT len)
     return mass;
 }
 
-#ifdef VMODS
-
 /*
  * FUNCTION: UTILS_InitializeModInfo
  *
@@ -508,7 +504,205 @@ FLOAT UTILS_GenerateModSpectrum(CHAR *seq, UINT len, UINT *Spectrum, modAA modIn
     return mass;
 }
 
-#endif /* VMODS */
+/*
+ * FUNCTION: UTILS_ModelSurvivalFunction
+ *
+ * DESCRIPTION: Model Gumbal distribution
+ *              for shared memory execution.
+ *
+ * INPUT:
+ * @resPtr: candidate PSMs handle
+ *
+ * OUTPUT:
+ * @status: Status of execution
+ */
+STATUS UTILS_ModelSurvivalFunction(Results *resPtr)
+{
+    STATUS status = SLM_SUCCESS;
+
+    /* Total size and tailends */
+    UINT N = resPtr->cpsms;
+    /* Copy the slope and bias into local variables */
+    DOUBLE slope = resPtr->weight;
+    DOUBLE bias = resPtr->bias;
+
+    /* Histogram pointer */
+    DOUBLE *histogram = resPtr->survival;
+    const INT histosize = 2 + (MAX_HYPERSCORE * 10);
+
+    /* The extracted tail */
+    DOUBLE *tail = NULL;
+    DOUBLE *axis = NULL;
+    INT tailsize = 0;
+
+    /* Loop indexing variable */
+    INT ii = 0;
+
+    /* Construct the model */
+
+    /* Initialize the max hyperscore */
+    for (ii = histosize - 1; ii > 0; ii--)
+    {
+        if (histogram[ii] > 0)
+        {
+            resPtr->maxhypscore = ii;
+            ii--;
+            break;
+        }
+    }
+
+    /* Initialize nexthypscore */
+    for (; ii > 0; ii--)
+    {
+        if (histogram[ii] > 0)
+        {
+            resPtr->nexthypscore = ii;
+            break;
+        }
+    }
+
+    /* Initialize minhypscore */
+    for (ii = 1; ii < resPtr->nexthypscore; ii++)
+    {
+        if (histogram[ii] > 0)
+        {
+            resPtr->minhypscore = ii;
+            break;
+        }
+    }
+
+    UINT cumulative = 0;
+
+    /* Choosing the kneePt and endPt to be
+     * at 70.7% and 99.5% respectively */
+    UINT kneePt = N - (UINT)((float)N * 0.707);
+    UINT endPt = (UINT)((float)N * 0.995);
+
+    /* Compute the number of samples between min and next */
+    for (ii = resPtr->minhypscore; ii < resPtr->nexthypscore; ii++)
+    {
+        cumulative += histogram[ii];
+
+        /* Mark the lower end of the tail.
+         * Set the minhypscore at kneepoint */
+        if (cumulative >= kneePt)
+        {
+            if (ii > resPtr->minhypscore)
+            {
+                resPtr->minhypscore = ii;
+            }
+
+            break;
+        }
+    }
+
+#ifndef ANALYSIS
+    /* Set the nexthypscore at endPt: ~99.5% */
+    cumulative = N;
+
+    for (ii = resPtr->maxhypscore; ii >= resPtr->minhypscore; ii--)
+    {
+        cumulative -= histogram[ii];
+
+        /* Mark the upper end of tail */
+        if (cumulative <= endPt)
+        {
+            if (ii < resPtr->nexthypscore)
+            {
+                resPtr->nexthypscore = ii;
+            }
+
+            break;
+        }
+    }
+#endif /* ANALYSIS */
+
+    /* If both ends at the same point,
+     * set the upper end.
+     */
+    if (resPtr->nexthypscore <= resPtr->minhypscore)
+    {
+        resPtr->nexthypscore = MIN (resPtr->maxhypscore - 1, resPtr->minhypscore + 1);
+    }
+
+    /* Construct s(x) = 1 - CDF in [minhyp, nexthyp] */
+    UINT count = histogram[resPtr->nexthypscore];
+
+    for (ii = resPtr->nexthypscore - 1; ii >= resPtr->minhypscore; ii--)
+    {
+        UINT tmpcount = histogram[ii];
+
+        cumulative -= tmpcount;
+        histogram[ii] = (count + histogram[ii + 1]);
+        count = tmpcount;
+    }
+
+    /* Construct log_10(s(x)) */
+    for (ii = resPtr->minhypscore; ii <= resPtr->nexthypscore; ii++)
+    {
+        histogram[ii] = log10(histogram[ii] / N);
+    }
+
+    /* Set the tailPtr, score axis and tail size */
+    tail     = histogram + resPtr->minhypscore;
+    axis     = resPtr->xaxis + resPtr->minhypscore;
+    tailsize = resPtr->nexthypscore - resPtr->minhypscore + 1;
+
+    /*
+     * Perform linear regression (least sq. error)
+     * on tail curve and find slope (m) and bias (b)
+     */
+    (VOID) UTILS_LinearRegression(tailsize, axis, tail, slope, bias);
+
+    /* Assign back from local variables */
+    resPtr->weight = slope;
+    resPtr->bias   =  bias;
+
+    /* Return the status */
+    return status;
+}
+
+/*
+ * FUNCTION: UTILS_ModelpGumbalDistribution
+ *
+ * DESCRIPTION: Model partial Gumbal distribution
+ *              for distributed memory exeuction.
+ *
+ * INPUT:
+ * @resPtr: candidate PSMs handle
+ *
+ * OUTPUT:
+ * @status: status of execution
+ */
+STATUS UTILS_ModelpGumbalDistribution(Results *resPtr)
+{
+    return UTILS_ModelSurvivalFunction(resPtr);
+}
+
+/*
+ * FUNCTION: __wrap_memcpy
+ *
+ * DESCRIPTION: Wrapper function for memcpy@GLIBC2.2.5
+ *
+ * INPUT:
+ * @dest: destination ptr
+ * @src : source ptr
+ * @size: size in bytes
+ *
+ * OUTPUT: none
+ */
+extern "C"
+{
+#if __GNUC__ < 5
+/* some systems do not have newest memcpy@GLIBC_2.14 - stay with v2.2.5 */
+asm (".symver memcpy, memcpy@GLIBC_2.2.5");
+#endif /* __GNUC__ */
+
+void *__wrap_memcpy(void *dest, const void *src, size_t n)
+{
+    return memcpy(dest, src, n);
+}
+}
 
 //****************************************************************************
 //
@@ -595,17 +789,4 @@ void UTILS_LinearRegression(INT n, DOUBLE x[], DOUBLE y[], DOUBLE &a, DOUBLE &b)
     b = ybar - a * xbar;
 
     return;
-}
-
-extern "C"
-{
-#if __GNUC__ < 5
-/* some systems do not have newest memcpy@@GLIBC_2.14 - stay with old good one */
-asm (".symver memcpy, memcpy@GLIBC_2.2.5");
-#endif /* __GNUC__ */
-
-void *__wrap_memcpy(void *dest, const void *src, size_t n)
-{
-    return memcpy(dest, src, n);
-}
 }

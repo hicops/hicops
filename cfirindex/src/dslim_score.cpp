@@ -256,12 +256,82 @@ DSLIM_Score::~DSLIM_Score()
     return;
 }
 
-STATUS DSLIM_Score::ComputeDistScores()
+STATUS DSLIM_Score::ComputegGumbalDistribution()
 {
     STATUS status = SLM_SUCCESS;
 
-    /* TODO: Implement here */
-    /* Take care of this during merging stage */
+    /* Initial running count */
+    INT currCount = 0;
+
+    /* Starting position */
+    INT startPos  = 0;
+
+    /* Initial batch number */
+    INT batchNum  = 0;
+
+    /* Each node sent its sample */
+    const INT nSamples = params.nodes;
+
+    cout << "Total RX'ed Spectra: " << myRXsize << endl;
+
+#ifdef _OPENMP
+#pragma omp parallel for schedule (dynamic, 1) num_threads(params.threads) \
+                         private (currCount, batchNum, startPos)
+#endif /* _OPENMP */
+    for (INT spec = 0; spec < this->myRXsize; spec++)
+    {
+        /* My thread number */
+        INT thno = omp_get_thread_num();
+
+        /* Results pointer to use */
+        Results *rPtr = &this->scPtr[thno].res;
+
+        /* Calculate the batchNum that spec belongs to */
+        for (;spec >= (currCount + sizeArray[batchNum]) && batchNum < this->nBatches;)
+        {
+            if (spec >= (currCount + sizeArray[batchNum]))
+            {
+                break;
+            }
+
+            currCount += sizeArray[batchNum];
+            startPos  += sizeArray[batchNum] * nSamples;
+
+            /* Update the batchNumber */
+            batchNum  += 1;
+        }
+
+        /* Compute the spectrum index in rxArray */
+        INT specIDX  = startPos + spec;
+
+        /* Compute the stride in rxArray */
+        INT stride = sizeArray[batchNum];
+
+        /* For all samples, update the histogram */
+        for (INT sno = 0; sno < nSamples; sno++)
+        {
+            /* Pointer to Result sample */
+            partRes *sResult = resPtr + (specIDX + (stride * sno));
+
+            if (specIDX + (stride * sno) >= (this->myRXsize * nSamples))
+            {
+                cout << "MoFo@: " << params.myid << " sIDX: " << specIDX << " bNO: " << batchNum << endl;
+                break;
+            }
+
+            try
+            {
+                //cout << "PTR: " << (void *)sResult << endl;
+                partRes rr = *sResult;
+            }
+            catch (std::exception& e)
+            {
+                std::cout << "FATAL: Excepting in RX MPI_Test: " << e.what() << " on: " << params.myid << endl;
+            }
+
+        }
+
+    }
 
     /* FIXME Only stub implementation */
     for (UINT jj = 0; jj < params.nodes - 1; jj++)

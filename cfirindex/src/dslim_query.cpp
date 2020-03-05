@@ -626,9 +626,8 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 /* FIXME: How to set the params.min_cpsm in dist mem? */
                 if (resPtr->cpsms > 1 /*params.min_cpsm*/)
                 {
-                    /* Compute expect score if there
-                     * are any candidate PSMs */
-                    status = DSLIM_ModelSurvivalFunction(resPtr);
+                    /* Compute the partial Gumbal distribution */
+                    status = UTILS_ModelpGumbalDistribution(resPtr);
 
                     /* Fill in the Tx array cells */
                     txArray[queries].b = (INT)(resPtr->bias * 1000);
@@ -655,7 +654,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 
                     /* Compute expect score if there
                      * are any candidate PSMs */
-                    status = DSLIM_ModelSurvivalFunction(resPtr);
+                    status = UTILS_ModelSurvivalFunction(resPtr);
 
                     /* Estimate the log (s(x)); x = log(hyperscore) */
                     DOUBLE lgs_x = resPtr->weight * (psm.hyperscore * 10 + 0.5) + resPtr->bias;
@@ -865,157 +864,7 @@ static INT DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max)
 
 }
 
-STATUS DSLIM_ModelSurvivalFunction(Results *resPtr)
-{
-    STATUS status = SLM_SUCCESS;
-
-    /* Total size and tailends */
-    UINT N = resPtr->cpsms;
-
-    /* Choosing the kneePt and endPt to be
-     * at 70.7% aspectrumIDnd 99% respectively */
-    UINT kneePt = N - (UINT)((float)N * 0.707);
-
-#ifndef ANALYSIS
-    UINT endPt = (UINT)((float)N * 0.995);
-#endif /* ANALYSIS */
-
-    /* Copy the slope and bias into local variables */
-    DOUBLE slope = resPtr->weight;
-    DOUBLE bias = resPtr->bias;
-
-    /* Histogram pointer */
-    DOUBLE *histogram = resPtr->survival;
-    const INT histosize = 2 + (MAX_HYPERSCORE * 10);
-
-    /* The extracted tail */
-    DOUBLE *tail = NULL;
-    DOUBLE *axis = NULL;
-    INT tailsize = 0;
-
-    /* Loop indexing variable */
-    INT ii = 0;
-
-    /* Construct the model */
-
-    /* Initialize the max hyperscore */
-    for (ii = histosize - 1; ii > 0; ii--)
-    {
-        if (histogram[ii] > 0)
-        {
-            resPtr->maxhypscore = ii;
-            ii--;
-            break;
-        }
-    }
-
-    /* Initialize nexthypscore */
-    for (; ii > 0; ii--)
-    {
-        if (histogram[ii] > 0)
-        {
-            resPtr->nexthypscore = ii;
-            break;
-        }
-    }
-
-    /* Initialize minhypscore */
-    for (ii = 0; ii < resPtr->nexthypscore; ii++)
-    {
-        if (histogram[ii] > 0)
-        {
-            resPtr->minhypscore = ii;
-            break;
-        }
-    }
-
-    /* Set the minhypscore at kneepoint: ~ 70.7% */
-    UINT cumulative = 0;
-
-    for (ii = resPtr->minhypscore; ii < resPtr->nexthypscore; ii++)
-    {
-        cumulative += histogram[ii];
-
-        /* Mark the lower end of the tail */
-        if (cumulative >= kneePt)
-        {
-            if (ii > resPtr->minhypscore)
-            {
-                resPtr->minhypscore = ii;
-            }
-
-            break;
-        }
-    }
-
-#ifndef ANALYSIS
-    /* Set the nexthypscore at endPt: ~99.5% */
-    cumulative = N;
-
-    for (ii = resPtr->maxhypscore; ii >= resPtr->minhypscore; ii--)
-    {
-        cumulative -= histogram[ii];
-
-        /* Mark the upper end of tail */
-        if (cumulative <= endPt)
-        {
-            if (ii < resPtr->nexthypscore)
-            {
-                resPtr->nexthypscore = ii;
-            }
-
-            break;
-        }
-    }
-#endif /* ANALYSIS */
-
-    /* If both ends at the same point,
-     * set the upper end to maxhypscore
-     */
-    if (resPtr->nexthypscore <= resPtr->minhypscore)
-    {
-        resPtr->nexthypscore = resPtr->maxhypscore - 1;
-    }
-
-    /* Construct s(x) = 1 - CDF in [minhyp, nexthyp] */
-    UINT count = histogram[resPtr->nexthypscore];
-
-    for (ii = resPtr->nexthypscore - 1; ii >= resPtr->minhypscore; ii--)
-    {
-        UINT tmpcount = histogram[ii];
-
-        cumulative -= tmpcount;
-        histogram[ii] = (count + histogram[ii + 1]);
-        count = tmpcount;
-    }
-
-    /* Construct log_10(s(x)) */
-    for (ii = resPtr->minhypscore; ii <= resPtr->nexthypscore; ii++)
-    {
-        histogram[ii] = log10(histogram[ii] / N);
-    }
-
-    /* Set the tailPtr, score axis and tail size */
-    tail     = histogram + resPtr->minhypscore;
-    axis     = resPtr->xaxis + resPtr->minhypscore;
-    tailsize = resPtr->nexthypscore - resPtr->minhypscore + 1;
-
-    /*
-     * Perform linear regression (least sq. error)
-     * on tail curve and find slope (m) and bias (b)
-     */
-    (VOID) UTILS_LinearRegression(tailsize, axis, tail, slope, bias);
-
-    /* Assign back from local variables */
-    resPtr->weight = slope;
-    resPtr->bias   =  bias;
-
-    /* Return the status */
-    return status;
-}
-
 #ifdef DISTMEM
-
 /*
  * FUNCTION: Comm_Thread_Entry
  *
