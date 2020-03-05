@@ -110,6 +110,10 @@ DSLIM_Comm::DSLIM_Comm()
 
     fileArray = new INT[rxbuffsize];
 
+    indxArray = new INT[rxbuffsize];
+
+    cumulate = 0;
+
     sizeOffset  = 0;
 
     /* Product rxbuffsize by QCHUNK
@@ -147,6 +151,8 @@ DSLIM_Comm::~DSLIM_Comm()
 
     rxbuffsize = 0;
 
+    cumulate = 0;
+
     nBatches = 0;
 
     mismatch = 0;
@@ -175,6 +181,12 @@ DSLIM_Comm::~DSLIM_Comm()
         delete[] fileArray;
 
         fileArray = NULL;
+    }
+
+    if (indxArray != NULL)
+    {
+        delete[] indxArray;
+        indxArray = NULL;
     }
 
     * Deallocate the Rx array *
@@ -581,7 +593,10 @@ STATUS DSLIM_Comm::AddBufferEntry(INT bsize, INT fno)
 
         /* Add the size to sizeArray */
         sizeArray[sizeOffset] = bsize;
-        fileArray[sizeOffset++] = fno;
+        fileArray[sizeOffset] = fno;
+        indxArray[sizeOffset] = cumulate;
+
+        sizeOffset++;
 
         sem_wait(&control);
 
@@ -594,6 +609,9 @@ STATUS DSLIM_Comm::AddBufferEntry(INT bsize, INT fno)
 
     /* Increment the batch number */
     nBatches++;
+
+    /* Increment the cumulate */
+    cumulate += bsize;
 
     return status;
 }

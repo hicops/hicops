@@ -53,6 +53,7 @@ STATUS DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, BYICount *Score,
         bdata->heapArray = CandidatePSMS;
         bdata->fileArray = CommHandle->fileArray;
         bdata->sizeArray = CommHandle->sizeArray;
+        bdata->indxArray = CommHandle->indxArray;
         bdata->nBatches  = CommHandle->sizeOffset;
         bdata->resPtr    = CommHandle->rxArr;
         bdata->cPSMsize  = cpsmSize;
@@ -271,6 +272,7 @@ INT DSLIM_TestBData()
         cout << (void *) &bdata->heapArray[0] << " @: " << params.myid << endl;
         cout << (void *) &bdata->fileArray[0] << " @: " << params.myid << endl;
         cout << (void *)&bdata->sizeArray[0] << " @: " << params.myid << endl;
+        cout << (void *) &bdata->indxArray[0] << " @: " << params.myid << endl;
         cout << bdata->nBatches << endl;
         cout << (void *) &bdata->resPtr[0] << " @: " << params.myid << endl;
         cout << bdata->cPSMsize << endl;

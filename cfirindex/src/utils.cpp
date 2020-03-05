@@ -680,6 +680,121 @@ STATUS UTILS_ModelpGumbalDistribution(Results *resPtr)
 }
 
 /*
+ * FUNCTION: UTILS_ModelSurvivalFunction
+ *
+ * DESCRIPTION: Model Gumbal distribution
+ *              for shared memory execution.
+ *
+ * INPUT:
+ * @resPtr: candidate PSMs handle
+ *
+ * OUTPUT:
+ * @status: Status of execution
+ */
+STATUS UTILS_ModelgGumbalDistribution(Results *resPtr)
+{
+    STATUS status = SLM_SUCCESS;
+
+    /* Total size and tailends */
+    UINT N = resPtr->cpsms;
+
+    /* Copy the slope and bias into local variables */
+    DOUBLE slope = resPtr->weight;
+    DOUBLE bias = resPtr->bias;
+
+    /* Histogram pointer */
+    DOUBLE *histogram = resPtr->survival;
+    const INT histosize = 2 + (MAX_HYPERSCORE * 10);
+
+    /* The extracted tail */
+    DOUBLE *tail = NULL;
+    DOUBLE *axis = NULL;
+    INT tailsize = 0;
+
+    /* Loop indexing variable */
+    INT ii = 0;
+
+    /* Construct the model */
+
+    /* Initialize the max hyperscore */
+    for (ii = histosize - 1; ii > 0; ii--)
+    {
+        if (histogram[ii] > 0)
+        {
+            resPtr->maxhypscore = ii;
+            ii--;
+            break;
+        }
+    }
+
+    /* Initialize nexthypscore */
+    for (; ii > 0; ii--)
+    {
+        if (histogram[ii] > 0)
+        {
+            resPtr->nexthypscore = ii;
+            break;
+        }
+    }
+
+    /* Initialize minhypscore */
+    for (ii = 1; ii < resPtr->nexthypscore; ii++)
+    {
+        if (histogram[ii] > 0)
+        {
+            resPtr->minhypscore = ii;
+            break;
+        }
+    }
+
+    UINT cumulative = 0;
+
+    /* If both ends at the same point,
+     * set the upper end.
+     */
+    if (resPtr->nexthypscore <= resPtr->minhypscore)
+    {
+        resPtr->nexthypscore = MIN (resPtr->maxhypscore - 1, resPtr->minhypscore + 1);
+    }
+
+    /* Construct s(x) = 1 - CDF in [minhyp, nexthyp] */
+    UINT count = histogram[resPtr->nexthypscore];
+
+    for (ii = resPtr->nexthypscore - 1; ii >= resPtr->minhypscore; ii--)
+    {
+        UINT tmpcount = histogram[ii];
+
+        cumulative -= tmpcount;
+        histogram[ii] = (count + histogram[ii + 1]);
+        count = tmpcount;
+    }
+
+    /* Construct log_10(s(x)) */
+    for (ii = resPtr->minhypscore; ii <= resPtr->nexthypscore; ii++)
+    {
+        histogram[ii] = log10(histogram[ii] / N);
+    }
+
+    /* Set the tailPtr, score axis and tail size */
+    tail     = histogram + resPtr->minhypscore;
+    axis     = resPtr->xaxis + resPtr->minhypscore;
+    tailsize = resPtr->nexthypscore - resPtr->minhypscore + 1;
+
+    /*
+     * Perform linear regression (least sq. error)
+     * on tail curve and find slope (m) and bias (b)
+     */
+    (VOID) UTILS_LinearRegression(tailsize, axis, tail, slope, bias);
+
+    /* Assign back from local variables */
+    resPtr->weight = slope;
+    resPtr->bias   =  bias;
+
+    /* Return the status */
+    return status;
+}
+
+/*
  * FUNCTION: __wrap_memcpy
  *
  * DESCRIPTION: Wrapper function for memcpy@GLIBC2.2.5

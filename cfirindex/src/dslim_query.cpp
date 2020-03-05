@@ -630,11 +630,13 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                     status = UTILS_ModelpGumbalDistribution(resPtr);
 
                     /* Fill in the Tx array cells */
-                    txArray[queries].b = (INT)(resPtr->bias * 1000);
-                    txArray[queries].m = (INT)(resPtr->weight * 1000);
-                    txArray[queries].min = resPtr->minhypscore;
+                    txArray[queries].b    = (INT)(resPtr->bias * 1000);
+                    txArray[queries].m    = (INT)(resPtr->weight * 1000);
+                    txArray[queries].min  = resPtr->minhypscore;
                     txArray[queries].max2 = resPtr->nexthypscore;
-                    txArray[queries].max = resPtr->maxhypscore;
+                    txArray[queries].max  = resPtr->maxhypscore;
+                    txArray[queries].N    = resPtr->cpsms;
+                    txArray[queries].qID  = spectrumID + queries;
                 }
                 else
                 {

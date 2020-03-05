@@ -41,6 +41,7 @@ DSLIM_Score::DSLIM_Score()
     /* These pointers will be borrowed */
     sizeArray = NULL;
     fileArray = NULL;
+    indxArray = NULL;
     scPtr = NULL;
     heapArray = NULL;
     index = NULL;
@@ -84,6 +85,8 @@ DSLIM_Score::DSLIM_Score(BData *bd)
     /* These pointers will be borrowed */
     sizeArray = bd->sizeArray;
     fileArray = bd->fileArray;
+    indxArray = bd->indxArray;
+
     scPtr = bd->scPtr;
     heapArray = bd->heapArray;
     index = bd->index;
@@ -260,23 +263,53 @@ STATUS DSLIM_Score::ComputegGumbalDistribution()
 {
     STATUS status = SLM_SUCCESS;
 
-    /* Initial running count */
-    INT currCount = 0;
-
-    /* Starting position */
-    INT startPos  = 0;
-
-    /* Initial batch number */
-    INT batchNum  = 0;
-
     /* Each node sent its sample */
     const INT nSamples = params.nodes;
 
-    cout << "Total RX'ed Spectra: " << myRXsize << endl;
+    /* Initial running counts */
+    INT *currCount = new INT[params.threads];
 
+    if (currCount != NULL)
+    {
+        memset(currCount, 0x0, (sizeof(INT) * params.threads));
+    }
+    else
+    {
+        status = ERR_INVLD_MEMORY;
+    }
+
+    /* Starting positions */
+    INT *startPos  = new INT[params.threads];
+
+    if (startPos != NULL)
+    {
+        memset(startPos, 0x0, (sizeof(INT) * params.threads));
+    }
+    else
+    {
+        status = ERR_INVLD_MEMORY;
+    }
+
+    /* Initial batch numberS */
+    INT *batchNum  = new INT[params.threads];
+
+    if (batchNum != NULL)
+    {
+        memset(batchNum, 0x0, (sizeof(INT) * params.threads));
+    }
+    else
+    {
+        status = ERR_INVLD_MEMORY;
+    }
+
+    //cout << "Total RX'ed Spectra: " << myRXsize << " @: " << params.myid << endl;
+
+    /* Comment: Wanted to declare these variables
+     * as private without making arrays but suspected
+     * undefined behavior with different toolchains.
+     */
 #ifdef _OPENMP
-#pragma omp parallel for schedule (dynamic, 1) num_threads(params.threads) \
-                         private (currCount, batchNum, startPos)
+#pragma omp parallel for schedule (dynamic, 1) num_threads(params.threads)
 #endif /* _OPENMP */
     for (INT spec = 0; spec < this->myRXsize; spec++)
     {
@@ -287,25 +320,30 @@ STATUS DSLIM_Score::ComputegGumbalDistribution()
         Results *rPtr = &this->scPtr[thno].res;
 
         /* Calculate the batchNum that spec belongs to */
-        for (;spec >= (currCount + sizeArray[batchNum]) && batchNum < this->nBatches;)
+        for (;spec >= (currCount[thno] + sizeArray[batchNum[thno]]) && batchNum[thno] < this->nBatches;)
         {
-            if (spec >= (currCount + sizeArray[batchNum]))
-            {
-                break;
-            }
+            /* cout << "batchNum update@: " << params.myid << thno
+             *      << " currCnt: " << currCount << " spec: " << spec << endl; */
 
-            currCount += sizeArray[batchNum];
-            startPos  += sizeArray[batchNum] * nSamples;
+            currCount[thno] += sizeArray[batchNum[thno]];
+            startPos[thno]  += sizeArray[batchNum[thno]] * nSamples;
 
             /* Update the batchNumber */
-            batchNum  += 1;
+            batchNum[thno]  += 1;
         }
 
         /* Compute the spectrum index in rxArray */
-        INT specIDX  = startPos + spec;
+        INT specIDX  = startPos[thno] + spec;
 
         /* Compute the stride in rxArray */
-        INT stride = sizeArray[batchNum];
+        INT stride = sizeArray[batchNum[thno]];
+
+        /* Reset pointer before computations */
+        rPtr->reset2();
+
+        /* Record locators */
+        INT key = params.nodes;
+        INT maxhypscore = -1;
 
         /* For all samples, update the histogram */
         for (INT sno = 0; sno < nSamples; sno++)
@@ -313,54 +351,116 @@ STATUS DSLIM_Score::ComputegGumbalDistribution()
             /* Pointer to Result sample */
             partRes *sResult = resPtr + (specIDX + (stride * sno));
 
+            /* Sanity check */
             if (specIDX + (stride * sno) >= (this->myRXsize * nSamples))
             {
-                cout << "MoFo@: " << params.myid << " sIDX: " << specIDX << " bNO: " << batchNum << endl;
-                break;
+                cout << "FATAL: Segfault caught @: " << params.myid << "_" << thno << endl;
+                exit (-11);
             }
 
-            try
+            /* Get the number of samples */
+            rPtr->cpsms += sResult->N;
+
+            /* Get the slope and bias */
+            DOUBLE b = (DOUBLE)(sResult->b);
+            DOUBLE m = (DOUBLE)(sResult->m);
+
+            /* Divide by 1000 */
+            b /= 1000;
+            m /= 1000;
+
+            /* Reconstruct the partial histogram */
+            for (INT x = sResult->min; x <= sResult->max2; x++)
             {
-                //cout << "PTR: " << (void *)sResult << endl;
-                partRes rr = *sResult;
+                rPtr->survival[x] += pow(10, (m * x) + b) * sResult->N;
             }
-            catch (std::exception& e)
+
+            /* Record the maxhypscore and its key */
+            if (sResult->max > 0 && sResult->max > maxhypscore)
             {
-                std::cout << "FATAL: Excepting in RX MPI_Test: " << e.what() << " on: " << params.myid << endl;
+                maxhypscore = sResult->max;
+                key         = sno;
             }
 
         }
 
+        /* Combine the fResult */
+        fResult *psm = &TxValues[spec];
+
+        /* Need further processing only if enough results */
+        if (key < (INT)params.nodes && rPtr->cpsms > params.min_cpsm)
+        {
+            /* Model the global Gumbal distribution */
+            status = UTILS_ModelgGumbalDistribution(rPtr);
+
+            /* Estimate the log (s(x)); x = log(hyperscore) */
+            DOUBLE lgs_x = (rPtr->weight * rPtr->maxhypscore) + rPtr->bias;
+
+            /* Compute the s(x) */
+            DOUBLE s_x = pow(10, lgs_x);
+
+            /* e(x) = n * s(x) */
+            DOUBLE e_x = rPtr->cpsms * s_x;
+
+            /* If the scores are good enough */
+            if (e_x < params.expect_max)
+            {
+                /* cout << "@" << params.myid << " SpecID: "
+                                 *      << indxArray[batchNum[thno]] <<" bNO: "
+                                 *      << batchNum[thno] << endl; */
+                psm->eValue = e_x * 1e6;
+                psm->specID = indxArray[batchNum[thno]] + (spec - currCount[thno]);
+
+                txSizes[key] += 1;
+            }
+            else
+            {
+                psm->eValue = params.expect_max * 1e6;
+                psm->specID = params.nodes;
+            }
+        }
+        else
+        {
+            psm->eValue = params.expect_max * 1e6;
+            psm->specID = params.nodes;
+        }
     }
 
-    /* FIXME Only stub implementation */
-    for (UINT jj = 0; jj < params.nodes - 1; jj++)
+    /* Check if we have RX data */
+    if (myRXsize > 0)
     {
-        txSizes[jj] = (this->myRXsize)/(params.nodes);
+        /* Sort the TxValues by keys (mchID) */
+        KeyVal_Parallel<INT, fResult>(keys, TxValues, myRXsize, params.threads);
     }
-
-#if 0
-    /* Estimate the log (s(x)); x = log(hyperscore) */
-    DOUBLE lgs_x = resPtr->weight * (psm.hyperscore * 10 + 0.5) + resPtr->bias;
-
-    /* Compute the s(x) */
-    DOUBLE s_x = pow(10, lgs_x);
-
-    /* e(x) = n * s(x) */
-    DOUBLE e_x = resPtr->cpsms * s_x;
-
-    /* Do not print any scores just yet */
-    if (e_x < params.expect_max)
+    else
     {
-#ifndef ANALYSIS
-        /* Printing the scores in OpenMP mode */
-        //status = DFile_PrintScore(index, queries, pmass, &psm, e_x, resPtr->cpsms);
-#else
-        status = DFile_PrintPartials(queries, resPtr);
-#endif /* ANALYSIS */
+        /* Set all sizes to zero */
+        for (UINT ky = 0; ky < params.nodes - 1; ky++)
+        {
+            txSizes[ky] = 0;
+        }
     }
-#endif /* 0 */
 
+    /* Deallocate the memory */
+    if (currCount != NULL)
+    {
+        delete[] currCount;
+        currCount = NULL;
+    }
+
+    if (batchNum != NULL)
+    {
+        delete[] batchNum;
+        batchNum = NULL;
+    }
+
+    if (startPos != NULL)
+    {
+        delete[] startPos;
+        startPos = NULL;
+    }
+
+    /* return the status of execution */
     return status;
 }
 
@@ -405,7 +505,8 @@ STATUS DSLIM_Score::ScatterScores()
                  if (txStats[ll] == 0 && ll != (INT)params.myid)
                  {
  #ifdef DIAGNOSE2
-                     cout << " MPI_Test@ " << params.myid << "Stat: " << txStats2[ll] << " ll: " << ll << endl;
+                     cout << " MPI_Test@ " << params.myid << "Stat: "
+                          << txStats2[ll] << " ll: " << ll << endl;
  #endif /* DIAGNOSE2 */
  
                      //cout << (void *)((MPI_Request*)(txRqsts + ll)) << " txRqsts@:" << params.myid << endl;
@@ -453,7 +554,8 @@ STATUS DSLIM_Score::ScatterScores()
                     if (txStats[ll] == 0 && ll != (INT)params.myid)
                     {
 #ifdef DIAGNOSE2
-                        cout << " MPI_Test@ " << params.myid << "Stat: " << txStats2[ll] << " ll: " << ll << endl;
+                        cout << " MPI_Test@ " << params.myid << "Stat: "
+                             << txStats2[ll] << " ll: " << ll << endl;
 #endif /* DIAGNOSE2 */
                         //cout << (void *)((MPI_Request*)(txRqsts + ll)) << " txRqsts@:" << params.myid << endl;
                         status = MPI_Test(txRqsts + ll, &txStats[ll], MPI_STATUS_IGNORE);
@@ -507,7 +609,8 @@ STATUS DSLIM_Score::TXSizes(MPI_Request *txRqsts, INT *txStats)
         {
 
 #ifdef DIAGNOSE2
-            cout << "TXSIZE: " << params.myid << " -> " << kk << " Size: "<< txSizes[ll] << endl;
+            cout << "TXSIZE: " << params.myid << " -> "
+                 << kk << " Size: "<< txSizes[ll] << endl;
 #endif /* DIAGNOSE */
 
             if (txSizes == NULL || txRqsts == NULL)
@@ -543,7 +646,8 @@ STATUS DSLIM_Score::RXSizes(MPI_Request *rxRqsts, INT *rxStats)
         {
 
 #ifdef DIAGNOSE2
-            cout << "RXSIZE: " << params.myid << " -> " << kk << " Size: "<< txSizes[ll] << endl;
+            cout << "RXSIZE: " << params.myid << " -> "
+                 << kk << " Size: "<< txSizes[ll] << endl;
 #endif /* DIAGNOSE */
 
             if (rxSizes == NULL || rxRqsts == NULL)
@@ -589,7 +693,8 @@ STATUS DSLIM_Score::TXResults(MPI_Request *txRqsts, INT* txStats)
                 exit(-1);
             }
 
-            //cout << (void *)((fResult*)(TxValues + offset)) << " TxValues@:" << params.myid << endl;
+            /* cout << (void *)((fResult*)(TxValues + offset))
+             *      << " TxValues@:" << params.myid << endl; */
 
             /* Send an integer to all other machines */
             status = MPI_Isend(TxValues + offset, txSizes[kk], resultF, kk, 0x1, MPI_COMM_WORLD, txRqsts + kk);

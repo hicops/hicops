@@ -714,6 +714,19 @@ typedef struct _Results
         topK.heap_reset();
     }
 
+    void reset2()
+    {
+        cpsms = 0;
+        weight = 0;
+        bias = 0;
+        minhypscore = 0;
+        maxhypscore = 0;
+        nexthypscore = 0;
+
+        std::memset(survival, 0x0, sizeof(DOUBLE) * (2 + MAX_HYPERSCORE * 10));
+
+    }
+
 } Results;
 
 /* Data structure for partial result Tx/Rx */
@@ -731,6 +744,7 @@ typedef struct _partResult
 
     /* Total number of samples scored */
     INT N;
+    INT qID;
 
 
     /* Default contructor */
@@ -742,6 +756,7 @@ typedef struct _partResult
         b = 0;
         N  = 0;
         max = 0;
+        qID = 0;
     }
 
     _partResult(INT def)
@@ -752,6 +767,7 @@ typedef struct _partResult
         b = def;
         N  = def;
         max = def;
+        qID = 0;
     }
 
     /* Destructor */
@@ -763,6 +779,7 @@ typedef struct _partResult
         b = 0;
         N  = 0;
         max2 = 0;
+        qID = 0;
     }
 
     _partResult& operator=(const INT& rhs)
@@ -774,6 +791,7 @@ typedef struct _partResult
             b = rhs;
             N = rhs;
             max = rhs;
+            qID = rhs;
 
         return *this;
     }
@@ -789,6 +807,7 @@ typedef struct _partResult
             b = rhs.b;
             N = rhs.N;
             max2 = rhs.max2;
+            qID = rhs.qID;
         }
 
         return *this;
@@ -861,6 +880,7 @@ typedef struct _BorrowedData
     Index *index;
     INT *sizeArray;
     INT *fileArray;
+    INT *indxArray;
 
     /* Dataset size */
     INT cPSMsize;
@@ -874,6 +894,7 @@ typedef struct _BorrowedData
         index = NULL;
         sizeArray = NULL;
         fileArray = NULL;
+        indxArray = NULL;
 
         cPSMsize = 0;
         nBatches = 0;

@@ -125,7 +125,7 @@ ULONGLONG UTILS_Factorial(ULONGLONG);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS UTILS_Shuffle(UINT *old, UINT N);
+STATUS UTILS_Shuffle(UINT *, UINT );
 
 /*
  * FUNCTION: UTILS_ShuffleI
@@ -140,7 +140,7 @@ STATUS UTILS_Shuffle(UINT *old, UINT N);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS UTILS_ShuffleI(UINT *arr, UINT N, ULONGLONG seed);
+STATUS UTILS_ShuffleI(UINT *, UINT, ULONGLONG);
 
 /*
  * FUNCTION: UTILS_GenerateSpectrum
@@ -155,7 +155,7 @@ STATUS UTILS_ShuffleI(UINT *arr, UINT N, ULONGLONG seed);
  * OUTPUT:
  * @mass: Precursor mass of peptide
  */
-FLOAT  UTILS_GenerateSpectrum(CHAR *seq, UINT len, UINT *Spectrum);
+FLOAT  UTILS_GenerateSpectrum(CHAR *, UINT, UINT *);
 
 /*
  * FUNCTION: UTILS_CalculatePepMass
@@ -169,7 +169,7 @@ FLOAT  UTILS_GenerateSpectrum(CHAR *seq, UINT len, UINT *Spectrum);
  * OUTPUT:
  * @mass: Precursor mass of peptide
  */
-FLOAT UTILS_CalculatePepMass(AA *seq, UINT len);
+FLOAT UTILS_CalculatePepMass(AA *, UINT);
 
 #ifdef VMODS
 
@@ -184,7 +184,7 @@ FLOAT UTILS_CalculatePepMass(AA *seq, UINT len);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS UTILS_InitializeModInfo(STRING modconditions);
+STATUS UTILS_InitializeModInfo(STRING);
 
 /*
  * FUNCTION: UTILS_InitializeModInfo
@@ -197,7 +197,7 @@ STATUS UTILS_InitializeModInfo(STRING modconditions);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS UTILS_InitializeModInfo(SLM_vMods *vMods);
+STATUS UTILS_InitializeModInfo(SLM_vMods *);
 
 /*
  * FUNCTION: UTILS_CalculateModMass
@@ -212,7 +212,7 @@ STATUS UTILS_InitializeModInfo(SLM_vMods *vMods);
  * OUTPUT:
  * @mass: Precursor mass of modified peptide
  */
-FLOAT UTILS_CalculateModMass(AA *seq, UINT len, UINT vModInfo);
+FLOAT UTILS_CalculateModMass(AA *, UINT, UINT);
 
 /*
  * FUNCTION: UTILS_GenerateModSpectrum
@@ -228,13 +228,15 @@ FLOAT UTILS_CalculateModMass(AA *seq, UINT len, UINT vModInfo);
  * OUTPUT:
  * @mass: Precursor mass of modified peptide
  */
-FLOAT UTILS_GenerateModSpectrum(CHAR *seq, UINT len, UINT *Spectrum, modAA modInfo);
+FLOAT UTILS_GenerateModSpectrum(CHAR *, UINT, UINT *, modAA);
 
-STATUS UTILS_ModelSurvivalFunction(Results *resPtr);
+STATUS UTILS_ModelSurvivalFunction(Results *);
 
-STATUS UTILS_ModelpGumbalDistribution(Results *resPtr);
+STATUS UTILS_ModelpGumbalDistribution(Results *);
 
-void UTILS_LinearRegression(INT n, DOUBLE x[], DOUBLE y[], DOUBLE &a, DOUBLE &b);
+STATUS UTILS_ModelgGumbalDistribution(Results *);
+
+VOID UTILS_LinearRegression(INT n, DOUBLE x[], DOUBLE y[], DOUBLE &a, DOUBLE &b);
 
 #endif /* VMODS */
 

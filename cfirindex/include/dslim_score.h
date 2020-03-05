@@ -43,6 +43,7 @@ private:
     /* These pointers will be borrowed */
     INT      *sizeArray;
     INT      *fileArray;
+    INT      *indxArray;
     BYICount *scPtr;
     partRes  *resPtr;
     hCell    *heapArray;
