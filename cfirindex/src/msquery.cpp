@@ -160,11 +160,11 @@ STATUS MSQuery::InitQueryFile(STRING *filename, INT fno)
             running_count = 0;
             nqchunks = std::ceil(((double) QAcount / QCHUNK));
             qfileIndex = fno;
-            maxslen = largestspec;
+            maxslen = max(specsize, largestspec);
 
             /* Initialize to largest spectrum in file */
-            spectrum.intn = new UINT[largestspec + 1];
-            spectrum.mz = new UINT[largestspec + 1];
+            spectrum.intn = new UINT[maxslen + 1];
+            spectrum.mz = new UINT[maxslen + 1];
         }
 
         /* Close the file */
@@ -384,6 +384,8 @@ VOID MSQuery::ReadSpectrum()
                 speclen++;
             }
         }
+
+        spectrum.SpectrumSize = speclen;
     }
 }
 
