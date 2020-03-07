@@ -1,5 +1,5 @@
-# PCDSFrame
-PCDSFrame: A comprehensive software framework for identification of peptides from DDA LC-MS/MS data using an HPC system (specifically optmized for XSEDE COMET HPC Cluster)
+# HiCOPS
+HiCOPS: A comprehensive software framework for identification of peptides from DDA LC-MS/MS data using an HPC system (specifically optmized for XSEDE COMET HPC Cluster)
 
 # Authors:
 Muhammad Haseeb, Fahad Saeed
