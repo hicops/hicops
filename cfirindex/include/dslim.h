@@ -118,7 +118,6 @@ STATUS DSLIM_Optimize(Index *index, UINT chunk_number);
  */
 STATUS DSLIM_InitializeSC(UINT threads, Index *index);
 
-STATUS DSLIM_ModelSurvivalFunction(Results *resPtr);
 /*
  * FUNCTION: DSLIM_Analyze
  *

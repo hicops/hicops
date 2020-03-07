@@ -53,6 +53,7 @@ STATUS DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, BYICount *Score,
         bdata->heapArray = CandidatePSMS;
         bdata->fileArray = CommHandle->fileArray;
         bdata->sizeArray = CommHandle->sizeArray;
+        bdata->indxArray = CommHandle->indxArray;
         bdata->nBatches  = CommHandle->sizeOffset;
         bdata->resPtr    = CommHandle->rxArr;
         bdata->cPSMsize  = cpsmSize;
@@ -94,13 +95,23 @@ STATUS DSLIM_DistScoreManager()
         /* Distributed Scoring Algorithm */
         if (status == SLM_SUCCESS)
         {
-            status = ScoreHandle->ComputeDistScores();
+            status = ScoreHandle->ComputegGumbalDistribution();
+
+            if (params.myid == 0)
+            {
+                cout << endl << "ComputegGumbal with status:\t" << status << endl;
+            }
         }
 
         /* Scatter the key-values to all machines */
         if (status == SLM_SUCCESS)
         {
             status = ScoreHandle->ScatterScores();
+
+            if (params.myid == 0)
+            {
+                cout << "ScatterScores with status:\t" << status << endl;
+            }
         }
 
         if (status == SLM_SUCCESS)
@@ -112,6 +123,11 @@ STATUS DSLIM_DistScoreManager()
         if (status == SLM_SUCCESS)
         {
             status = ScoreHandle->DisplayResults();
+
+            if (params.myid == 0)
+            {
+                cout << "DisplayResults with status:\t" << status << endl;
+            }
         }
 
         if (status == SLM_SUCCESS)
@@ -256,6 +272,7 @@ INT DSLIM_TestBData()
         cout << (void *) &bdata->heapArray[0] << " @: " << params.myid << endl;
         cout << (void *) &bdata->fileArray[0] << " @: " << params.myid << endl;
         cout << (void *)&bdata->sizeArray[0] << " @: " << params.myid << endl;
+        cout << (void *) &bdata->indxArray[0] << " @: " << params.myid << endl;
         cout << bdata->nBatches << endl;
         cout << (void *) &bdata->resPtr[0] << " @: " << params.myid << endl;
         cout << bdata->cPSMsize << endl;

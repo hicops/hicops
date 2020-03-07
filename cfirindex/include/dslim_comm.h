@@ -62,9 +62,12 @@ private:
      */
     INT     *sizeArray;
     INT     *fileArray;
+    INT     *indxArray;
 
     /* currPtr */
     INT  sizeOffset;
+
+    INT cumulate;
 
     /* Semaphore for Rx array */
     LOCK rxLock;

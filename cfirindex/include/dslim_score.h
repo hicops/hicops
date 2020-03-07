@@ -43,6 +43,7 @@ private:
     /* These pointers will be borrowed */
     INT      *sizeArray;
     INT      *fileArray;
+    INT      *indxArray;
     BYICount *scPtr;
     partRes  *resPtr;
     hCell    *heapArray;
@@ -66,7 +67,7 @@ public:
     DSLIM_Score(BData *bd);
     virtual  ~DSLIM_Score();
 
-    STATUS   ComputeDistScores();
+    STATUS   ComputegGumbalDistribution();
 
     STATUS   ScatterScores();
 
