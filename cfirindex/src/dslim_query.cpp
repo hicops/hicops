@@ -565,10 +565,10 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                     }
 
                     /* Compute the chunksize to look further into */
-                    INT csize = maxlimit - minlimit;
+                    INT csize = maxlimit - minlimit + 1;
 
                     /* Look for candidate PSMs */
-                    for (INT it = minlimit; it < maxlimit; it++)
+                    for (INT it = minlimit; it <= maxlimit; it++)
                     {
                         /* Filter by the min shared peaks */
                         if (bycPtr[it].bc + bycPtr[it].yc >= params.min_shp)
@@ -784,7 +784,7 @@ static INT DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max)
 {
     INT half = (min + max)/2;
 
-    if (max - min < 500)
+    if (max - min < 20)
     {
         INT current = min;
 
@@ -822,12 +822,11 @@ static INT DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max)
 
 }
 
-
 static INT DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max)
 {
     INT half = (min + max)/2;
 
-    if (max - min < 500)
+    if (max - min < 20)
     {
         INT current = max;
 

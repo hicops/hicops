@@ -442,7 +442,7 @@ STATUS LBE_CountPeps(CHAR *filename, Index *index, UINT explen)
         {
             if (line.at(0) != '>')
             {
-                /* Linux has a weird \r at end of each line */
+                /* Linux needs \n not \r\n at end of each line */
                 if (line.at(line.length() - 1) == '\r')
                 {
                     line = line.substr(0, line.size() - 1);
