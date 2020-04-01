@@ -608,24 +608,17 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 }
             }
 
-            /* Search done - Handle results in one node
-             *               and multi node modes */
+            /* Distributed memory mode - Model partial Gumbel 
+             * and transmit parameters to rx machine */
             if (params.nodes > 1)
             {
-                /* Extract the top result
-                 * and put it in the list */
-                if (resPtr->cpsms > 0)
+                /* Set the params.min_cpsm in dist mem mode to 1 */
+                if (resPtr->cpsms >= 1)
                 {
+                    /* Extract the top result
+                     * and put it in the list */
                     CandidatePSMS[spectrumID + queries] = resPtr->topK.getMax();
-                }
-                else
-                {
-                    CandidatePSMS[spectrumID + queries] = 0;
-                }
 
-                /* FIXME: How to set the params.min_cpsm in dist mem? */
-                if (resPtr->cpsms > 1 /*params.min_cpsm*/)
-                {
                     /* Compute the partial Gumbal distribution */
                     status = UTILS_ModelpGumbalDistribution(resPtr);
 
@@ -640,16 +633,23 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 }
                 else
                 {
+                    /* Extract the top result
+                     * and put it in the list */
+                    CandidatePSMS[spectrumID + queries] = 0;
+
                     /* Get the handle to the txArr
                      * Fill it up and move on */
                     txArray[queries] = 0;
-                    txArray[queries].max = resPtr->maxhypscore;
+                    txArray[queries].qID  = spectrumID + queries;
                 }
             }
+
+            /* Shared memory mode - Do complete 
+             * modelling and print results */
             else
             {
                 /* Check for minimum number of PSMs */
-                if (resPtr->cpsms > params.min_cpsm)
+                if (resPtr->cpsms >= params.min_cpsm)
                 {
                     /* Extract the top PSM */
                     hCell psm = resPtr->topK.getMax();
@@ -670,12 +670,12 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                     /* Do not print any scores just yet */
                     if (e_x < params.expect_max)
                     {
-                #ifndef ANALYSIS
+#ifndef ANALYSIS
                         /* Printing the scores in OpenMP mode */
-                        status = DFile_PrintScore(index, queries, pmass, &psm, e_x, resPtr->cpsms);
-                #else
+                        status = DFile_PrintScore(index, spectrumID + queries, pmass, &psm, e_x, resPtr->cpsms);
+#else
                         status = DFile_PrintPartials(queries, resPtr);
-                #endif /* ANALYSIS */
+#endif /* ANALYSIS */
                     }
                 }
             }
