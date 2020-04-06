@@ -608,7 +608,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 }
             }
 
-            /* Distributed memory mode - Model partial Gumbel 
+            /* Distributed memory mode - Model partial Gumbel
              * and transmit parameters to rx machine */
             if (params.nodes > 1)
             {
@@ -644,8 +644,8 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 }
             }
 
-            /* Shared memory mode - Do complete 
-             * modelling and print results */
+            /* Shared memory mode - Do complete
+             * modeling and print results */
             else
             {
                 /* Check for minimum number of PSMs */

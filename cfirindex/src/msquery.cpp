@@ -144,6 +144,8 @@ STATUS MSQuery::InitQueryFile(STRING *filename, INT fno)
             }
         }
 
+        largestspec = max(specsize, largestspec);
+
         /* Check the largestspecsize */
         if (largestspec < 1)
         {
@@ -257,7 +259,7 @@ VOID MSQuery::ReadSpectrum()
             {
                 continue;
             }
-            else if ( line[0] == 'Z')
+            else if (line[0] == 'Z')
             {
                 CHAR *mh = strtok((CHAR *) line.c_str(), " \t");
                 mh = strtok(NULL, " \t");
@@ -317,6 +319,8 @@ VOID MSQuery::ReadSpectrum()
                 speclen++;
             }
         }
+
+        spectrum.SpectrumSize = speclen;
     }
     /* Not the first spectrum in file */
     else

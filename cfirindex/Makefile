@@ -63,7 +63,7 @@ all: lbe
 
 lbe: $(DEPS)
 	$(MAKE) -j$(JOBS) -C $(SRC)
-	$(CXX) -c -I./include -I./mstoolkit/include $(CXXFLAGS) -DGCC ./hicops.cpp -o hicops.o
+	$(CXX) -c -I./include $(CXXFLAGS) -DGCC ./hicops.cpp -o hicops.o
 
 clean:
 	$(MAKE) -C $(SRC) clean

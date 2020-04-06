@@ -333,7 +333,7 @@ STATUS DSLIM_Score::ComputegGumbalDistribution()
         }
 
         /* Compute the spectrum index in rxArray */
-        INT specIDX  = startPos[thno] + spec;
+        INT specIDX  = startPos[thno] + spec - currCount[thno];
 
         /* Compute the stride in rxArray */
         INT stride = sizeArray[batchNum[thno]];
@@ -354,7 +354,15 @@ STATUS DSLIM_Score::ComputegGumbalDistribution()
             /* Sanity check */
             if (specIDX + (stride * sno) >= (this->myRXsize * nSamples))
             {
-                cout << "FATAL: Segfault caught @: " << params.myid << "_" << thno << endl;
+                cout << "FATAL: Segfault caught @: " << params.myid << endl;
+                cout << "spec: " << spec << endl;
+                cout << "currCount: " << currCount[thno] << endl;
+                cout << "myRXsize: " << this->myRXsize << endl;
+                cout << "specIDX: " << specIDX << endl;
+                cout << "currCount: " << currCount[thno] << endl;
+                cout << "batchNum: " << batchNum[thno] << endl;
+                cout << "sizeArray: " << sizeArray[batchNum[thno]] << endl;
+
                 exit (-11);
             }
 
@@ -388,7 +396,7 @@ STATUS DSLIM_Score::ComputegGumbalDistribution()
         fResult *psm = &TxValues[spec];
 
         /* Need further processing only if enough results */
-        if (key < (INT)params.nodes && rPtr->cpsms > params.min_cpsm)
+        if (key < (INT)params.nodes && rPtr->cpsms >= params.min_cpsm)
         {
             /* Model the global Gumbal distribution */
             status = UTILS_ModelgGumbalDistribution(rPtr);
