@@ -45,11 +45,11 @@ else
 endif
 
 # Setup parallel build jobs
-#ifeq ($(OS),Windows_NT)
-#	JOBS := $(NUMBER_OF_PROCESSORS)
-#else
-#	JOBS := $(shell grep -c ^processor /proc/cpuinfo)
-#endif
+ifeq ($(OS),Windows_NT)
+	JOBS := $(NUMBER_OF_PROCESSORS)
+else
+	JOBS := $(shell grep -c ^processor /proc/cpuinfo)
+endif
 
 # Export Build Variables
 export BUILD_MODE
@@ -63,7 +63,7 @@ all: lbe
 
 lbe: $(DEPS)
 	$(MAKE) -j$(JOBS) -C $(SRC)
-	$(CXX) -c -I./include -I./mstoolkit/include $(CXXFLAGS) -DGCC ./hicops.cpp -o hicops.o
+	$(CXX) -c -I./include $(CXXFLAGS) -DGCC ./hicops.cpp -o hicops.o
 
 clean:
 	$(MAKE) -C $(SRC) clean

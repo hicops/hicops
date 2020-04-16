@@ -105,8 +105,8 @@ STATUS  DFile_PrintPartials(UINT specid, Results *resPtr)
 
     tsvs[thno]         << std::to_string(specid + 1);
     tsvs[thno] << '\t' << std::to_string(resPtr->cpsms);
-    tsvs[thno] << '\t' << std::to_string(resPtr->weight);
-    tsvs[thno] << '\t' << std::to_string(resPtr->bias);
+    tsvs[thno] << '\t' << std::to_string(resPtr->mu);
+    tsvs[thno] << '\t' << std::to_string(resPtr->beta);
     tsvs[thno] << '\t' << std::to_string(resPtr->minhypscore);
     tsvs[thno] << '\t' << std::to_string(resPtr->nexthypscore);
 

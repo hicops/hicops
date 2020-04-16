@@ -26,6 +26,7 @@
 #include "lbe.h"
 #include "slm_dsts.h"
 #include "dslim_comm.h"
+#include "expeRT.h"
 
 /* Macros for SLM bitmask operations */
 #define BYTE1                              8
@@ -118,7 +119,6 @@ STATUS DSLIM_Optimize(Index *index, UINT chunk_number);
  */
 STATUS DSLIM_InitializeSC(UINT threads, Index *index);
 
-STATUS DSLIM_ModelSurvivalFunction(Results *resPtr);
 /*
  * FUNCTION: DSLIM_Analyze
  *
@@ -150,7 +150,7 @@ STATUS DSLIM_DeallocateIonIndex(Index *);
 
 STATUS DSLIM_InitDistScore();
 
-STATUS DSLIM_CarryForward(Index *, DSLIM_Comm *, BYICount *, hCell *, INT);
+STATUS DSLIM_CarryForward(Index *, DSLIM_Comm *, expeRT *, hCell *, INT);
 
 STATUS DSLIM_DistScoreManager();
 

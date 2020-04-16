@@ -580,7 +580,7 @@ static STATUS ParseParams(CHAR* paramfile)
         status = MPI_Comm_rank(MPI_COMM_WORLD, (INT *)&params.myid);
         status = MPI_Comm_size(MPI_COMM_WORLD, (INT *)&params.nodes);
 #else
-        params.myid = 1;
+        params.myid = 0;
         params.nodes = 4;
 
 #endif /* DISTMEM */

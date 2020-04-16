@@ -1,5 +1,5 @@
 /*
- * This file is part of PCDSFrame software
+ * This file is part of HiCOPS software
  * Copyright (C) 2019  Muhammad Haseeb, and Fahad Saeed
  * Florida International University, Miami, FL
  *
@@ -43,6 +43,7 @@ BOOL ExitSignal = false;
 DSLIM_Comm *CommHandle    = NULL;
 Scheduler  *SchedHandle   = NULL;
 hCell      *CandidatePSMS = NULL;
+expeRT     *ePtrs         = NULL;
 
 /* Lock for query file vector and thread manager */
 LOCK qfilelock;
@@ -63,7 +64,6 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv);
 lwqueue<MSQuery *> *ioQ = NULL;
 LOCK ioQlock;
 /****************************************************************/
-
 
 #ifdef BENCHMARK
 static DOUBLE duration = 0;
@@ -181,6 +181,12 @@ STATUS DSLIM_SearchManager(Index *index)
     if (status == SLM_SUCCESS)
     {
         qPtrs = new lwbuff<Queries>(20, 5, 15); // cap, th1, th2
+    }
+
+    /* Initialize the ePtrs */
+    if (status == SLM_SUCCESS)
+    {
+        ePtrs = new expeRT[params.threads];
     }
 
     /* Create queries buffers and push them to the lwbuff */
@@ -357,7 +363,7 @@ STATUS DSLIM_SearchManager(Index *index)
         if (params.myid == 0)
         {
             /* Compute Duration */
-            std::cout << "Query Time: " << qtime.count() << "s" << endl;
+            std::cout << "\nQuery Time: " << qtime.count() << "s" << endl;
             std::cout << "Queried with status:\t\t" << status << endl << endl;
         }
 #endif /* DIAGNOSE */
@@ -399,7 +405,7 @@ STATUS DSLIM_SearchManager(Index *index)
         CommHandle->SignalExit();
 
         /* Carry forward the data to the distributed scoring module */
-        status = DSLIM_CarryForward(index, CommHandle, Score, CandidatePSMS, spectrumID);
+        status = DSLIM_CarryForward(index, CommHandle, ePtrs, CandidatePSMS, spectrumID);
 
         /* Delete the instance of CommHandle */
         delete CommHandle;
@@ -412,6 +418,9 @@ STATUS DSLIM_SearchManager(Index *index)
     if (status == SLM_SUCCESS && params.nodes == 1)
     {
         status = DFile_DeinitFiles();
+
+        delete[] ePtrs;
+        ePtrs = NULL;
     }
 
     /* Return the status of execution */
@@ -495,6 +504,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
             BYC *bycPtr = Score[thno].byc;
             iBYC *ibycPtr = Score[thno].ibyc;
             Results *resPtr = &Score[thno].res;
+            expeRT  *expPtr = ePtrs + thno;
 
 #ifndef DIAGNOSE
             if (thno == 0 && params.myid == 0)
@@ -565,10 +575,10 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                     }
 
                     /* Compute the chunksize to look further into */
-                    INT csize = maxlimit - minlimit;
+                    INT csize = maxlimit - minlimit + 1;
 
                     /* Look for candidate PSMs */
-                    for (INT it = minlimit; it < maxlimit; it++)
+                    for (INT it = minlimit; it <= maxlimit; it++)
                     {
                         /* Filter by the min shared peaks */
                         if (bycPtr[it].bc + bycPtr[it].yc >= params.min_shp)
@@ -594,8 +604,10 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 
                                 /* Insert the cell in the heap dst */
                                 resPtr->topK.insert(cell);
+
                                 /* Increase the N */
                                 resPtr->cpsms += 1;
+
                                 /* Update the histogram */
                                 resPtr->survival[(INT) (cell.hyperscore * 10 + 0.5)] += 1;
                             }
@@ -608,57 +620,98 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 }
             }
 
-            /* Search done - Handle results in one node
-             *               and multi node modes */
+            /* Distributed memory mode - Model partial Gumbel
+             * and transmit parameters to rx machine */
             if (params.nodes > 1)
             {
-                /* Extract the top result
-                 * and put it in the list */
-                if (resPtr->cpsms > 0)
+                /* Set the params.min_cpsm in dist mem mode to 1 */
+                if (resPtr->cpsms >= 1)
                 {
-                    CandidatePSMS[spectrumID + queries] = resPtr->topK.getMax();
-                }
-                else
-                {
-                    CandidatePSMS[spectrumID + queries] = 0;
-                }
+#ifdef PARTIALPSM
+                    ofstream *fh = new ofstream;
+                    STRING fn = params.workspace + "/" +
+                                std::to_string(spectrumID + queries) +
+                                "_h_" + std::to_string(params.myid) + ".txt";
+                    fh->open(fn);
 
-                /* FIXME: How to set the params.min_cpsm in dist mem? */
-                if (resPtr->cpsms > 1 /*params.min_cpsm*/)
-                {
-                    /* Compute expect score if there
-                     * are any candidate PSMs */
-                    status = DSLIM_ModelSurvivalFunction(resPtr);
+                    for (INT ik = 0; ik < 2 + (MAX_HYPERSCORE *10); ik++)
+                    {
+                        *fh << std::to_string(resPtr->survival[ik]) << endl;
+                    }
 
-                    /* Fill in the Tx array cells */
-                    txArray[queries].b = (INT)(resPtr->bias * 1000);
-                    txArray[queries].m = (INT)(resPtr->weight * 1000);
-                    txArray[queries].min = resPtr->minhypscore;
-                    txArray[queries].max2 = resPtr->nexthypscore;
-                    txArray[queries].max = resPtr->maxhypscore;
-                }
-                else
-                {
-                    /* Get the handle to the txArr
-                     * Fill it up and move on */
-                    txArray[queries] = 0;
-                    txArray[queries].max = resPtr->maxhypscore;
-                }
-            }
-            else
-            {
-                /* Check for minimum number of PSMs */
-                if (resPtr->cpsms > params.min_cpsm)
-                {
+                    fh->close();
+
+                    delete fh;
+#endif /* PARTIALPSM */
+
                     /* Extract the top PSM */
                     hCell psm = resPtr->topK.getMax();
 
+                    /* Put it in the list */
+                    CandidatePSMS[spectrumID + queries] = psm;
+
+                    resPtr->maxhypscore = (psm.hyperscore * 10 + 0.5);
+
+                    /* Compute the partial Gumbal distribution */
+                    status = expPtr->Model_logWeibull(resPtr);
+
+                    /* Fill in the Tx array cells */
+                    txArray[queries].b    = (INT)(resPtr->beta * 10000);
+                    txArray[queries].m    = (INT)(resPtr->mu * 10000);
+                    txArray[queries].min  = resPtr->minhypscore;
+                    txArray[queries].max2 = resPtr->nexthypscore;
+                    txArray[queries].max  = resPtr->maxhypscore;
+                    txArray[queries].N    = resPtr->cpsms;
+                    txArray[queries].qID  = spectrumID + queries;
+                }
+                else
+                {
+                    /* Extract the top result
+                     * and put it in the list */
+                    CandidatePSMS[spectrumID + queries] = 0;
+
+                    /* Get the handle to the txArr
+                     * Fill it up and move on */
+                    txArray[queries] = 0;
+                    txArray[queries].qID  = spectrumID + queries;
+                }
+            }
+
+            /* Shared memory mode - Do complete
+             * modeling and print results */
+            else
+            {
+                /* Check for minimum number of PSMs */
+                if (resPtr->cpsms >= params.min_cpsm)
+                {
+#ifdef PARTIALPSM
+                    ofstream *fh = new ofstream;
+                    STRING fn = params.workspace + "/" +
+                                std::to_string(spectrumID + queries) +
+                                "_h.txt";
+
+                    fh->open(fn);
+
+                    for (INT ik = 0; ik < 2 + (MAX_HYPERSCORE *10); ik++)
+                    {
+                        *fh << std::to_string(resPtr->survival[ik]) << endl;
+                    }
+
+                    fh->close();
+
+                    delete fh;
+#else
+                    /* Extract the top PSM */
+                    hCell psm = resPtr->topK.getMax();
+
+                    resPtr->maxhypscore = (psm.hyperscore * 10 + 0.5);
+
                     /* Compute expect score if there
                      * are any candidate PSMs */
-                    status = DSLIM_ModelSurvivalFunction(resPtr);
+                    status = expPtr->ModelSurvivalFunction(resPtr);
 
                     /* Estimate the log (s(x)); x = log(hyperscore) */
-                    DOUBLE lgs_x = resPtr->weight * (psm.hyperscore * 10 + 0.5) + resPtr->bias;
+                    DOUBLE lgs_x = resPtr->mu * resPtr->maxhypscore + resPtr->beta;
 
                     /* Compute the s(x) */
                     DOUBLE s_x = pow(10, lgs_x);
@@ -668,13 +721,14 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 
                     /* Do not print any scores just yet */
                     if (e_x < params.expect_max)
+#endif /* PARTIALPSM */
                     {
-                #ifndef ANALYSIS
+#ifndef ANALYSIS
                         /* Printing the scores in OpenMP mode */
-                        status = DFile_PrintScore(index, queries, pmass, &psm, e_x, resPtr->cpsms);
-                #else
+                        status = DFile_PrintScore(index, spectrumID + queries, pmass, &psm, e_x, resPtr->cpsms);
+#else
                         status = DFile_PrintPartials(queries, resPtr);
-                #endif /* ANALYSIS */
+#endif /* ANALYSIS */
                     }
                 }
             }
@@ -783,7 +837,7 @@ static INT DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max)
 {
     INT half = (min + max)/2;
 
-    if (max - min < 500)
+    if (max - min < 20)
     {
         INT current = min;
 
@@ -821,12 +875,11 @@ static INT DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max)
 
 }
 
-
 static INT DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max)
 {
     INT half = (min + max)/2;
 
-    if (max - min < 500)
+    if (max - min < 20)
     {
         INT current = max;
 
@@ -865,157 +918,7 @@ static INT DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max)
 
 }
 
-STATUS DSLIM_ModelSurvivalFunction(Results *resPtr)
-{
-    STATUS status = SLM_SUCCESS;
-
-    /* Total size and tailends */
-    UINT N = resPtr->cpsms;
-
-    /* Choosing the kneePt and endPt to be
-     * at 70.7% aspectrumIDnd 99% respectively */
-    UINT kneePt = N - (UINT)((float)N * 0.707);
-
-#ifndef ANALYSIS
-    UINT endPt = (UINT)((float)N * 0.995);
-#endif /* ANALYSIS */
-
-    /* Copy the slope and bias into local variables */
-    DOUBLE slope = resPtr->weight;
-    DOUBLE bias = resPtr->bias;
-
-    /* Histogram pointer */
-    DOUBLE *histogram = resPtr->survival;
-    const INT histosize = 2 + (MAX_HYPERSCORE * 10);
-
-    /* The extracted tail */
-    DOUBLE *tail = NULL;
-    DOUBLE *axis = NULL;
-    INT tailsize = 0;
-
-    /* Loop indexing variable */
-    INT ii = 0;
-
-    /* Construct the model */
-
-    /* Initialize the max hyperscore */
-    for (ii = histosize - 1; ii > 0; ii--)
-    {
-        if (histogram[ii] > 0)
-        {
-            resPtr->maxhypscore = ii;
-            ii--;
-            break;
-        }
-    }
-
-    /* Initialize nexthypscore */
-    for (; ii > 0; ii--)
-    {
-        if (histogram[ii] > 0)
-        {
-            resPtr->nexthypscore = ii;
-            break;
-        }
-    }
-
-    /* Initialize minhypscore */
-    for (ii = 0; ii < resPtr->nexthypscore; ii++)
-    {
-        if (histogram[ii] > 0)
-        {
-            resPtr->minhypscore = ii;
-            break;
-        }
-    }
-
-    /* Set the minhypscore at kneepoint: ~ 70.7% */
-    UINT cumulative = 0;
-
-    for (ii = resPtr->minhypscore; ii < resPtr->nexthypscore; ii++)
-    {
-        cumulative += histogram[ii];
-
-        /* Mark the lower end of the tail */
-        if (cumulative >= kneePt)
-        {
-            if (ii > resPtr->minhypscore)
-            {
-                resPtr->minhypscore = ii;
-            }
-
-            break;
-        }
-    }
-
-#ifndef ANALYSIS
-    /* Set the nexthypscore at endPt: ~99.5% */
-    cumulative = N;
-
-    for (ii = resPtr->maxhypscore; ii >= resPtr->minhypscore; ii--)
-    {
-        cumulative -= histogram[ii];
-
-        /* Mark the upper end of tail */
-        if (cumulative <= endPt)
-        {
-            if (ii < resPtr->nexthypscore)
-            {
-                resPtr->nexthypscore = ii;
-            }
-
-            break;
-        }
-    }
-#endif /* ANALYSIS */
-
-    /* If both ends at the same point,
-     * set the upper end to maxhypscore
-     */
-    if (resPtr->nexthypscore <= resPtr->minhypscore)
-    {
-        resPtr->nexthypscore = resPtr->maxhypscore - 1;
-    }
-
-    /* Construct s(x) = 1 - CDF in [minhyp, nexthyp] */
-    UINT count = histogram[resPtr->nexthypscore];
-
-    for (ii = resPtr->nexthypscore - 1; ii >= resPtr->minhypscore; ii--)
-    {
-        UINT tmpcount = histogram[ii];
-
-        cumulative -= tmpcount;
-        histogram[ii] = (count + histogram[ii + 1]);
-        count = tmpcount;
-    }
-
-    /* Construct log_10(s(x)) */
-    for (ii = resPtr->minhypscore; ii <= resPtr->nexthypscore; ii++)
-    {
-        histogram[ii] = log10(histogram[ii] / N);
-    }
-
-    /* Set the tailPtr, score axis and tail size */
-    tail     = histogram + resPtr->minhypscore;
-    axis     = resPtr->xaxis + resPtr->minhypscore;
-    tailsize = resPtr->nexthypscore - resPtr->minhypscore + 1;
-
-    /*
-     * Perform linear regression (least sq. error)
-     * on tail curve and find slope (m) and bias (b)
-     */
-    (VOID) UTILS_LinearRegression(tailsize, axis, tail, slope, bias);
-
-    /* Assign back from local variables */
-    resPtr->weight = slope;
-    resPtr->bias   =  bias;
-
-    /* Return the status */
-    return status;
-}
-
 #ifdef DISTMEM
-
 /*
  * FUNCTION: Comm_Thread_Entry
  *

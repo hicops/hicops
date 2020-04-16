@@ -1,6 +1,6 @@
 /*
- * This file is part of PCDSFrame software
- * Copyright (C) 2019  Muhammad Haseeb, Fahad Saeed
+ * This file is part of HiCOPS software
+ * Copyright (C) 2020  Muhammad Haseeb, Fahad Saeed
  * Florida International University, Miami, FL
  *
  * This program is free software: you can redistribute it and/or modify
@@ -668,16 +668,11 @@ typedef struct _Results
      */
     minHeap<hCell> topK;
 
-    /************************
-     * Required variables per
-     * query for expect score
-     ************************/
-
-    /* The y = mx + b form
-     * for linear regression
+    /* The y ~ logWeibull(X, mu, beta)
+     * for data fit
      */
-    FLOAT weight;
-    FLOAT bias;
+    FLOAT mu;
+    FLOAT beta;
 
     INT minhypscore;
     INT maxhypscore;
@@ -685,26 +680,24 @@ typedef struct _Results
 
     /* Survival function s(x) vs log(score) */
     DOUBLE *survival;
-    DOUBLE *xaxis;
 
     /* Constructor */
     _Results()
     {
         cpsms = 0;
-        weight = 0;
-        bias = 0;
+        mu = 0;
+        beta = 0;
         minhypscore = 0;
         maxhypscore = 0;
         nexthypscore = 0;
-        survival = NULL;
-        xaxis = NULL;
+        survival = NULL;;
     }
 
     void reset()
     {
         cpsms = 0;
-        weight = 0;
-        bias = 0;
+        mu = 0;
+        beta = 0;
         minhypscore = 0;
         maxhypscore = 0;
         nexthypscore = 0;
@@ -712,6 +705,18 @@ typedef struct _Results
         std::memset(survival, 0x0, sizeof(DOUBLE) * (2 + MAX_HYPERSCORE * 10));
 
         topK.heap_reset();
+    }
+
+    void reset2()
+    {
+        cpsms = 0;
+        mu = 0;
+        beta = 0;
+        minhypscore = 0;
+        maxhypscore = 0;
+        nexthypscore = 0;
+
+        std::memset(survival, 0x0, sizeof(DOUBLE) * (2 + MAX_HYPERSCORE * 10));
     }
 
 } Results;
@@ -731,6 +736,7 @@ typedef struct _partResult
 
     /* Total number of samples scored */
     INT N;
+    INT qID;
 
 
     /* Default contructor */
@@ -742,6 +748,7 @@ typedef struct _partResult
         b = 0;
         N  = 0;
         max = 0;
+        qID = 0;
     }
 
     _partResult(INT def)
@@ -752,6 +759,7 @@ typedef struct _partResult
         b = def;
         N  = def;
         max = def;
+        qID = 0;
     }
 
     /* Destructor */
@@ -763,6 +771,7 @@ typedef struct _partResult
         b = 0;
         N  = 0;
         max2 = 0;
+        qID = 0;
     }
 
     _partResult& operator=(const INT& rhs)
@@ -774,6 +783,7 @@ typedef struct _partResult
             b = rhs;
             N = rhs;
             max = rhs;
+            qID = rhs;
 
         return *this;
     }
@@ -789,6 +799,7 @@ typedef struct _partResult
             b = rhs.b;
             N = rhs.N;
             max2 = rhs.max2;
+            qID = rhs.qID;
         }
 
         return *this;
@@ -851,34 +862,5 @@ typedef struct _fResult
     }
 
 } fResult;
-
-typedef struct _BorrowedData
-{
-    /* These pointers will be borrowed */
-    partRes *resPtr;
-    BYICount *scPtr;
-    hCell *heapArray;
-    Index *index;
-    INT *sizeArray;
-    INT *fileArray;
-
-    /* Dataset size */
-    INT cPSMsize;
-    INT nBatches;
-
-    _BorrowedData()
-    {
-        resPtr = NULL;
-        scPtr = NULL;
-        heapArray = NULL;
-        index = NULL;
-        sizeArray = NULL;
-        fileArray = NULL;
-
-        cPSMsize = 0;
-        nBatches = 0;
-    }
-
-} BData;
 
 #endif /* INCLUDE_SLM_DSTS_H_ */
