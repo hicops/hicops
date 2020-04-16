@@ -542,14 +542,6 @@ STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs)
 
             std::memset(Score[thd].res.survival, 0x0, sizeof (DOUBLE) * (2 + MAX_HYPERSCORE * 10));
 
-            /* Initialize the log(score) axis */
-            Score[thd].res.xaxis = new DOUBLE[1 + (MAX_HYPERSCORE * 10) + 1];
-
-            for (UINT k = 0; k < 1 + (MAX_HYPERSCORE * 10) + 1; k++)
-            {
-                Score[thd].res.xaxis[k] = k;
-            }
-
             /* Initialize the heap with size = pow(2, num) - 1 */
             Score[thd].res.topK.heap_init((1 << num) - 1);
         }
@@ -894,21 +886,16 @@ STATUS DSLIM_DeallocateSC()
         {
             delete[] Score[thd].byc;
             delete[] Score[thd].ibyc;
-            /*
             delete[] Score[thd].res.survival;
-            delete[] Score[thd].res.xaxis;
-             */
+
             Score[thd].byc = NULL;
             Score[thd].ibyc = NULL;
-            /*
             Score[thd].res.survival = NULL;
-            Score[thd].res.xaxis = NULL;
-            */
         }
-/*
+
         delete[] Score;
         Score = NULL;
-*/
+
     }
 
     return SLM_SUCCESS;

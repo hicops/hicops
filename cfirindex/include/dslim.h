@@ -26,6 +26,7 @@
 #include "lbe.h"
 #include "slm_dsts.h"
 #include "dslim_comm.h"
+#include "expeRT.h"
 
 /* Macros for SLM bitmask operations */
 #define BYTE1                              8
@@ -149,7 +150,7 @@ STATUS DSLIM_DeallocateIonIndex(Index *);
 
 STATUS DSLIM_InitDistScore();
 
-STATUS DSLIM_CarryForward(Index *, DSLIM_Comm *, BYICount *, hCell *, INT);
+STATUS DSLIM_CarryForward(Index *, DSLIM_Comm *, expeRT *, hCell *, INT);
 
 STATUS DSLIM_DistScoreManager();
 

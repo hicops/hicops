@@ -40,7 +40,7 @@ extern gParams           params;
 /* Entry function for DSLIM_Score module */
 VOID *DSLIM_Score_Thread_Entry(VOID *);
 
-STATUS DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, BYICount *Score, hCell *CandidatePSMS, INT cpsmSize)
+STATUS DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, expeRT *ePtr, hCell *CandidatePSMS, INT cpsmSize)
 {
     STATUS status = SLM_SUCCESS;
 
@@ -49,7 +49,7 @@ STATUS DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, BYICount *Score,
     if (bdata != NULL)
     {
         bdata->index     = index;
-        bdata->scPtr     = Score;
+        bdata->ePtr      = ePtr;
         bdata->heapArray = CandidatePSMS;
         bdata->fileArray = CommHandle->fileArray;
         bdata->sizeArray = CommHandle->sizeArray;
@@ -95,7 +95,7 @@ STATUS DSLIM_DistScoreManager()
         /* Distributed Scoring Algorithm */
         if (status == SLM_SUCCESS)
         {
-            status = ScoreHandle->ComputegGumbalDistribution();
+            status = ScoreHandle->CombineResults();
 
             if (params.myid == 0)
             {

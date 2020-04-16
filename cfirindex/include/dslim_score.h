@@ -27,6 +27,38 @@
 #include "dslim.h"
 #include "slmerr.h"
 #include "utils.h"
+#include "expeRT.h"
+
+typedef struct _BorrowedData
+{
+    /* These pointers will be borrowed */
+    partRes *resPtr;
+    expeRT *ePtr;
+    hCell *heapArray;
+    Index *index;
+    INT *sizeArray;
+    INT *fileArray;
+    INT *indxArray;
+
+    /* Dataset size */
+    INT cPSMsize;
+    INT nBatches;
+
+    _BorrowedData()
+    {
+        resPtr = NULL;
+        ePtr = NULL;
+        heapArray = NULL;
+        index = NULL;
+        sizeArray = NULL;
+        fileArray = NULL;
+        indxArray = NULL;
+
+        cPSMsize = 0;
+        nBatches = 0;
+    }
+
+} BData;
 
 class DSLIM_Score
 {
@@ -44,7 +76,7 @@ private:
     INT      *sizeArray;
     INT      *fileArray;
     INT      *indxArray;
-    BYICount *scPtr;
+    expeRT   *ePtr;
     partRes  *resPtr;
     hCell    *heapArray;
     Index    *index;
@@ -67,7 +99,7 @@ public:
     DSLIM_Score(BData *bd);
     virtual  ~DSLIM_Score();
 
-    STATUS   ComputegGumbalDistribution();
+    STATUS   CombineResults();
 
     STATUS   ScatterScores();
 

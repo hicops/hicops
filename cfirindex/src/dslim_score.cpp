@@ -42,7 +42,7 @@ DSLIM_Score::DSLIM_Score()
     sizeArray = NULL;
     fileArray = NULL;
     indxArray = NULL;
-    scPtr = NULL;
+    ePtr      = NULL;
     heapArray = NULL;
     index = NULL;
     resPtr = NULL;
@@ -87,7 +87,7 @@ DSLIM_Score::DSLIM_Score(BData *bd)
     fileArray = bd->fileArray;
     indxArray = bd->indxArray;
 
-    scPtr = bd->scPtr;
+    ePtr = bd->ePtr;
     heapArray = bd->heapArray;
     index = bd->index;
     resPtr = bd->resPtr;
@@ -196,13 +196,13 @@ DSLIM_Score::~DSLIM_Score()
         fileArray = NULL;
     }
 
-    if (scPtr != NULL)
+    if (ePtr != NULL)
     {
 #ifdef DIAGNOSE2
         cout << (void *) scPtr << "scA@: " << params.myid << endl;
 #endif /* DIAGNOSE2 */
-        delete[] scPtr;
-        scPtr = NULL;
+        delete[] ePtr;
+        ePtr = NULL;
     }
 
     if (heapArray != NULL)
@@ -259,7 +259,7 @@ DSLIM_Score::~DSLIM_Score()
     return;
 }
 
-STATUS DSLIM_Score::ComputegGumbalDistribution()
+STATUS DSLIM_Score::CombineResults()
 {
     STATUS status = SLM_SUCCESS;
 
@@ -317,7 +317,9 @@ STATUS DSLIM_Score::ComputegGumbalDistribution()
         INT thno = omp_get_thread_num();
 
         /* Results pointer to use */
-        Results *rPtr = &this->scPtr[thno].res;
+        expeRT *expPtr = this->ePtr + thno;
+
+        INT cpsms = 0;
 
         /* Calculate the batchNum that spec belongs to */
         for (;spec >= (currCount[thno] + sizeArray[batchNum[thno]]) && batchNum[thno] < this->nBatches;)
@@ -339,7 +341,7 @@ STATUS DSLIM_Score::ComputegGumbalDistribution()
         INT stride = sizeArray[batchNum[thno]];
 
         /* Reset pointer before computations */
-        rPtr->reset2();
+        //ePtr->reset();
 
         /* Record locators */
         INT key = params.nodes;
@@ -366,22 +368,19 @@ STATUS DSLIM_Score::ComputegGumbalDistribution()
                 exit (-11);
             }
 
-            /* Get the number of samples */
-            rPtr->cpsms += sResult->N;
-
             /* Get the slope and bias */
             DOUBLE b = (DOUBLE)(sResult->b);
             DOUBLE m = (DOUBLE)(sResult->m);
 
-            /* Divide by 1000 */
-            b /= 1000;
-            m /= 1000;
+            /* Divide by 10000 */
+            b /= 10000.0;
+            m /= 10000.0;
+
+            /* Update the number of samples */
+            cpsms += sResult->N;
 
             /* Reconstruct the partial histogram */
-            for (INT x = sResult->min; x <= sResult->max2; x++)
-            {
-                rPtr->survival[x] += pow(10, (m * x) + b) * sResult->N;
-            }
+            expPtr->AddlogWeibull(sResult->N, m, b, sResult->min, sResult->max2);
 
             /* Record the maxhypscore and its key */
             if (sResult->max > 0 && sResult->max > maxhypscore)
@@ -389,26 +388,21 @@ STATUS DSLIM_Score::ComputegGumbalDistribution()
                 maxhypscore = sResult->max;
                 key         = sno;
             }
-
         }
 
         /* Combine the fResult */
         fResult *psm = &TxValues[spec];
 
         /* Need further processing only if enough results */
-        if (key < (INT)params.nodes && rPtr->cpsms >= params.min_cpsm)
+        if (key < (INT)params.nodes && cpsms >= (INT)params.min_cpsm)
         {
-            /* Model the global Gumbal distribution */
-            status = UTILS_ModelgGumbalDistribution(rPtr);
+            DOUBLE e_x = params.expect_max;
 
-            /* Estimate the log (s(x)); x = log(hyperscore) */
-            DOUBLE lgs_x = (rPtr->weight * rPtr->maxhypscore) + rPtr->bias;
+            /* Model the survival function */
+            expPtr->ModelSurvivalFunction(e_x, maxhypscore);
 
-            /* Compute the s(x) */
-            DOUBLE s_x = pow(10, lgs_x);
-
-            /* e(x) = n * s(x) */
-            DOUBLE e_x = rPtr->cpsms * s_x;
+            /* TODO: Remove me */
+            cout << "eValue: " << e_x << endl;
 
             /* If the scores are good enough */
             if (e_x < params.expect_max)
@@ -429,6 +423,8 @@ STATUS DSLIM_Score::ComputegGumbalDistribution()
         }
         else
         {
+            expPtr->ResetPartialVectors();
+
             psm->eValue = params.expect_max * 1e6;
             psm->specID = params.nodes;
         }

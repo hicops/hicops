@@ -1,5 +1,5 @@
 /*
- * This file is part of PCDSFrame software
+ * This file is part of HiCOPS software
  * Copyright (C) 2019  Muhammad Haseeb, and Fahad Saeed
  * Florida International University, Miami, FL
  *
@@ -43,6 +43,7 @@ BOOL ExitSignal = false;
 DSLIM_Comm *CommHandle    = NULL;
 Scheduler  *SchedHandle   = NULL;
 hCell      *CandidatePSMS = NULL;
+expeRT     *ePtrs         = NULL;
 
 /* Lock for query file vector and thread manager */
 LOCK qfilelock;
@@ -63,7 +64,6 @@ VOID *DSLIM_Comm_Thread_Entry(VOID *argv);
 lwqueue<MSQuery *> *ioQ = NULL;
 LOCK ioQlock;
 /****************************************************************/
-
 
 #ifdef BENCHMARK
 static DOUBLE duration = 0;
@@ -181,6 +181,12 @@ STATUS DSLIM_SearchManager(Index *index)
     if (status == SLM_SUCCESS)
     {
         qPtrs = new lwbuff<Queries>(20, 5, 15); // cap, th1, th2
+    }
+
+    /* Initialize the ePtrs */
+    if (status == SLM_SUCCESS)
+    {
+        ePtrs = new expeRT[params.threads];
     }
 
     /* Create queries buffers and push them to the lwbuff */
@@ -357,7 +363,7 @@ STATUS DSLIM_SearchManager(Index *index)
         if (params.myid == 0)
         {
             /* Compute Duration */
-            std::cout << "Query Time: " << qtime.count() << "s" << endl;
+            std::cout << "\nQuery Time: " << qtime.count() << "s" << endl;
             std::cout << "Queried with status:\t\t" << status << endl << endl;
         }
 #endif /* DIAGNOSE */
@@ -399,7 +405,7 @@ STATUS DSLIM_SearchManager(Index *index)
         CommHandle->SignalExit();
 
         /* Carry forward the data to the distributed scoring module */
-        status = DSLIM_CarryForward(index, CommHandle, Score, CandidatePSMS, spectrumID);
+        status = DSLIM_CarryForward(index, CommHandle, ePtrs, CandidatePSMS, spectrumID);
 
         /* Delete the instance of CommHandle */
         delete CommHandle;
@@ -412,6 +418,9 @@ STATUS DSLIM_SearchManager(Index *index)
     if (status == SLM_SUCCESS && params.nodes == 1)
     {
         status = DFile_DeinitFiles();
+
+        delete[] ePtrs;
+        ePtrs = NULL;
     }
 
     /* Return the status of execution */
@@ -495,6 +504,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
             BYC *bycPtr = Score[thno].byc;
             iBYC *ibycPtr = Score[thno].ibyc;
             Results *resPtr = &Score[thno].res;
+            expeRT  *expPtr = ePtrs + thno;
 
 #ifndef DIAGNOSE
             if (thno == 0 && params.myid == 0)
@@ -594,8 +604,10 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 
                                 /* Insert the cell in the heap dst */
                                 resPtr->topK.insert(cell);
+
                                 /* Increase the N */
                                 resPtr->cpsms += 1;
+
                                 /* Update the histogram */
                                 resPtr->survival[(INT) (cell.hyperscore * 10 + 0.5)] += 1;
                             }
@@ -615,16 +627,37 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 /* Set the params.min_cpsm in dist mem mode to 1 */
                 if (resPtr->cpsms >= 1)
                 {
-                    /* Extract the top result
-                     * and put it in the list */
-                    CandidatePSMS[spectrumID + queries] = resPtr->topK.getMax();
+#ifdef PARTIALPSM
+                    ofstream *fh = new ofstream;
+                    STRING fn = params.workspace + "/" +
+                                std::to_string(spectrumID + queries) +
+                                "_h_" + std::to_string(params.myid) + ".txt";
+                    fh->open(fn);
+
+                    for (INT ik = 0; ik < 2 + (MAX_HYPERSCORE *10); ik++)
+                    {
+                        *fh << std::to_string(resPtr->survival[ik]) << endl;
+                    }
+
+                    fh->close();
+
+                    delete fh;
+#endif /* PARTIALPSM */
+
+                    /* Extract the top PSM */
+                    hCell psm = resPtr->topK.getMax();
+
+                    /* Put it in the list */
+                    CandidatePSMS[spectrumID + queries] = psm;
+
+                    resPtr->maxhypscore = (psm.hyperscore * 10 + 0.5);
 
                     /* Compute the partial Gumbal distribution */
-                    status = UTILS_ModelpGumbalDistribution(resPtr);
+                    status = expPtr->Model_logWeibull(resPtr);
 
                     /* Fill in the Tx array cells */
-                    txArray[queries].b    = (INT)(resPtr->bias * 1000);
-                    txArray[queries].m    = (INT)(resPtr->weight * 1000);
+                    txArray[queries].b    = (INT)(resPtr->beta * 10000);
+                    txArray[queries].m    = (INT)(resPtr->mu * 10000);
                     txArray[queries].min  = resPtr->minhypscore;
                     txArray[queries].max2 = resPtr->nexthypscore;
                     txArray[queries].max  = resPtr->maxhypscore;
@@ -651,15 +684,34 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 /* Check for minimum number of PSMs */
                 if (resPtr->cpsms >= params.min_cpsm)
                 {
+#ifdef PARTIALPSM
+                    ofstream *fh = new ofstream;
+                    STRING fn = params.workspace + "/" +
+                                std::to_string(spectrumID + queries) +
+                                "_h.txt";
+
+                    fh->open(fn);
+
+                    for (INT ik = 0; ik < 2 + (MAX_HYPERSCORE *10); ik++)
+                    {
+                        *fh << std::to_string(resPtr->survival[ik]) << endl;
+                    }
+
+                    fh->close();
+
+                    delete fh;
+#else
                     /* Extract the top PSM */
                     hCell psm = resPtr->topK.getMax();
 
+                    resPtr->maxhypscore = (psm.hyperscore * 10 + 0.5);
+
                     /* Compute expect score if there
                      * are any candidate PSMs */
-                    status = UTILS_ModelSurvivalFunction(resPtr);
+                    status = expPtr->ModelSurvivalFunction(resPtr);
 
                     /* Estimate the log (s(x)); x = log(hyperscore) */
-                    DOUBLE lgs_x = resPtr->weight * (psm.hyperscore * 10 + 0.5) + resPtr->bias;
+                    DOUBLE lgs_x = resPtr->mu * resPtr->maxhypscore + resPtr->beta;
 
                     /* Compute the s(x) */
                     DOUBLE s_x = pow(10, lgs_x);
@@ -669,6 +721,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 
                     /* Do not print any scores just yet */
                     if (e_x < params.expect_max)
+#endif /* PARTIALPSM */
                     {
 #ifndef ANALYSIS
                         /* Printing the scores in OpenMP mode */

@@ -36,6 +36,7 @@
 #include "msquery.h"
 #include "config.h"
 #include "lwqueue.h"
+#include "expeRT.h"
 
 #define TXARRAYS                   2
 
@@ -146,7 +147,7 @@ public:
     virtual ~DSLIM_Comm();
 
     friend STATUS DSLIM_CarryForward(Index *, DSLIM_Comm *,
-                                     BYICount *, hCell *, INT);
+                                     expeRT *, hCell *, INT);
 
     partRes *getTxBuffer(INT batchtag, INT batchsize, INT&);
 
