@@ -23,6 +23,7 @@
 using namespace std;
 
 MPI_Datatype resultF;
+STRING fn;
 
 extern gParams params;
 extern VOID *DSLIM_Score_Thread_Entry(VOID *);
@@ -265,169 +266,181 @@ STATUS DSLIM_Score::CombineResults()
 
     /* Each node sent its sample */
     const INT nSamples = params.nodes;
+    auto startPos = 0;
+    auto startSpec= 0;
+    ifstream *fhs = NULL;
+    ebuffer  *iBuffs = NULL;
 
-    /* Initial running counts */
-    INT *currCount = new INT[params.threads];
-
-    if (currCount != NULL)
+    if (this->myRXsize > 0)
     {
-        memset(currCount, 0x0, (sizeof(INT) * params.threads));
-    }
-    else
-    {
-        status = ERR_INVLD_MEMORY;
+        fhs = new ifstream[nSamples];
+        iBuffs = new ebuffer[nSamples];
     }
 
-    /* Starting positions */
-    INT *startPos  = new INT[params.threads];
+    auto vbatch = params.myid;
 
-    if (startPos != NULL)
+    for (auto batchNum = 0; batchNum < this->nBatches; batchNum++, vbatch += nSamples)
     {
-        memset(startPos, 0x0, (sizeof(INT) * params.threads));
-    }
-    else
-    {
-        status = ERR_INVLD_MEMORY;
-    }
+        auto bSize = sizeArray[batchNum];
 
-    /* Initial batch numberS */
-    INT *batchNum  = new INT[params.threads];
+        for (INT saa = 0; saa < nSamples; saa++)
+        {
+            fn = params.workspace + "/" + std::to_string(vbatch) + "_"
+                    + std::to_string(saa) + ".dat";
 
-    if (batchNum != NULL)
-    {
-        memset(batchNum, 0x0, (sizeof(INT) * params.threads));
-    }
-    else
-    {
-        status = ERR_INVLD_MEMORY;
-    }
+            fhs[saa].open(fn, ios::in | ios::binary);
 
-    //cout << "Total RX'ed Spectra: " << myRXsize << " @: " << params.myid << endl;
+            if (fhs[saa].is_open())
+            {
+                fhs[saa].read(iBuffs[saa].ibuff, bSize * 128 * sizeof(USHORT));
 
-    /* Comment: Wanted to declare these variables
-     * as private without making arrays but suspected
-     * undefined behavior with different toolchains.
-     */
+                if (fhs[saa].fail())
+                {
+                    status = ERR_FILE_NOT_FOUND;
+                    cout << "FATAL: File Read Failed" << endl;
+                    exit(status);
+                }
+            }
+
+            fn.clear();
+        }
+
 #ifdef _OPENMP
-#pragma omp parallel for schedule (dynamic, 1) num_threads(params.threads)
+#pragma omp parallel for schedule (dynamic, 4) num_threads(params.threads)
 #endif /* _OPENMP */
-    for (INT spec = 0; spec < this->myRXsize; spec++)
-    {
-        /* My thread number */
-        INT thno = omp_get_thread_num();
-
-        /* Results pointer to use */
-        expeRT *expPtr = this->ePtr + thno;
-
-        INT cpsms = 0;
-
-        /* Calculate the batchNum that spec belongs to */
-        for (;spec >= (currCount[thno] + sizeArray[batchNum[thno]]) && batchNum[thno] < this->nBatches;)
+        for (INT spec = 0; spec < bSize; spec++)
         {
-            /* cout << "batchNum update@: " << params.myid << thno
-             *      << " currCnt: " << currCount << " spec: " << spec << endl; */
+            INT thno = omp_get_thread_num();
 
-            currCount[thno] += sizeArray[batchNum[thno]];
-            startPos[thno]  += sizeArray[batchNum[thno]] * nSamples;
+            /* Results pointer to use */
+            expeRT *expPtr = this->ePtr + thno;
 
-            /* Update the batchNumber */
-            batchNum[thno]  += 1;
-        }
+            INT cpsms = 0;
 
-        /* Compute the spectrum index in rxArray */
-        INT specIDX  = startPos[thno] + spec - currCount[thno];
+            /* Compute the spectrum index in rxArray */
+            INT specIDX = startPos + spec;
 
-        /* Compute the stride in rxArray */
-        INT stride = sizeArray[batchNum[thno]];
+            /* Compute the stride in rxArray */
+            INT stride = bSize;
 
-        /* Reset pointer before computations */
-        //ePtr->reset();
+            /* Reset pointer before computations */
+            //ePtr->reset();
+            /* Record locators */
+            INT key = params.nodes;
+            INT maxhypscore = -1;
 
-        /* Record locators */
-        INT key = params.nodes;
-        INT maxhypscore = -1;
-
-        /* For all samples, update the histogram */
-        for (INT sno = 0; sno < nSamples; sno++)
-        {
-            /* Pointer to Result sample */
-            partRes *sResult = resPtr + (specIDX + (stride * sno));
-
-            /* Sanity check */
-            if (specIDX + (stride * sno) >= (this->myRXsize * nSamples))
+            /* For all samples, update the histogram */
+            for (INT sno = 0; sno < nSamples; sno++)
             {
-                cout << "FATAL: Segfault caught @: " << params.myid << endl;
-                cout << "spec: " << spec << endl;
-                cout << "currCount: " << currCount[thno] << endl;
-                cout << "myRXsize: " << this->myRXsize << endl;
-                cout << "specIDX: " << specIDX << endl;
-                cout << "currCount: " << currCount[thno] << endl;
-                cout << "batchNum: " << batchNum[thno] << endl;
-                cout << "sizeArray: " << sizeArray[batchNum[thno]] << endl;
+                /* Pointer to Result sample */
+                partRes *sResult = resPtr + (specIDX + (stride * sno));
 
-                exit (-11);
+                /* Sanity check */
+                if (specIDX + (stride * sno) >= (this->myRXsize * (nSamples)))
+                {
+                    cout << "FATAL: Segfault caught @: " << params.myid << endl;
+                    cout << "spec: " << spec << endl;
+                    cout << "currCount: " << startPos << endl;
+                    cout << "myRXsize: " << this->myRXsize << endl;
+                    cout << "specIDX: " << specIDX << endl;
+                    cout << "batchNum: " << batchNum << endl;
+                    cout << "sizeArray: " << sizeArray[batchNum] << endl;
+
+                    exit(-11);
+                }
+
+                if (*sResult == 0)
+                {
+                    continue;
+                }
+
+                /* Update the number of samples */
+                cpsms += sResult->N;
+
+                /* Reconstruct the partial histogram */
+                expPtr->Reconstruct(&iBuffs[sResult->sno], spec, sResult);
+
+                /* Record the maxhypscore and its key */
+                if (sResult->max > 0 && sResult->max > maxhypscore)
+                {
+                    maxhypscore = sResult->max;
+                    key = sResult->sno;
+                }
             }
 
-            /* Get the slope and bias */
-            DOUBLE b = (DOUBLE)(sResult->b);
-            DOUBLE m = (DOUBLE)(sResult->m);
+            /* Combine the fResult */
+            fResult *psm = &TxValues[startSpec + spec];
+            keys[startSpec + spec] = key;
 
-            /* Divide by 10000 */
-            b /= 10000.0;
-            m /= 10000.0;
-
-            /* Update the number of samples */
-            cpsms += sResult->N;
-
-            /* Reconstruct the partial histogram */
-            expPtr->AddlogWeibull(sResult->N, m, b, sResult->min, sResult->max2);
-
-            /* Record the maxhypscore and its key */
-            if (sResult->max > 0 && sResult->max > maxhypscore)
+            /* Need further processing only if enough results */
+            if (key < (INT) params.nodes && cpsms >= (INT) params.min_cpsm)
             {
-                maxhypscore = sResult->max;
-                key         = sno;
-            }
-        }
+                DOUBLE e_x = params.expect_max;
 
-        /* Combine the fResult */
-        fResult *psm = &TxValues[spec];
+                /* Model the survival function */
+                expPtr->ModelSurvivalFunction(e_x, maxhypscore);
 
-        /* Need further processing only if enough results */
-        if (key < (INT)params.nodes && cpsms >= (INT)params.min_cpsm)
-        {
-            DOUBLE e_x = params.expect_max;
+                /* If the scores are good enough */
+                if (e_x < params.expect_max)
+                {
+                    /*
+                    if (params.myid == 0)
+                    {
+                         FIXME: Remove me
+                        cout << "@" << params.myid << " SpecID: " << indxArray[batchNum] + spec
+                                << " eValue: " << e_x << " bNO: " << batchNum << " npsms: " << cpsms
+                                << " key: " << key << endl;
+                    }*/
 
-            /* Model the survival function */
-            expPtr->ModelSurvivalFunction(e_x, maxhypscore);
+                    psm->eValue = e_x * 1e6;
+                    psm->specID = indxArray[batchNum] + spec;
+                    psm->npsms = cpsms;
 
-            /* TODO: Remove me */
-            cout << "eValue: " << e_x << endl;
-
-            /* If the scores are good enough */
-            if (e_x < params.expect_max)
-            {
-                /* cout << "@" << params.myid << " SpecID: "
-                                 *      << indxArray[batchNum[thno]] <<" bNO: "
-                                 *      << batchNum[thno] << endl; */
-                psm->eValue = e_x * 1e6;
-                psm->specID = indxArray[batchNum[thno]] + (spec - currCount[thno]);
-
-                txSizes[key] += 1;
+                    txSizes[key] += 1;
+                }
+                else
+                {
+                    psm->eValue = params.expect_max * 1e6;
+                    psm->specID = -1;
+                    psm->npsms = 0;
+                }
             }
             else
             {
+                expPtr->ResetPartialVectors();
                 psm->eValue = params.expect_max * 1e6;
-                psm->specID = params.nodes;
+                psm->specID = -1;
+                psm->npsms = 0;
             }
         }
-        else
-        {
-            expPtr->ResetPartialVectors();
 
-            psm->eValue = params.expect_max * 1e6;
-            psm->specID = params.nodes;
+        /* Update the counters */
+        startSpec += sizeArray[batchNum];
+        startPos += sizeArray[batchNum] * (nSamples-1);
+
+        /* Remove the files when no longer needed */
+        for (INT saa = 0; saa < nSamples; saa++)
+        {
+            fn = params.workspace + "/" + std::to_string(vbatch) + "_" + std::to_string(saa)
+                    + ".dat";
+
+            if (fhs[saa].is_open())
+            {
+                fhs[saa].close();
+                std::remove((const CHAR *) fn.c_str());
+            }
+
+            fn.clear();
         }
+    }
+
+    if (this->myRXsize > 0)
+    {
+        delete[] fhs;
+        fhs = NULL;
+
+        delete[] iBuffs;
+        iBuffs = NULL;
     }
 
     /* Check if we have RX data */
@@ -445,24 +458,6 @@ STATUS DSLIM_Score::CombineResults()
         }
     }
 
-    /* Deallocate the memory */
-    if (currCount != NULL)
-    {
-        delete[] currCount;
-        currCount = NULL;
-    }
-
-    if (batchNum != NULL)
-    {
-        delete[] batchNum;
-        batchNum = NULL;
-    }
-
-    if (startPos != NULL)
-    {
-        delete[] startPos;
-        startPos = NULL;
-    }
 
     /* return the status of execution */
     return status;
@@ -700,7 +695,7 @@ STATUS DSLIM_Score::TXResults(MPI_Request *txRqsts, INT* txStats)
             /* cout << (void *)((fResult*)(TxValues + offset))
              *      << " TxValues@:" << params.myid << endl; */
 
-            /* Send an integer to all other machines */
+            /* Send results to all other machines */
             status = MPI_Isend(TxValues + offset, txSizes[kk], resultF, kk, 0x1, MPI_COMM_WORLD, txRqsts + kk);
 
             txStats[kk] = 0;
@@ -775,14 +770,60 @@ STATUS DSLIM_Score::DisplayResults()
     STATUS status = SLM_SUCCESS;
 
     /* Initialize the file handles */
-    //status = DFile_InitFiles();
+    status = DFile_InitFiles();
 
-    /* TODO: Implement stuff here */
+    /* Display TxArray Data */
+    auto offset = 0;
+    auto mysize = txSizes[params.myid];
+
+    if (mysize > 0)
+    {
+        for (auto beg = 0; beg < (INT)params.myid; beg++)
+        {
+            offset += txSizes[beg];
+        }
+    }
+
+    fResult *myPtr = TxValues + offset;
+
+    /* Display the data */
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(params.threads)
+#endif /* _OPENMP */
+    for (auto ik = myPtr; ik < myPtr + mysize; ik++)
+    {
+        hCell *psm = heapArray + ik->specID;
+
+        //cout <<"TX: eV: " << ik->eValue << " specID: " << ik->specID << " npsms: " << ik->npsms << endl;
+
+        DFile_PrintScore(this->index, ik->specID, psm->pmass, psm, ((DOUBLE)(ik->eValue))/1e6, ik->npsms);
+    }
+
+    /* Now display the RX data */
+    myPtr = RxValues;
+    mysize = 0;
+
+    for (auto pt = rxSizes; pt < rxSizes + params.nodes; pt++)
+    {
+        mysize += *pt;
+    }
+
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(params.threads)
+#endif /* _OPENMP */
+    for (auto ik = myPtr; ik < myPtr + mysize; ik++)
+    {
+        hCell *psm = heapArray + ik->specID;
+
+        //cout <<"RX: eV: " << ik->eValue << " specID: " << ik->specID << " npsms: " << ik->npsms << endl;
+
+        DFile_PrintScore(this->index, ik->specID, psm->pmass, psm, ((DOUBLE)(ik->eValue))/1e6, ik->npsms);
+    }
 
     /* Close the files and deallocate objects */
     if (status == SLM_SUCCESS)
     {
-        //status = DFile_DeinitFiles();
+        status = DFile_DeinitFiles();
     }
 
     return status;

@@ -45,6 +45,9 @@ Scheduler  *SchedHandle   = NULL;
 hCell      *CandidatePSMS = NULL;
 expeRT     *ePtrs         = NULL;
 
+ebuffer    *iBuff        = NULL;
+LOCK       writer;
+
 /* Lock for query file vector and thread manager */
 LOCK qfilelock;
 INT qfid = 0;
@@ -58,6 +61,7 @@ Queries *workPtr = NULL;
 
 #ifdef DISTMEM
 VOID *DSLIM_Comm_Thread_Entry(VOID *argv);
+VOID *DSLIM_FOut_Thread_Entry(VOID *argv);
 #endif
 
 /* A queue containing I/O thread state when preempted */
@@ -71,10 +75,6 @@ extern DOUBLE compute;
 extern DOUBLE fileio;
 extern DOUBLE memory;
 #endif /* BENCHMARK */
-
-#ifdef DISTMEM
-VOID *DSLIM_Comm_Thread_Entry(VOID *argv);
-#endif /* DISTMEM */
 
 VOID *DSLIM_IO_Threads_Entry(VOID *argv);
 
@@ -170,6 +170,8 @@ STATUS DSLIM_SearchManager(Index *index)
     INT maxlen = params.max_len;
     INT minlen = params.min_len;
 
+    THREAD *wthread = new THREAD;
+
     /* The mutex for queryfile vector */
     if (status == SLM_SUCCESS)
     {
@@ -225,6 +227,16 @@ STATUS DSLIM_SearchManager(Index *index)
     if (status == SLM_SUCCESS && params.nodes == 1)
     {
         status = DFile_InitFiles();
+    }
+    else if (status == SLM_SUCCESS && params.nodes > 1)
+    {
+        status = sem_init(&writer, 0, 0);
+
+        if (wthread != NULL && status == SLM_SUCCESS)
+        {
+            /* Pass the reference to thread block as argument */
+            status = pthread_create(wthread, NULL, &DSLIM_FOut_Thread_Entry, (VOID *)NULL);
+        }
     }
 
     /* Initialize the Comm module */
@@ -336,12 +348,11 @@ STATUS DSLIM_SearchManager(Index *index)
         /* Transfer my partial results to others */
         if (status == SLM_SUCCESS && params.nodes > 1)
         {
+            status = sem_post(&writer);
+
             /* Check if its a Tx */
-            if (batchnum % (params.nodes) != params.myid)
-            {
-                /* Tx the results need the batchsize */
-                status = CommHandle->Tx(batchnum, batchsize, buffernum);
-            }
+            /* Tx the results need the batchsize */
+            status = CommHandle->Tx(batchnum, batchsize, buffernum);
 
             batchnum++;
         }
@@ -390,6 +401,18 @@ STATUS DSLIM_SearchManager(Index *index)
 #ifdef DIAGNOSE
        std::cout << "Wait4Completion: " << params.myid << endl;
 #endif /* DIAGNOSE */
+
+        while (iBuff != NULL);
+
+        status = sem_post(&writer);
+
+        VOID *ptr = NULL;
+        pthread_join(*wthread, &ptr);
+
+        delete wthread;
+
+        sem_destroy(&writer);
+        writer = NULL;
 
         /* Wait for CommHandle to complete its work */
         status = CommHandle->Wait4Completion();
@@ -450,6 +473,19 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
     UINT scale = params.scale;
     DOUBLE maxmass = params.max_mass;
 
+    if (params.nodes > 1)
+    {
+        /* Wait for FOut thread to take out iBuff */
+        while (iBuff != NULL);
+        iBuff = new ebuffer;
+
+        /* Check for correct allocation */
+        if (iBuff == NULL)
+        {
+            status = ERR_BAD_MEM_ALLOC;
+        }
+    }
+
 #ifdef BENCHMARK
     DOUBLE tcons[threads];
     std::memset(tcons, 0x0, threads * sizeof(DOUBLE));
@@ -485,9 +521,11 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
         }
 #endif /* DIAGNOSE */
 
-        /* Process all the queries in the chunk */
+        /* Process all the queries in the chunk.
+         * Setting chunk size to 4 to avoid false sharing
+         */
 #ifdef _OPENMP
-#pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
+#pragma omp parallel for num_threads(threads) schedule(dynamic, 4)
 #endif /* _OPENMP */
         for (INT queries = 0; queries < ss->numSpecs; queries++)
         {
@@ -505,6 +543,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
             iBYC *ibycPtr = Score[thno].ibyc;
             Results *resPtr = &Score[thno].res;
             expeRT  *expPtr = ePtrs + thno;
+            ebuffer *inBuff = inBuff + thno;
 
 #ifndef DIAGNOSE
             if (thno == 0 && params.myid == 0)
@@ -627,23 +666,6 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 /* Set the params.min_cpsm in dist mem mode to 1 */
                 if (resPtr->cpsms >= 1)
                 {
-#ifdef PARTIALPSM
-                    ofstream *fh = new ofstream;
-                    STRING fn = params.workspace + "/" +
-                                std::to_string(spectrumID + queries) +
-                                "_h_" + std::to_string(params.myid) + ".txt";
-                    fh->open(fn);
-
-                    for (INT ik = 0; ik < 2 + (MAX_HYPERSCORE *10); ik++)
-                    {
-                        *fh << std::to_string(resPtr->survival[ik]) << endl;
-                    }
-
-                    fh->close();
-
-                    delete fh;
-#endif /* PARTIALPSM */
-
                     /* Extract the top PSM */
                     hCell psm = resPtr->topK.getMax();
 
@@ -652,17 +674,15 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 
                     resPtr->maxhypscore = (psm.hyperscore * 10 + 0.5);
 
-                    /* Compute the partial Gumbal distribution */
-                    status = expPtr->Model_logWeibull(resPtr);
+                    status = expPtr->StoreIResults(resPtr, queries, iBuff);
 
                     /* Fill in the Tx array cells */
-                    txArray[queries].b    = (INT)(resPtr->beta * 10000);
-                    txArray[queries].m    = (INT)(resPtr->mu * 10000);
                     txArray[queries].min  = resPtr->minhypscore;
                     txArray[queries].max2 = resPtr->nexthypscore;
                     txArray[queries].max  = resPtr->maxhypscore;
                     txArray[queries].N    = resPtr->cpsms;
                     txArray[queries].qID  = spectrumID + queries;
+                    txArray[queries].sno  = params.myid;
                 }
                 else
                 {
@@ -674,6 +694,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                      * Fill it up and move on */
                     txArray[queries] = 0;
                     txArray[queries].qID  = spectrumID + queries;
+                    txArray[queries].sno  = params.myid;
                 }
             }
 
@@ -710,8 +731,14 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                      * are any candidate PSMs */
                     status = expPtr->ModelSurvivalFunction(resPtr);
 
+                    DOUBLE w = resPtr->mu;
+                    DOUBLE b = resPtr->beta;
+
+                    w /= 1e6;
+                    b /=1e6;
+
                     /* Estimate the log (s(x)); x = log(hyperscore) */
-                    DOUBLE lgs_x = resPtr->mu * resPtr->maxhypscore + resPtr->beta;
+                    DOUBLE lgs_x = w * resPtr->maxhypscore + b;
 
                     /* Compute the s(x) */
                     DOUBLE s_x = pow(10, lgs_x);
@@ -739,6 +766,11 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 #ifdef BENCHMARK
             tcons[thno] += omp_get_wtime() - stime;
 #endif
+        }
+
+        if (params.nodes > 1)
+        {
+            iBuff->currptr = ss->numSpecs * 128 * sizeof(USHORT);
         }
 
         /* Update the number of queried spectra */
@@ -1083,7 +1115,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
                 /* Initialize Query MS/MS file */
                 status = Query->InitQueryFile(&queryfiles[qfid_lcl], qfid_lcl);
 #ifndef DIAGNOSE
-                if (params.myid == 1)
+                if (params.myid == 0)
                 {
                     std::cout << "\nQuery File: " << queryfiles[qfid_lcl] << endl;
                     std::cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
@@ -1228,6 +1260,43 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
     return NULL;
 }
 
+VOID *DSLIM_FOut_Thread_Entry(VOID *argv)
+{
+    STATUS status = SLM_SUCCESS;
+    INT batchNo = 0;
+
+    while (status == SLM_SUCCESS)
+    {
+        status = sem_wait(&writer);
+
+        if (iBuff == NULL)
+        {
+            break;
+        }
+
+        ebuffer *lbuff = iBuff;
+
+        iBuff = NULL;
+
+        ofstream *fh = new ofstream;
+        STRING fn = params.workspace + "/" +
+                    std::to_string(batchNo) +
+                    "_" + std::to_string(params.myid) + ".dat";
+
+        fh->open(fn, ios::out | ios::binary);
+        fh->write(lbuff->ibuff, lbuff->currptr * sizeof (CHAR));
+        fh->close();
+
+        delete lbuff;
+        lbuff = NULL;
+
+        batchNo ++;
+
+    }
+
+    return argv;
+}
+
 static inline STATUS DSLIM_Deinit_IO()
 {
     STATUS status = SLM_SUCCESS;
@@ -1270,3 +1339,4 @@ static inline STATUS DSLIM_Deinit_IO()
 
     return status;
 }
+

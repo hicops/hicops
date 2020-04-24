@@ -71,7 +71,7 @@ STATUS DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, expeRT *ePtr, hC
 STATUS DSLIM_DistScoreManager()
 {
     STATUS status = SLM_SUCCESS;
-    
+
     /* Check if parameters have been brought */
     if (isCarried == false && params.nodes > 1)
     {
@@ -95,11 +95,15 @@ STATUS DSLIM_DistScoreManager()
         /* Distributed Scoring Algorithm */
         if (status == SLM_SUCCESS)
         {
+            if (params.myid == 0)
+            {
+                cout << endl << "**** Merging Partial Results ****\n" << endl;
+            }
             status = ScoreHandle->CombineResults();
 
             if (params.myid == 0)
             {
-                cout << endl << "ComputegGumbal with status:\t" << status << endl;
+                cout << endl << "Scores Merged with status:\t" << status << endl;
             }
         }
 
@@ -110,7 +114,7 @@ STATUS DSLIM_DistScoreManager()
 
             if (params.myid == 0)
             {
-                cout << "ScatterScores with status:\t" << status << endl;
+                cout << "Scatter Scores with status:\t" << status << endl;
             }
         }
 
@@ -126,7 +130,7 @@ STATUS DSLIM_DistScoreManager()
 
             if (params.myid == 0)
             {
-                cout << "DisplayResults with status:\t" << status << endl;
+                cout << "Display Results with status:\t" << status << endl;
             }
         }
 
@@ -208,13 +212,13 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
         }
     }
 
-    ScoreHandle->RXResults(rxRqsts, rxStats);
-
     /* Fill the rxStats with ones - available */
     for (INT kk = 0; kk < nodes; kk++)
     {
         rxStats[kk] = 1;
     }
+
+    ScoreHandle->RXResults(rxRqsts, rxStats);
 
     /* Wait 500ms between each loop */
     for (INT cumulate = 0; cumulate < nodes; usleep(500000))

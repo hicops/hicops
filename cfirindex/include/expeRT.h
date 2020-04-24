@@ -125,17 +125,28 @@ public:
     /* Function to reset the data */
     VOID ResetPartialVectors();
 
+    STATUS Reconstruct(ifstream *ifs, INT min, INT max2, INT N);
+    STATUS Reconstruct(ebuffer *ebs, INT specno, partRes *fR);
+
     /* Add distibution data */
     STATUS AddlogWeibull(INT, DOUBLE, DOUBLE, INT, INT);
 
-    /* In case of distributed memory, we will call this */
-    STATUS ModelSurvivalFunction(DOUBLE &, INT);
+    STATUS StoreIResults(Results *, ofstream *);
+
+    STATUS StoreIResults(Results *, INT, ebuffer *);
+
+    STATUS ModelSurvivalFunction(DOUBLE &, const INT);
 
     /* In case of shared memory system, we will call this API */
     STATUS ModelSurvivalFunction(Results *);
 
     /* Model the partial distribution using logWeibull */
     STATUS Model_logWeibull(Results *);
+
+#if 0
+    /* In case of distributed memory, we will call this */
+    STATUS ModelSurvivalFunction(DOUBLE &, INT);
+#endif
 };
 
 #endif /* EXPERT_H_ */

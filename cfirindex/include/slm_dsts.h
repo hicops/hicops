@@ -671,8 +671,8 @@ typedef struct _Results
     /* The y ~ logWeibull(X, mu, beta)
      * for data fit
      */
-    FLOAT mu;
-    FLOAT beta;
+    INT mu;
+    INT beta;
 
     INT minhypscore;
     INT maxhypscore;
@@ -730,13 +730,10 @@ typedef struct _partResult
     INT max2;
     INT max;
 
-    /* NOTE: Have been multiplied by 1000 for discretization */
-    INT m;
-    INT b;
-
     /* Total number of samples scored */
     INT N;
     INT qID;
+    INT sno;
 
 
     /* Default contructor */
@@ -744,22 +741,20 @@ typedef struct _partResult
     {
         min = 0;
         max2 = 0;
-        m = 0;
-        b = 0;
         N  = 0;
         max = 0;
         qID = 0;
+        sno = 0;
     }
 
     _partResult(INT def)
     {
         min = def;
         max2 = def;
-        m = def;
-        b = def;
         N  = def;
         max = def;
         qID = 0;
+        sno = 0;
     }
 
     /* Destructor */
@@ -767,11 +762,10 @@ typedef struct _partResult
     {
         min = 0;
         max = 0;
-        m = 0;
-        b = 0;
         N  = 0;
         max2 = 0;
         qID = 0;
+        sno = 0;
     }
 
     _partResult& operator=(const INT& rhs)
@@ -779,8 +773,6 @@ typedef struct _partResult
         /* Check for self assignment */
             min = rhs;
             max2 = rhs;
-            m = rhs;
-            b = rhs;
             N = rhs;
             max = rhs;
             qID = rhs;
@@ -795,14 +787,42 @@ typedef struct _partResult
         {
             min = rhs.min;
             max = rhs.max;
-            m = rhs.m;
-            b = rhs.b;
             N = rhs.N;
             max2 = rhs.max2;
             qID = rhs.qID;
         }
 
         return *this;
+    }
+
+    BOOL operator==(const _partResult& rhs)
+    {
+        BOOL val = false;
+
+        /* Check for self assignment */
+        if (this != &rhs)
+        {
+            val = (min == rhs.min &&
+                  max == rhs.max &&
+                    N == rhs.N &&
+                 max2 == rhs.max2 &&
+                  qID == rhs.qID);
+        }
+        else
+        {
+            val= true;
+        }
+
+        return val;
+    }
+
+    BOOL operator==(const INT rhs)
+    {
+        BOOL val = false;
+
+        val = (min == rhs && max == rhs && N == rhs && max2 == rhs);
+
+        return val;
     }
 
 } partRes;
@@ -827,17 +847,20 @@ typedef struct _fResult
 {
     INT eValue;
     INT specID;
+    INT npsms;
 
     _fResult()
     {
         eValue = 0;
         specID = 0;
+        npsms = 0;
     }
 
     virtual ~_fResult()
     {
         this->eValue = 0;
         this->specID = 0;
+        this->npsms = 0;
     }
 
     _fResult &operator=(const _fResult& rhs)
@@ -847,6 +870,7 @@ typedef struct _fResult
         {
             this->eValue = rhs.eValue;
             this->specID = rhs.specID;
+            this->npsms = rhs.npsms;
         }
 
         return *this;
@@ -857,10 +881,35 @@ typedef struct _fResult
         /* Check for self assignment */
         this->eValue = rhs;
         this->specID = rhs;
+        this->npsms = rhs;
 
         return *this;
     }
 
 } fResult;
+
+typedef struct _ebuffer
+{
+    CHAR *ibuff;
+    INT currptr;
+
+    _ebuffer()
+    {
+        ibuff = new CHAR[128 * sizeof (USHORT) * QCHUNK];
+        currptr = 0;
+    }
+
+    ~_ebuffer()
+    {
+        if (ibuff != NULL)
+        {
+            delete[] ibuff;
+            ibuff = NULL;
+        }
+
+        currptr = 0;
+    }
+
+} ebuffer;
 
 #endif /* INCLUDE_SLM_DSTS_H_ */

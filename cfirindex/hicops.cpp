@@ -69,7 +69,6 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     auto start = chrono::system_clock::now();
     auto end   = chrono::system_clock::now();
     chrono::duration<double> elapsed_seconds = end - start;
-    chrono::duration<double> qtime = end - start;
 
     STRING patt = {".ms2"};
     CHAR extension[] = ".peps";
@@ -294,7 +293,15 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     /* Perform the distributed database search */
     if (status == SLM_SUCCESS)
     {
+        start = chrono::system_clock::now();
         status = DSLIM_SearchManager(slm_index);
+        elapsed_seconds = chrono::system_clock::now() - start;
+
+        if (params.myid == 0)
+        {
+            cout << "Partial Search with status:\t" << status << endl;
+            cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+        }
     }
 
     /* Deinitialize the scorecard */
@@ -313,7 +320,15 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     /* Compute the distributed scores */
     if (status == SLM_SUCCESS)
     {
+        start = chrono::system_clock::now();
         status = DSLIM_DistScoreManager();
+        elapsed_seconds = chrono::system_clock::now() - start;
+
+        if (params.myid == 0)
+        {
+            cout << "\nResult Merging with status:\t" << status << endl;
+            cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+        }
     }
 
     /* De-initialize the remaining index */
@@ -342,21 +357,25 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     {
         /* Wait for everyone to synchronize */
         status = MPI_Barrier(MPI_COMM_WORLD);
-
-        status = MPI_Finalize();
     }
+
+    status = MPI_Finalize();
 
 #endif /* DISTMEM */
 
     /* Print end time */
     auto end_tim = chrono::system_clock::now();
     time_t end_time = chrono::system_clock::to_time_t(end_tim);
-    cout << endl << "End Time: " << ctime(&end_time) << endl;
-    elapsed_seconds = end_tim - start_tim;
-    cout << "Total Elapsed Time: " << elapsed_seconds.count() << "s" <<endl;
 
-    /* Print final program status */
-    cout << "\n\nEnded with status: \t\t" << status << endl << endl;
+    if (params.myid == 0)
+    {
+        cout << endl << "End Time: " << ctime(&end_time) << endl;
+        elapsed_seconds = end_tim - start_tim;
+        cout << "Total Elapsed Time: " << elapsed_seconds.count() << "s" << endl;
+
+        /* Print final program status */
+        cout << "\n\nEnded with status: \t\t" << status << endl << endl;
+    }
 
 #ifdef BENCHMARK
     cout << "File I/O Time: \t\t\t" << fileio << 's' << endl;
@@ -580,8 +599,8 @@ static STATUS ParseParams(CHAR* paramfile)
         status = MPI_Comm_rank(MPI_COMM_WORLD, (INT *)&params.myid);
         status = MPI_Comm_size(MPI_COMM_WORLD, (INT *)&params.nodes);
 #else
-        params.myid = 0;
-        params.nodes = 4;
+        params.myid = 1;
+        params.nodes = 2;
 
 #endif /* DISTMEM */
 
