@@ -1,5 +1,4 @@
 /*
- * This file is part of PCDSFrame software
  * Copyright (C) 2019  Muhammad Haseeb, Fahad Saeed
  * Florida International University, Miami, FL
  *
@@ -35,6 +34,8 @@
 
 /* Switch the benchmarking */
 //#define BENCHMARK
+
+#define TAILFIT
 
 #define MAX_SEQ_LEN              60
 

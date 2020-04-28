@@ -32,13 +32,15 @@ using namespace std;
 /* Global Variables */
 BOOL         isCarried   = false;
 
-DSLIM_Score *ScoreHandle = NULL;
 BData       *bdata       = NULL;
 
 extern gParams           params;
 
+#ifdef DISTMEM
 /* Entry function for DSLIM_Score module */
 VOID *DSLIM_Score_Thread_Entry(VOID *);
+DSLIM_Score *ScoreHandle = NULL;
+#endif /* DISTMEM */
 
 STATUS DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, expeRT *ePtr, hCell *CandidatePSMS, INT cpsmSize)
 {
@@ -72,6 +74,7 @@ STATUS DSLIM_DistScoreManager()
 {
     STATUS status = SLM_SUCCESS;
 
+#ifdef DISTMEM
     /* Check if parameters have been brought */
     if (isCarried == false && params.nodes > 1)
     {
@@ -151,10 +154,13 @@ STATUS DSLIM_DistScoreManager()
         }
     }
 
+#endif /* DISTMEM */
+
     /* Return the status of execution */
     return status;
 }
 
+#ifdef DISTMEM
 /* Entry function for the score communicator */
 VOID *DSLIM_Score_Thread_Entry(VOID *argv)
 {
@@ -264,6 +270,7 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
 
     return NULL;
 }
+#endif /* DISTMEM */
 
 #ifdef DIAGNOSE
 INT DSLIM_TestBData()

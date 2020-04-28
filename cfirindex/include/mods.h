@@ -1,5 +1,4 @@
 /*
- * This file is part of PCDSFrame software
  * Copyright (C) 2019  Fatima Afzali, Muhammad Haseeb, Fahad Saeed
  * Florida International University, Miami, FL
  *

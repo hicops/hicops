@@ -20,6 +20,8 @@
 #include "dslim_score.h"
 #include "dslim_fileout.h"
 
+#ifdef DISTMEM
+
 using namespace std;
 
 MPI_Datatype resultF;
@@ -132,18 +134,6 @@ DSLIM_Score::DSLIM_Score(BData *bd)
         keys = NULL;
     }
 
-#ifdef DIAGNOSE2
-    cout << "myRXsize = " << myRXsize << " @: " << params.myid << endl;
-    cout << "nSpectra = " << nSpectra << " @: " << params.myid << endl;
-    cout << "nSpectra + myRXsize = " << myRXsize << " @: " << params.myid << endl;
-
-    fResult *ptr = TxValues + myRXsize;
-
-    cout << (void *) TxValues << " TxV@: " << params.myid << endl;
-    cout << (void *) RxValues << " RxV@: " << params.myid << endl;
-    cout << (void *) ptr << " TxEnd@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
-
     InitDataTypes();
 
     /* Communication threads */
@@ -162,9 +152,6 @@ DSLIM_Score::~DSLIM_Score()
 
     if (txSizes != NULL)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) txSizes << " txS@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
 
         delete[] txSizes;
         txSizes = NULL;
@@ -172,81 +159,54 @@ DSLIM_Score::~DSLIM_Score()
 
     if (rxSizes != NULL)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) rxSizes << " rxS@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
         delete[] rxSizes;
         rxSizes = NULL;
     }
 
     if (sizeArray != NULL)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) sizeArray << " sA@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
         delete[] sizeArray;
         sizeArray = NULL;
     }
 
     if (fileArray != NULL)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) fileArray << " fA@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
         delete[] fileArray;
         fileArray = NULL;
     }
 
     if (ePtr != NULL)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) scPtr << "scA@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
         delete[] ePtr;
         ePtr = NULL;
     }
 
     if (heapArray != NULL)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) heapArray << " hA@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
         delete[] heapArray;
         heapArray = NULL;
     }
 
     if (resPtr != NULL)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) resPtr << " resPtr@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
         delete[] resPtr;
         resPtr = NULL;
     }
 
     if (keys != NULL && myRXsize != 0)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) keys << " key@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
         delete[] keys;
         keys = NULL;
     }
 
     if (TxValues != NULL && myRXsize != 0)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) TxValues << " key@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
         delete[] TxValues;
         TxValues = NULL;
     }
 
     if (RxValues != NULL)
     {
-#ifdef DIAGNOSE2
-        cout << (void *) RxValues << " key@: " << params.myid << endl;
-#endif /* DIAGNOSE2 */
         delete[] RxValues;
         RxValues = NULL;
     }
@@ -323,8 +283,6 @@ STATUS DSLIM_Score::CombineResults()
             /* Compute the stride in rxArray */
             INT stride = bSize;
 
-            /* Reset pointer before computations */
-            //ePtr->reset();
             /* Record locators */
             INT key = params.nodes;
             INT maxhypscore = -1;
@@ -357,52 +315,60 @@ STATUS DSLIM_Score::CombineResults()
                 /* Update the number of samples */
                 cpsms += sResult->N;
 
-                /* Reconstruct the partial histogram */
-                expPtr->Reconstruct(&iBuffs[sResult->sno], spec, sResult);
-
-                /* Record the maxhypscore and its key */
-                if (sResult->max > 0 && sResult->max > maxhypscore)
+                /* Only take out data if present */
+                if (sResult->N >= 1)
                 {
-                    maxhypscore = sResult->max;
-                    key = sResult->sno;
+                    /* Reconstruct the partial histogram */
+                    expPtr->Reconstruct(&iBuffs[sResult->sno], spec, sResult);
+
+                    /* Record the maxhypscore and its key */
+                    if (sResult->max > 0 && sResult->max > maxhypscore)
+                    {
+                        maxhypscore = sResult->max;
+                        key = sResult->sno;
+                    }
                 }
             }
 
             /* Combine the fResult */
             fResult *psm = &TxValues[startSpec + spec];
-            keys[startSpec + spec] = key;
 
             /* Need further processing only if enough results */
             if (key < (INT) params.nodes && cpsms >= (INT) params.min_cpsm)
             {
                 DOUBLE e_x = params.expect_max;
 
+#ifdef TAILFIT
                 /* Model the survival function */
+                expPtr->ModelTailFit(e_x, maxhypscore);
+#else
                 expPtr->ModelSurvivalFunction(e_x, maxhypscore);
+#endif /* TAILFIT */
 
                 /* If the scores are good enough */
                 if (e_x < params.expect_max)
                 {
-                    /*
-                    if (params.myid == 0)
-                    {
-                         FIXME: Remove me
-                        cout << "@" << params.myid << " SpecID: " << indxArray[batchNum] + spec
-                                << " eValue: " << e_x << " bNO: " << batchNum << " npsms: " << cpsms
-                                << " key: " << key << endl;
-                    }*/
-
                     psm->eValue = e_x * 1e6;
                     psm->specID = indxArray[batchNum] + spec;
                     psm->npsms = cpsms;
 
+                    /* Must be an atomic update */
+#ifdef _OPENMP
+#pragma omp atomic update
                     txSizes[key] += 1;
+#else
+                    txSizes[key] += 1;
+#endif /* _OPENMP */
+
+                    /* Update the key */
+                    keys[startSpec + spec] = key;
                 }
                 else
                 {
                     psm->eValue = params.expect_max * 1e6;
                     psm->specID = -1;
                     psm->npsms = 0;
+                    keys[startSpec + spec] = params.nodes;
                 }
             }
             else
@@ -411,12 +377,13 @@ STATUS DSLIM_Score::CombineResults()
                 psm->eValue = params.expect_max * 1e6;
                 psm->specID = -1;
                 psm->npsms = 0;
+                keys[startSpec + spec] = params.nodes;
             }
         }
 
         /* Update the counters */
         startSpec += sizeArray[batchNum];
-        startPos += sizeArray[batchNum] * (nSamples-1);
+        startPos += sizeArray[batchNum] * (nSamples);
 
         /* Remove the files when no longer needed */
         for (INT saa = 0; saa < nSamples; saa++)
@@ -507,8 +474,6 @@ STATUS DSLIM_Score::ScatterScores()
                      cout << " MPI_Test@ " << params.myid << "Stat: "
                           << txStats2[ll] << " ll: " << ll << endl;
  #endif /* DIAGNOSE2 */
- 
-                     //cout << (void *)((MPI_Request*)(txRqsts + ll)) << " txRqsts@:" << params.myid << endl;
                      status = MPI_Test(txRqsts + ll, &txStats[ll], MPI_STATUS_IGNORE);
 
                      /* Check if the results
@@ -556,7 +521,6 @@ STATUS DSLIM_Score::ScatterScores()
                         cout << " MPI_Test@ " << params.myid << "Stat: "
                              << txStats2[ll] << " ll: " << ll << endl;
 #endif /* DIAGNOSE2 */
-                        //cout << (void *)((MPI_Request*)(txRqsts + ll)) << " txRqsts@:" << params.myid << endl;
                         status = MPI_Test(txRqsts + ll, &txStats[ll], MPI_STATUS_IGNORE);
 
                         /* Check if the results
@@ -618,8 +582,6 @@ STATUS DSLIM_Score::TXSizes(MPI_Request *txRqsts, INT *txStats)
                 exit(-1);
             }
 
-            //cout << (void *)((INT*)(txSizes + kk)) << " txSizes@:" << params.myid << endl;
-
             /* Send an integer to all other machines */
             status = MPI_Isend(txSizes + kk, 1, MPI_INT, kk, 0x0, MPI_COMM_WORLD, txRqsts + kk);
 
@@ -655,8 +617,6 @@ STATUS DSLIM_Score::RXSizes(MPI_Request *rxRqsts, INT *rxStats)
                 exit(-1);
             }
 
-            //cout << (void *)((INT*)(rxSizes + kk)) << " rxSizes@:" << params.myid << endl;
-
             /* Send an integer to all other machines */
             status = MPI_Irecv(rxSizes + kk, 1, MPI_INT, kk, 0x0, MPI_COMM_WORLD, rxRqsts + kk);
 
@@ -691,9 +651,6 @@ STATUS DSLIM_Score::TXResults(MPI_Request *txRqsts, INT* txStats)
                 cout << "FATAL: TxValues Failed @: " << params.myid << endl;
                 exit(-1);
             }
-
-            /* cout << (void *)((fResult*)(TxValues + offset))
-             *      << " TxValues@:" << params.myid << endl; */
 
             /* Send results to all other machines */
             status = MPI_Isend(TxValues + offset, txSizes[kk], resultF, kk, 0x1, MPI_COMM_WORLD, txRqsts + kk);
@@ -732,8 +689,6 @@ STATUS DSLIM_Score::RXResults(MPI_Request *rxRqsts, INT *rxStats)
                 cout << "FATAL: RxValues failed @: " << params.myid << endl;
                 exit(-1);
             }
-
-            //cout << (void *)((fResult*)(RxValues + offset)) << " RxValues@:" << params.myid << endl;
 
             /* Send an integer to all other machines */
             status = MPI_Irecv(RxValues + offset, rxSizes[kk], resultF, kk, 0x1, MPI_COMM_WORLD, rxRqsts + kk);
@@ -794,8 +749,6 @@ STATUS DSLIM_Score::DisplayResults()
     {
         hCell *psm = heapArray + ik->specID;
 
-        //cout <<"TX: eV: " << ik->eValue << " specID: " << ik->specID << " npsms: " << ik->npsms << endl;
-
         DFile_PrintScore(this->index, ik->specID, psm->pmass, psm, ((DOUBLE)(ik->eValue))/1e6, ik->npsms);
     }
 
@@ -814,8 +767,6 @@ STATUS DSLIM_Score::DisplayResults()
     for (auto ik = myPtr; ik < myPtr + mysize; ik++)
     {
         hCell *psm = heapArray + ik->specID;
-
-        //cout <<"RX: eV: " << ik->eValue << " specID: " << ik->specID << " npsms: " << ik->npsms << endl;
 
         DFile_PrintScore(this->index, ik->specID, psm->pmass, psm, ((DOUBLE)(ik->eValue))/1e6, ik->npsms);
     }
@@ -846,3 +797,5 @@ STATUS DSLIM_Score::FreeDataTypes()
 
     return SLM_SUCCESS;
 }
+
+#endif /* DISTMEM */

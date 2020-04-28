@@ -1,5 +1,4 @@
 /*
- * This file is part of HiCOPS software
  * Copyright (C) 2020  Muhammad Haseeb, and Fahad Saeed
  * Florida International University, Miami, FL
  *

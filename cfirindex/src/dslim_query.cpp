@@ -1,5 +1,4 @@
 /*
- * This file is part of HiCOPS software
  * Copyright (C) 2019  Muhammad Haseeb, and Fahad Saeed
  * Florida International University, Miami, FL
  *
@@ -45,7 +44,9 @@ Scheduler  *SchedHandle   = NULL;
 hCell      *CandidatePSMS = NULL;
 expeRT     *ePtrs         = NULL;
 
-ebuffer    *iBuff        = NULL;
+ebuffer    *iBuff         = NULL;
+INT         ciBuff        = -1;
+
 LOCK       writer;
 
 /* Lock for query file vector and thread manager */
@@ -79,7 +80,7 @@ extern DOUBLE memory;
 VOID *DSLIM_IO_Threads_Entry(VOID *argv);
 
 /* Static function */
-static VOID DSLIM_BinarySearch(Index *, FLOAT, INT&, INT&);
+static BOOL DSLIM_BinarySearch(Index *, FLOAT, INT&, INT&);
 static INT  DSLIM_BinFindMin(pepEntry *entries, FLOAT pmass1, INT min, INT max);
 static INT  DSLIM_BinFindMax(pepEntry *entries, FLOAT pmass2, INT min, INT max);
 static inline STATUS DSLIM_WaitFor_IO(INT &);
@@ -156,10 +157,12 @@ static inline STATUS DSLIM_WaitFor_IO(INT &batchsize)
 STATUS DSLIM_SearchManager(Index *index)
 {
     STATUS status = SLM_SUCCESS;
-
-    INT batchnum = 0;
     INT batchsize = 0;
+
+#ifdef DISTMEM
+    INT batchnum = 0;
     INT buffernum = 0;
+#endif
 
     partRes *buffers = NULL;
 
@@ -170,7 +173,9 @@ STATUS DSLIM_SearchManager(Index *index)
     INT maxlen = params.max_len;
     INT minlen = params.min_len;
 
+#ifdef DISTMEM
     THREAD *wthread = new THREAD;
+#endif /* DISTMEM */
 
     /* The mutex for queryfile vector */
     if (status == SLM_SUCCESS)
@@ -228,8 +233,11 @@ STATUS DSLIM_SearchManager(Index *index)
     {
         status = DFile_InitFiles();
     }
+#ifdef DISTMEM
     else if (status == SLM_SUCCESS && params.nodes > 1)
     {
+        iBuff = new ebuffer[NIBUFFS];
+
         status = sem_init(&writer, 0, 0);
 
         if (wthread != NULL && status == SLM_SUCCESS)
@@ -238,6 +246,7 @@ STATUS DSLIM_SearchManager(Index *index)
             status = pthread_create(wthread, NULL, &DSLIM_FOut_Thread_Entry, (VOID *)NULL);
         }
     }
+#endif /* DISTMEM */
 
     /* Initialize the Comm module */
 #ifdef DISTMEM
@@ -398,21 +407,24 @@ STATUS DSLIM_SearchManager(Index *index)
     /* Deinitialize the Communication module */
     if (params.nodes > 1)
     {
-#ifdef DIAGNOSE
-       std::cout << "Wait4Completion: " << params.myid << endl;
-#endif /* DIAGNOSE */
+        ebuffer *liBuff = iBuff + ((ciBuff + 1) % NIBUFFS);
 
-        while (iBuff != NULL);
+        /* Wait for FOut thread to take out iBuff */
+        while (liBuff->isDone == false);
 
         status = sem_post(&writer);
 
         VOID *ptr = NULL;
+
         pthread_join(*wthread, &ptr);
 
         delete wthread;
 
         sem_destroy(&writer);
-        writer = NULL;
+
+        delete[] iBuff;
+
+        iBuff = NULL;
 
         /* Wait for CommHandle to complete its work */
         status = CommHandle->Wait4Completion();
@@ -472,18 +484,20 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
     INT threads = (INT)params.threads - (INT)SchedHandle->getNumActivThds();
     UINT scale = params.scale;
     DOUBLE maxmass = params.max_mass;
+    ebuffer *liBuff = NULL;
 
     if (params.nodes > 1)
     {
-        /* Wait for FOut thread to take out iBuff */
-        while (iBuff != NULL);
-        iBuff = new ebuffer;
+        liBuff = iBuff + ((ciBuff + 1) % NIBUFFS);
 
-        /* Check for correct allocation */
-        if (iBuff == NULL)
-        {
-            status = ERR_BAD_MEM_ALLOC;
-        }
+        /* Wait for FOut thread to take out iBuff */
+        while (liBuff->isDone == false);
+
+        liBuff->isDone = false;
+    }
+    else
+    {
+        LBE_UNUSED_PARAM(liBuff);
     }
 
 #ifdef BENCHMARK
@@ -565,10 +579,10 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                     INT minlimit = 0;
                     INT maxlimit = 0;
 
-                    DSLIM_BinarySearch(index + ixx, ss->precurse[queries], minlimit, maxlimit);
+                    BOOL val = DSLIM_BinarySearch(index + ixx, ss->precurse[queries], minlimit, maxlimit);
 
                     /* Spectrum violates limits */
-                    if ((maxlimit - minlimit) < 1)
+                    if (val == false || (maxlimit < minlimit))
                     {
                         continue;
                     }
@@ -674,7 +688,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 
                     resPtr->maxhypscore = (psm.hyperscore * 10 + 0.5);
 
-                    status = expPtr->StoreIResults(resPtr, queries, iBuff);
+                    status = expPtr->StoreIResults(resPtr, queries, liBuff);
 
                     /* Fill in the Tx array cells */
                     txArray[queries].min  = resPtr->minhypscore;
@@ -686,6 +700,9 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 }
                 else
                 {
+                    /* No need to memset as there are apt checks in dslim_score.cpp
+                    memset(liBuff->ibuff + (queries * 128 * sizeof(USHORT)), 0x0, 128 * sizeof(USHORT));*/
+
                     /* Extract the top result
                      * and put it in the list */
                     CandidatePSMS[spectrumID + queries] = 0;
@@ -705,23 +722,6 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                 /* Check for minimum number of PSMs */
                 if (resPtr->cpsms >= params.min_cpsm)
                 {
-#ifdef PARTIALPSM
-                    ofstream *fh = new ofstream;
-                    STRING fn = params.workspace + "/" +
-                                std::to_string(spectrumID + queries) +
-                                "_h.txt";
-
-                    fh->open(fn);
-
-                    for (INT ik = 0; ik < 2 + (MAX_HYPERSCORE *10); ik++)
-                    {
-                        *fh << std::to_string(resPtr->survival[ik]) << endl;
-                    }
-
-                    fh->close();
-
-                    delete fh;
-#else
                     /* Extract the top PSM */
                     hCell psm = resPtr->topK.getMax();
 
@@ -729,8 +729,10 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 
                     /* Compute expect score if there
                      * are any candidate PSMs */
-                    status = expPtr->ModelSurvivalFunction(resPtr);
+#ifdef TAILFIT
+                    status = expPtr->ModelTailFit(resPtr);
 
+                    /* Linear Regression Parameters */
                     DOUBLE w = resPtr->mu;
                     DOUBLE b = resPtr->beta;
 
@@ -746,16 +748,21 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                     /* e(x) = n * s(x) */
                     DOUBLE e_x = resPtr->cpsms * s_x;
 
+#else
+                    status = expPtr->ModelSurvivalFunction(resPtr);
+
+                    /* Extract e(x) = n * s(x) = mu * 1e6 */
+                    DOUBLE e_x = resPtr->mu;
+
+                    e_x /= 1e6;
+
+#endif /* TAILFIT */
+
                     /* Do not print any scores just yet */
                     if (e_x < params.expect_max)
-#endif /* PARTIALPSM */
                     {
-#ifndef ANALYSIS
                         /* Printing the scores in OpenMP mode */
                         status = DFile_PrintScore(index, spectrumID + queries, pmass, &psm, e_x, resPtr->cpsms);
-#else
-                        status = DFile_PrintPartials(queries, resPtr);
-#endif /* ANALYSIS */
                     }
                 }
             }
@@ -787,7 +794,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 #endif
 
 #ifndef DIAGNOSE
-    if (params.myid == 1)
+    if (params.myid == 0)
     {
         std::cout << "\nQueried Spectra:\t\t" << workPtr->numSpecs << endl;
     }
@@ -806,12 +813,14 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
  * OUTPUT
  * none
  */
-static VOID DSLIM_BinarySearch(Index *index, FLOAT precmass, INT &minlimit, INT &maxlimit)
+static BOOL DSLIM_BinarySearch(Index *index, FLOAT precmass, INT &minlimit, INT &maxlimit)
 {
     /* Get the FLOAT precursor mass */
     FLOAT pmass1 = precmass - params.dM;
     FLOAT pmass2 = precmass + params.dM;
     pepEntry *entries = index->pepEntries;
+
+    BOOL rv = false;
 
     UINT min = 0;
     UINT max = index->lcltotCnt - 1;
@@ -821,7 +830,7 @@ static VOID DSLIM_BinarySearch(Index *index, FLOAT precmass, INT &minlimit, INT 
         minlimit = min;
         maxlimit = max;
 
-        return;
+        return rv;
     }
 
     /* Check for base case */
@@ -833,7 +842,7 @@ static VOID DSLIM_BinarySearch(Index *index, FLOAT precmass, INT &minlimit, INT 
     {
         minlimit = max;
         maxlimit = max;
-        return;
+        return rv;
     }
     else
     {
@@ -854,7 +863,7 @@ static VOID DSLIM_BinarySearch(Index *index, FLOAT precmass, INT &minlimit, INT 
     {
         minlimit = min;
         maxlimit = min;
-        return;
+        return rv;
     }
     else
     {
@@ -862,6 +871,12 @@ static VOID DSLIM_BinarySearch(Index *index, FLOAT precmass, INT &minlimit, INT 
         maxlimit = DSLIM_BinFindMax(entries, pmass2, min, max);
     }
 
+    if (entries[maxlimit].Mass <= pmass2 && entries[minlimit].Mass >= pmass1)
+    {
+        rv = true;
+    }
+
+    return rv;
 }
 
 
@@ -1190,11 +1205,13 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
             /* Extract a chunk and return the chunksize */
             status = Query->ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
 
+#ifdef DISTMEM
             if (params.nodes > 1)
             {
                 /* Add an entry of the added buffer to the CommHandle */
                 status = CommHandle->AddBufferEntry(ioPtr->numSpecs, Query->getQfileIndex());
             }
+#endif /* DISTMEM */
 
             /* Lock the ready queue */
             qPtrs->lockr_();
@@ -1264,19 +1281,18 @@ VOID *DSLIM_FOut_Thread_Entry(VOID *argv)
 {
     STATUS status = SLM_SUCCESS;
     INT batchNo = 0;
+    INT clbuff = -1;
 
     while (status == SLM_SUCCESS)
     {
         status = sem_wait(&writer);
 
-        if (iBuff == NULL)
+        ebuffer *lbuff = iBuff + ((clbuff+1) % NIBUFFS);
+
+        if (lbuff->isDone == true)
         {
             break;
         }
-
-        ebuffer *lbuff = iBuff;
-
-        iBuff = NULL;
 
         ofstream *fh = new ofstream;
         STRING fn = params.workspace + "/" +
@@ -1287,11 +1303,9 @@ VOID *DSLIM_FOut_Thread_Entry(VOID *argv)
         fh->write(lbuff->ibuff, lbuff->currptr * sizeof (CHAR));
         fh->close();
 
-        delete lbuff;
-        lbuff = NULL;
+        lbuff->isDone = true;
 
         batchNo ++;
-
     }
 
     return argv;

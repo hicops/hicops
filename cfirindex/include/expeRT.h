@@ -1,6 +1,5 @@
 /*
- * This file is part of HiCOPS software
- * Copyright (C) 2019  Muhammad Haseeb, and Fahad Saeed
+ * Copyright (C) 2020  Muhammad Haseeb, and Fahad Saeed
  * Florida International University, Miami, FL
  *
  * This program is free software: you can redistribute it and/or modify
@@ -125,20 +124,25 @@ public:
     /* Function to reset the data */
     VOID ResetPartialVectors();
 
-    STATUS Reconstruct(ifstream *ifs, INT min, INT max2, INT N);
     STATUS Reconstruct(ebuffer *ebs, INT specno, partRes *fR);
 
     /* Add distibution data */
     STATUS AddlogWeibull(INT, DOUBLE, DOUBLE, INT, INT);
 
-    STATUS StoreIResults(Results *, ofstream *);
-
     STATUS StoreIResults(Results *, INT, ebuffer *);
 
+    /* Model using log-Weibull in DISTMEM */
     STATUS ModelSurvivalFunction(DOUBLE &, const INT);
 
-    /* In case of shared memory system, we will call this API */
+    /* Model using log-Weibull in SHM */
     STATUS ModelSurvivalFunction(Results *);
+
+    /* Model using log-Weibull in DISTMEM */
+    STATUS ModelTailFit(DOUBLE &, const INT);
+
+    /* Model using log-Weibull in SHM */
+    STATUS ModelTailFit(Results *);
+
 
     /* Model the partial distribution using logWeibull */
     STATUS Model_logWeibull(Results *);

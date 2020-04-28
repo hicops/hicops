@@ -1,3 +1,23 @@
+/*
+ * From : https://raw.githubusercontent.com/thatchristoph/vmd-cvs-github/master/plugins/signalproc/src/sgsmooth.C
+ *
+ * Sliding window signal processing (and linear algebra toolkit).
+ *
+ * supported operations:
+ * <ul>
+ * <li> Savitzky-Golay smoothing.
+ * <li> computing a numerical derivative based of Savitzky-Golay smoothing.
+ * <li> required linear algebra support for SG smoothing using STL based
+ *      vector/matrix classes
+ * </ul>
+ *
+ * \brief Linear Algebra "Toolkit".
+ *
+ * modified by Rob Patro, 2016
+ * Also modified by Muhammad Haseeb, 2020 (https://GitHub.com/mhaseeb123)
+ *
+ */
+
 #ifndef __SGSMOOTH_HPP__
 #define __SGSMOOTH_HPP__
 

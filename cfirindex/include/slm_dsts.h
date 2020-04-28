@@ -1,5 +1,4 @@
 /*
- * This file is part of HiCOPS software
  * Copyright (C) 2020  Muhammad Haseeb, Fahad Saeed
  * Florida International University, Miami, FL
  *
@@ -892,11 +891,13 @@ typedef struct _ebuffer
 {
     CHAR *ibuff;
     INT currptr;
+    BOOL isDone;
 
     _ebuffer()
     {
         ibuff = new CHAR[128 * sizeof (USHORT) * QCHUNK];
         currptr = 0;
+        isDone = true;
     }
 
     ~_ebuffer()
@@ -908,6 +909,7 @@ typedef struct _ebuffer
         }
 
         currptr = 0;
+        isDone = true;
     }
 
 } ebuffer;

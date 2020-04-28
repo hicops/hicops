@@ -1,5 +1,4 @@
 /*
- * This file is part of PCDSFrame software
  * Copyright (C) 2019  Muhammad Haseeb, Fahad Saeed
  * Florida International University, Miami, FL
  *
@@ -229,14 +228,6 @@ FLOAT UTILS_CalculateModMass(AA *, UINT, UINT);
  * @mass: Precursor mass of modified peptide
  */
 FLOAT UTILS_GenerateModSpectrum(CHAR *, UINT, UINT *, modAA);
-
-STATUS UTILS_ModelSurvivalFunction(Results *);
-
-STATUS UTILS_ModelpGumbalDistribution(Results *);
-
-STATUS UTILS_ModelgGumbalDistribution(Results *);
-
-VOID UTILS_LinearRegression(INT n, DOUBLE x[], DOUBLE y[], DOUBLE &a, DOUBLE &b);
 
 #endif /* VMODS */
 

@@ -19,7 +19,7 @@ PROFILE = NO
 PROJECT_ROOT = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SRC = $(PROJECT_ROOT)/src
 
-DEPS = src/dslim_query.cpp src/dslim_comm.cpp include/dslim_comm.h src/scheduler.cpp include/scheduler.h src/dslim.cpp src/dslim_fileout.cpp src/lbe_internal.cpp src/utils.cpp src/mods.cpp src/msquery.cpp include/common.h include/config.h include/dslim_fileout.h include/keyval.h include/utils.h include/mods.h include/msquery.h include/slm_dsts.h include/dslim.h include/slmerr.h include/lbe.h
+DEPS = src/dslim_query.cpp src/dslim_comm.cpp src/scheduler.cpp src/dslim.cpp src/dslim_fileout.cpp src/lbe_internal.cpp src/utils.cpp src/mods.cpp src/msquery.cpp src/dslim_score.cpp src/dslim_scproc.cpp src/expeRT.cpp src/sgsmooth.cpp include/common.h include/config.h include/dslim_fileout.h include/keyval.h include/utils.h include/mods.h include/msquery.h include/slm_dsts.h include/dslim.h include/slmerr.h include/lbe.h include/sgsmooth.h include/expeRT.h include/lwvector.h include/dslim_score.h include/dslim_comm.h include/scheduler.h include/lwbuff.h include/lwqueue.h include/minheap.h
 
 LIBS = -ldslim
 LIBPATHS = -L$(SRC)
@@ -58,15 +58,19 @@ export JOBS
 export CXXFLAGS
 export CXX
 
-all: lbe
+all: hicops
 	$(CXX) $(LNKFLAGS) $(LIBPATHS) -Wl,--start-group  $(LIBS) ./hicops.o -Wl,--end-group -o $(EXECUTEABLE) -Wl,-Map=$(EXECUTEABLE).map
 
-lbe: $(DEPS)
+hicops: $(DEPS)
 	$(MAKE) -j$(JOBS) -C $(SRC)
 	$(CXX) -c -I./include $(CXXFLAGS) -DGCC ./hicops.cpp -o hicops.o
 
 clean:
 	$(MAKE) -C $(SRC) clean
 	rm -rf $(EXECUTEABLE) $(EXECUTEABLE).map hicops.o
+	
+distclean: clean
 
-.PHONY: all lbe clean
+allclean: clean
+
+.PHONY: all hicops clean distclean allclean

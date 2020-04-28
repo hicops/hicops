@@ -38,7 +38,7 @@
 #include "lwqueue.h"
 #include "expeRT.h"
 
-#define TXARRAYS                   2
+#define TXARRAYS                   4
 
 /* Class for DSLIM MPI Communication */
 class DSLIM_Comm
