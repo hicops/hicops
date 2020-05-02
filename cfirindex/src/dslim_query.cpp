@@ -644,7 +644,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                                                     UTILS_Factorial(ULONGLONG(bycPtr[it].bc)) *
                                                     UTILS_Factorial(ULONGLONG(bycPtr[it].yc)) *
                                                     ibycPtr[it].ibc *
-                                                    ibycPtr[it].iyc);
+                                                    ibycPtr[it].iyc) - 6;
 
                             /* hyperscore < 0 means either b- or y- ions were not matched */
                             if (cell.hyperscore > 0)
