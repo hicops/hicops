@@ -1,6 +1,6 @@
 BUILD_MODE = RELEASE
 OPENMP = YES
-MPI = YES
+MPI = NO
 JOBS=22
 CXXFLAGS = -Wall -fmessage-length=0 -std=c++14
 #LNKFLAGS = -Wl,--wrap,memcpy
