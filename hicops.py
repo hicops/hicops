@@ -897,7 +897,7 @@ if __name__ == '__main__':
 	# Run the HPC PCDSFrame
 	cfir = call('sbatch ' + workspace + '/autogen/hicops', shell=True)
 
-	print ('\nThe PCDSFrameHPC job is running now\n')
+	print ('\nThe HiCOPS job is running now\n')
 	print ('You can check the job progress using: squeue -u ' + username + '\n')
 	print ('The output will be written at: '+ workspace + '/output\n\n')
 
