@@ -1,5 +1,4 @@
 /*
- * This file is part of PCDSFrame software
  * Copyright (C) 2019  Muhammad Haseeb, Fahad Saeed
  * Florida International University, Miami, FL
  *
@@ -42,9 +41,9 @@ Scheduler::Scheduler()
     sem_init(&dumpQ, 0, 1);
 
     /* Thresholds */
-    maxpenalty = 10;
+    maxpenalty = 3;
     stopXtra = false;
-    minrate = 0.45;
+    minrate = 0.3;
     waitSincelast = 0;
 
     Ftplus1 = 0;   /* Forecast  */
@@ -72,7 +71,7 @@ Scheduler::Scheduler(INT maxio, INT dumpsize)
     nIOThds = 0;
     eSignal = false;
     stopXtra = 0;
-    minrate = 0.45;
+    minrate = 0.30;
     dump = new lwqueue <THREAD *> (dumpsize, false);
 
     /* Lock for above queues */
@@ -80,7 +79,7 @@ Scheduler::Scheduler(INT maxio, INT dumpsize)
     sem_init(&dumpQ, 0, 1);
 
     /* Thresholds */
-    maxpenalty = 10;
+    maxpenalty = 3;
     waitSincelast = 0;
 
     Ftplus1 = 0;   /* Forecast  */
@@ -244,11 +243,11 @@ BOOL Scheduler::makeDecisions(DOUBLE yt, INT dec)
     BOOL decision = false;
 
     /* Calculate the current rate of change.
-     * Add 0.1s in denominator to attenuate the small yt changes */
-    DOUBLE rate = (yt - ytminus1)/(ytminus1 + 0.1);
+     * Add 0.01s in denominator to attenuate the small yt changes */
+    DOUBLE rate = (yt - ytminus1)/(ytminus1 + 0.01);
 
     /* Add the next predicted rate of change */
-    rate += (Ftplus1 - yt) / (yt + 0.1);
+    rate += (Ftplus1 - yt) / (yt + 0.01);
 
     /* Divide by 2 for mean */
     rate /= 2;
@@ -271,7 +270,7 @@ BOOL Scheduler::makeDecisions(DOUBLE yt, INT dec)
             decision = true;
             stopXtra = false;
         }
-        else if (dec == -1 && nIOThds == 1)
+        else if (dec == -1 && nIOThds >= 1)
         {
             /* Increasing very fast or too much accumulated */
             /* FIXME: maxpenalty needs to be normalized according to the resources in use */

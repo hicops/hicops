@@ -1,5 +1,4 @@
 /*
- * This file is part of HiCOPS software
  * Copyright (C) 2020  Muhammad Haseeb, and Fahad Saeed
  * Florida International University, Miami, FL
  *
@@ -116,17 +115,14 @@ public:
     {
         INT ss = enda - stt + 1;
 
-        if (sze + ss > cap)
+        if (sze + ss <= cap)
         {
-            cout << "FATAL: Out of capacity" << endl;
-            return;
-        }
-
-        for (INT kk = stt; kk <= enda; kk++)
-        {
-            arr[tail] = kk;
-            tail ++;
-            sze ++;
+            for (INT kk = stt; kk <= enda; kk++)
+            {
+                arr[tail] = kk;
+                tail++;
+                sze++;
+            }
         }
     }
 
@@ -134,21 +130,18 @@ public:
     {
         INT ss = enda - stt + 1;
 
-        if (ss > cap)
+        if (ss <= cap)
         {
-            cout << "FATAL: Out of capacity" << endl;
-            return;
-        }
+            /* Make a range */
+            head = 0;
+            tail = 0;
+            sze = ss;
 
-        /* Make a range */
-        head = 0;
-        tail = 0;
-        sze = ss;
-
-        for (auto kk = stt; kk <= enda; kk++)
-        {
-            arr[tail] = kk;
-            tail ++;
+            for (auto kk = stt; kk <= enda; kk++)
+            {
+                arr[tail] = kk;
+                tail++;
+            }
         }
     }
 
@@ -220,6 +213,7 @@ public:
     VOID print()
     {
         cout << "PRINT: " << endl;
+
         for (auto i = head; i < tail; i++)
         {
             cout << arr[i] << ", ";
@@ -419,15 +413,15 @@ public:
     {
         auto actual = head;
 
-        if (index > 0)
-        {
+        /*if (index > 0)
+        {*/
             actual += index;
 
             if (actual >= tail)
             {
                 actual -= tail;
             }
-        }
+        /*}
 
         if (index < 0)
         {
@@ -438,7 +432,7 @@ public:
                 actual += head;
             }
         }
-
+*/
         return arr[actual];
     }
 

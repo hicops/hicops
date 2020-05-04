@@ -1,5 +1,4 @@
 /*
- * This file is part of HiCOPS software
  * Copyright (C) 2020  Muhammad Haseeb, Fahad Saeed
  * Florida International University, Miami, FL
  *
@@ -533,19 +532,19 @@ typedef struct _queries
 /* Score entry that goes into the heap */
 typedef struct _heapEntry
 {
-    /* The index * + offset */
-    USHORT   idxoffset;
-
     /* Number of shared ions in the spectra */
-    USHORT sharedions;
+    UCHAR   sharedions;
+
+    /* The index * + offset */
+    UCHAR    idxoffset;
 
     /* Total ions in spectrum */
     USHORT totalions;
 
     /* Parent spectrum ID in the respective chunk of index */
-    UINT  psid;
+    INT        psid;
 
-    FLOAT pmass;
+    FLOAT     pmass;
 
     /* Computed hyperscore */
     FLOAT hyperscore;
@@ -564,26 +563,23 @@ typedef struct _heapEntry
     /* Copy constructor */
     _heapEntry(const _heapEntry &obj)
     {
-        idxoffset  = obj.idxoffset;
+        memcpy(this, &obj, sizeof(_heapEntry));
+
+        /*idxoffset  = obj.idxoffset;
         psid       = obj.psid;
         hyperscore = obj.hyperscore;
         sharedions = obj.sharedions;
         totalions  = obj.totalions;
-        pmass      = obj.pmass;
+        pmass      = obj.pmass;*/
     }
 
     /* Overload = operator */
     _heapEntry& operator=(const _heapEntry& rhs)
     {
         /* Check for self assignment */
-        if (this != &rhs)
+        if (this != &rhs) 
         {
-            this->idxoffset  = rhs.idxoffset;
-            this->psid       = rhs.psid;
-            this->hyperscore = rhs.hyperscore;
-            this->sharedions = rhs.sharedions;
-            this->totalions  = rhs.totalions;
-            this->pmass      = rhs.pmass;
+            memcpy(this, &rhs, sizeof(_heapEntry));
         }
 
         return *this;
@@ -630,7 +626,8 @@ typedef struct _heapEntry
 } hCell;
 
 /* Structure to contain a communication request */
-typedef struct _commRqst{
+typedef struct _commRqst
+{
     UINT btag;
     UINT bsize;
     UINT buff;
@@ -648,10 +645,9 @@ typedef struct _commRqst{
         /* Check for self assignment */
         if (this != &rhs)
         {
-            this->btag  = rhs.btag;
-            this->bsize = rhs.bsize;
-            this->buff  = rhs.buff;
+            memcpy(this, &rhs, sizeof(_commRqst));
         }
+
         return *this;
     }
 
@@ -671,8 +667,8 @@ typedef struct _Results
     /* The y ~ logWeibull(X, mu, beta)
      * for data fit
      */
-    FLOAT mu;
-    FLOAT beta;
+    INT mu;
+    INT beta;
 
     INT minhypscore;
     INT maxhypscore;
@@ -726,40 +722,34 @@ typedef struct _Results
 typedef struct _partResult
 {
     /* Convert: x10 + 0.5 */
-    INT min;
-    INT max2;
-    INT max;
-
-    /* NOTE: Have been multiplied by 1000 for discretization */
-    INT m;
-    INT b;
+    USHORT min;
+    USHORT max2;
+    USHORT sno;
+    USHORT max;
 
     /* Total number of samples scored */
     INT N;
     INT qID;
-
 
     /* Default contructor */
     _partResult()
     {
         min = 0;
         max2 = 0;
-        m = 0;
-        b = 0;
         N  = 0;
         max = 0;
         qID = 0;
+        sno = 0;
     }
 
     _partResult(INT def)
     {
         min = def;
         max2 = def;
-        m = def;
-        b = def;
         N  = def;
         max = def;
         qID = 0;
+        sno = 0;
     }
 
     /* Destructor */
@@ -767,11 +757,10 @@ typedef struct _partResult
     {
         min = 0;
         max = 0;
-        m = 0;
-        b = 0;
         N  = 0;
         max2 = 0;
         qID = 0;
+        sno = 0;
     }
 
     _partResult& operator=(const INT& rhs)
@@ -779,8 +768,6 @@ typedef struct _partResult
         /* Check for self assignment */
             min = rhs;
             max2 = rhs;
-            m = rhs;
-            b = rhs;
             N = rhs;
             max = rhs;
             qID = rhs;
@@ -793,16 +780,40 @@ typedef struct _partResult
         /* Check for self assignment */
         if (this != &rhs)
         {
-            min = rhs.min;
-            max = rhs.max;
-            m = rhs.m;
-            b = rhs.b;
-            N = rhs.N;
-            max2 = rhs.max2;
-            qID = rhs.qID;
+            std::memcpy(this, &rhs, sizeof(_partResult));
         }
 
         return *this;
+    }
+
+    BOOL operator==(const _partResult& rhs)
+    {
+        BOOL val = false;
+
+        /* Check for self assignment */
+        if (this != &rhs)
+        {
+            val = (min == rhs.min &&
+                  max == rhs.max &&
+                    N == rhs.N &&
+                 max2 == rhs.max2 &&
+                  qID == rhs.qID);
+        }
+        else
+        {
+            val= true;
+        }
+
+        return val;
+    }
+
+    BOOL operator==(const INT rhs)
+    {
+        BOOL val = false;
+
+        val = (min == rhs && max == rhs && N == rhs && max2 == rhs);
+
+        return val;
     }
 
 } partRes;
@@ -827,17 +838,20 @@ typedef struct _fResult
 {
     INT eValue;
     INT specID;
+    INT npsms;
 
     _fResult()
     {
         eValue = 0;
         specID = 0;
+        npsms = 0;
     }
 
     virtual ~_fResult()
     {
         this->eValue = 0;
         this->specID = 0;
+        this->npsms = 0;
     }
 
     _fResult &operator=(const _fResult& rhs)
@@ -845,8 +859,7 @@ typedef struct _fResult
         /* Check for self assignment */
         if (this != &rhs)
         {
-            this->eValue = rhs.eValue;
-            this->specID = rhs.specID;
+            memcpy(this, &rhs, sizeof(_fResult));
         }
 
         return *this;
@@ -857,10 +870,38 @@ typedef struct _fResult
         /* Check for self assignment */
         this->eValue = rhs;
         this->specID = rhs;
+        this->npsms = rhs;
 
         return *this;
     }
 
 } fResult;
+
+typedef struct _ebuffer
+{
+    CHAR *ibuff;
+    INT currptr;
+    BOOL isDone;
+
+    _ebuffer()
+    {
+        ibuff = new CHAR[128 * sizeof (USHORT) * QCHUNK];
+        currptr = 0;
+        isDone = true;
+    }
+
+    ~_ebuffer()
+    {
+        if (ibuff != NULL)
+        {
+            delete[] ibuff;
+            ibuff = NULL;
+        }
+
+        currptr = 0;
+        isDone = true;
+    }
+
+} ebuffer;
 
 #endif /* INCLUDE_SLM_DSTS_H_ */

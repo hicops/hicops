@@ -1,6 +1,5 @@
 /*
- * This file is part of PCDSFrame software
- * Copyright (C) 2019  Muhammad Haseeb, Fahad Saeed
+ * Copyright (C) 2019  Muhammad Haseeb, and Fahad Saeed
  * Florida International University, Miami, FL
  *
  * This program is free software: you can redistribute it and/or modify
@@ -33,6 +32,8 @@
 #define BITNUM(z)                          ((z) % BYTE1)
 #define IS_INIT(x,y)                       (((x)>>BITNUM(y)) & 0x1)
 #define INIT(x,y)                          (x | (1 << BITNUM(y)))
+
+#define NIBUFFS                            4
 
 /* FUNCTION: DSLIM_Construct
  *

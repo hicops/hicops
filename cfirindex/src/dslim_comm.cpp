@@ -308,11 +308,6 @@ STATUS DSLIM_Comm::Rx(INT batchtag, INT batchsize)
     {
         MPI_Request *request = RxRqsts + rqst;
 
-        if ((UINT)mch == params.myid)
-        {
-            continue;
-        }
-
         /* Do the Rx */
         status = MPI_Irecv((partRes *)rxArr + currRxOffset,
                            batchsize,
@@ -621,44 +616,31 @@ partRes *DSLIM_Comm::getTxBuffer(INT batchtag, INT batchsize, INT &buffer)
     partRes *ptr = NULL;
 
     /* Check if Tx or Rx */
-    if (batchtag % params.nodes != params.myid)
-    {
-        INT lbuff = ((buffer + 1) % TXARRAYS);
 
-        for (;; usleep(300000), lbuff = ((lbuff + 1) % TXARRAYS))
+    INT lbuff = ((buffer + 1) % TXARRAYS);
+
+    for (;; usleep(300000), lbuff = ((lbuff + 1) % TXARRAYS))
+    {
+        if (!TxStat[lbuff])
         {
-            if (!TxStat[lbuff])
+            try
             {
-                try
-                {
-                    MPI_Test(TxRqsts + lbuff, &TxStat[lbuff], MPI_STATUS_IGNORE);
-                }
-                catch (std::exception& e)
-                {
-                    std::cerr << "FATAL: Excepting in TX MPI_Test: " << e.what() << " on: " << params.myid << endl;
-                }
+                MPI_Test(TxRqsts + lbuff, &TxStat[lbuff], MPI_STATUS_IGNORE);
             }
-            else
+            catch (std::exception& e)
             {
-                break;
+                std::cerr << "FATAL: Excepting in TX MPI_Test: " << e.what() << " on: "
+                        << params.myid << endl;
             }
         }
-
-        buffer = lbuff;
-        ptr = txArr[lbuff];
+        else
+        {
+            break;
+        }
     }
-    else
-    {
-        sem_wait(&rxLock);
 
-        /* Set the offset to this */
-        ptr = rxArr + currRxOffset;
-
-        /* Update the currRxOffset */
-        currRxOffset += batchsize;
-
-        sem_post(&rxLock);
-    }
+    buffer = lbuff;
+    ptr = txArr[lbuff];
 
     /* Return the ptr */
     return ptr;

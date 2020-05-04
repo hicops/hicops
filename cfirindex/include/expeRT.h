@@ -1,6 +1,5 @@
 /*
- * This file is part of HiCOPS software
- * Copyright (C) 2019  Muhammad Haseeb, and Fahad Saeed
+ * Copyright (C) 2020  Muhammad Haseeb, and Fahad Saeed
  * Florida International University, Miami, FL
  *
  * This program is free software: you can redistribute it and/or modify
@@ -103,13 +102,13 @@ private:
     VOID LinearFit(T& x, T& y, INT n, DOUBLE &a, DOUBLE &b);
 
     template <class T>
-    INT argmax(T &data, INT i1, INT i2, DOUBLE value);
+    inline INT argmax(T &data, INT i1, INT i2, DOUBLE value);
 
     template <class T>
-    INT rargmax(T &data, INT i1, INT i2, DOUBLE value);
+    inline INT rargmax(T &data, INT i1, INT i2, DOUBLE value);
 
     template <class T>
-    INT largmax(T &data, INT i1, INT i2, DOUBLE value);
+    inline INT largmax(T &data, INT i1, INT i2, DOUBLE value);
 
     dvector vrange(INT, INT);
     darray  arange(INT, INT);
@@ -125,17 +124,33 @@ public:
     /* Function to reset the data */
     VOID ResetPartialVectors();
 
+    STATUS Reconstruct(ebuffer *ebs, INT specno, partRes *fR);
+
     /* Add distibution data */
     STATUS AddlogWeibull(INT, DOUBLE, DOUBLE, INT, INT);
 
-    /* In case of distributed memory, we will call this */
-    STATUS ModelSurvivalFunction(DOUBLE &, INT);
+    STATUS StoreIResults(Results *, INT, ebuffer *);
 
-    /* In case of shared memory system, we will call this API */
+    /* Model using log-Weibull in DISTMEM */
+    STATUS ModelSurvivalFunction(DOUBLE &, const INT);
+
+    /* Model using log-Weibull in SHM */
     STATUS ModelSurvivalFunction(Results *);
+
+    /* Model using log-Weibull in DISTMEM */
+    STATUS ModelTailFit(DOUBLE &, const INT);
+
+    /* Model using log-Weibull in SHM */
+    STATUS ModelTailFit(Results *);
+
 
     /* Model the partial distribution using logWeibull */
     STATUS Model_logWeibull(Results *);
+
+#if 0
+    /* In case of distributed memory, we will call this */
+    STATUS ModelSurvivalFunction(DOUBLE &, INT);
+#endif
 };
 
 #endif /* EXPERT_H_ */

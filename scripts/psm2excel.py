@@ -48,9 +48,7 @@ if __name__ == '__main__':
 	if len(sys.argv) > 1:
 		data_dir = sys.argv[1]
 	else:
-		print ("ERROR: Missing data directory")
-		print ("USAGE: python3.5+ psm2excel.py <tsv_data_dir>")
-		sys.exit(-3)
+		data_dir = './'
 		
 	# Open the TSV files
 	data_dir = os.path.expanduser(data_dir)
@@ -78,6 +76,7 @@ if __name__ == '__main__':
 		for kk in tsv_files:
 			dat = pd.read_csv(kk, sep='\t', index_col=None, header=0)
 			matrix.append(dat)
+			os.remove(kk)
 	
 	
 	# ## Construct data frame

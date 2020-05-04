@@ -1,5 +1,4 @@
 /*
- * This file is part of PCDSFrame software
  * Copyright (C) 2019  Muhammad Haseeb, Fahad Saeed
  * Florida International University, Miami, FL
  *
@@ -143,7 +142,7 @@ UINT UTILS_GetNumProcs()
  */
 ULONGLONG UTILS_Factorial(ULONGLONG n)
 {
-    return (n == 1 || n == 0) ? 1 : UTILS_Factorial(n - 1) * n;
+    return (n < 2) ? 1 : UTILS_Factorial(n - 1) * n;
 }
 
 /*

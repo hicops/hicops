@@ -60,6 +60,8 @@ typedef struct _BorrowedData
 
 } BData;
 
+#ifdef DISTMEM
+
 class DSLIM_Score
 {
 private:
@@ -117,4 +119,5 @@ public:
     STATUS   FreeDataTypes();
 };
 
+#endif /* DISTMEM */
 #endif /* DSLIM_SCORE_H_ */

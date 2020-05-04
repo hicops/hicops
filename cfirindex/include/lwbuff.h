@@ -1,5 +1,4 @@
 /*
- * This file is part of PCDSFrame software
  * Copyright (C) 2019  Muhammad Haseeb, Fahad Saeed
  * Florida International University, Miami, FL
  *
@@ -54,7 +53,7 @@ public:
         thr_low = cap/4;
         thr_high = cap - thr_low;
 
-        readyQ = new lwqueue<T *>(DEF_SIZE + 1, false);
+        readyQ = new lwqueue<T *>(DEF_SIZE, false);
         waitQ = new lwqueue<T *>(DEF_SIZE, false);
 
         sem_init(&lockr, 0, 1);
@@ -67,7 +66,7 @@ public:
         thr_low = lo;
         thr_high = hi;
 
-        readyQ = new lwqueue<T*>(dcap + 1, false);
+        readyQ = new lwqueue<T*>(dcap, false);
         waitQ = new lwqueue<T*>(dcap, false);
 
         sem_init(&lockr, 0, 1);
