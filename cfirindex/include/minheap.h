@@ -10,6 +10,7 @@
  * of this license document, but changing it is not allowed.
  *
  * MODIFIED: Muhammad Haseeb, 2020
+ *
  */
 
 #ifndef MINHEAP_H
@@ -40,6 +41,7 @@ class minHeap //the main min heap class
 
     int heapify(int element_position); //heapify function is private b'coz it'll be used directly only by other member functions
     void swap(T&, T&); //swaps two nodes of the heap
+    void swap(int, int);
 
 public:
 
@@ -163,6 +165,14 @@ void minHeap<T>::swap(T& t1, T& t2) //to swap any two data objects
 }
 
 template<class T>
+void minHeap<T>::swap(int p1, int p2) //to swap any two data objects
+{
+    T temp = array[p1];
+    array[p1] = array[p2];
+    array[p2] = temp;
+}
+
+template<class T>
 int minHeap<T>::heapify(int element_position)
 {
     int right_child_position = (element_position + 1) << 1;
@@ -174,12 +184,17 @@ int minHeap<T>::heapify(int element_position)
      */
     int smallest_element_position = element_position;
 
-    if (left_child_position < size && array[left_child_position] < array[smallest_element_position])
+    /* Do this so that the memory does not need to be accessed again and again */
+    T left_child = array[left_child_position];
+    T right_child = array[right_child_position];
+    T smallest_element = array[smallest_element_position];
+
+    if (left_child_position < size && left_child < smallest_element)
     {
         smallest_element_position = left_child_position;
     }
 
-    if (right_child_position < size && array[right_child_position] < array[smallest_element_position])
+    if (right_child_position < size && right_child < smallest_element)
     {
         smallest_element_position = right_child_position;
     }
@@ -211,7 +226,7 @@ T minHeap<T>::extract_min() //root is the min. It is returned back
 template<class T>
 int minHeap<T>::heap_decrease_key(int element_position, T new_value)
 {
-    if (size < 1)
+    /*if (size < 1)
     {
         return ERROR_SIZE_LESS_THAN_1;
     }
@@ -224,7 +239,7 @@ int minHeap<T>::heap_decrease_key(int element_position, T new_value)
     if (element_position < 0)
     {
         return ERROR_POSITION_LESS_THAN_0;
-    }
+    }*/
 
     if (new_value > array[element_position]) //if an attempt to increase the value of the element
     {
@@ -251,7 +266,7 @@ int minHeap<T>::heap_decrease_key(int element_position, T new_value)
 template<class T>
 int minHeap<T>::heap_increase_key(int element_position, T new_value)
 {
-    if (size < 1)
+    /*if (size < 1)
     {
         return ERROR_SIZE_LESS_THAN_1;
     }
@@ -264,7 +279,7 @@ int minHeap<T>::heap_increase_key(int element_position, T new_value)
     if (element_position < 0)
     {
         return ERROR_POSITION_LESS_THAN_0;
-    }
+    }*/
 
     if (new_value < array[element_position]) //if an attempt to decrease the value of the element
     {

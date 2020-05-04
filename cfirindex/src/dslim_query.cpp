@@ -36,8 +36,8 @@ extern vector<STRING> queryfiles;
 
 /* Global variables */
 FLOAT *hyperscores = NULL;
-UCHAR *sCArr = NULL;
-BOOL ExitSignal = false;
+UCHAR *sCArr       = NULL;
+BOOL   ExitSignal  = false;
 
 DSLIM_Comm *CommHandle    = NULL;
 Scheduler  *SchedHandle   = NULL;
@@ -569,6 +569,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
             for (UINT ixx = 0; ixx < idxchunk; ixx++)
             {
                 UINT speclen = (index[ixx].pepIndex.peplen - 1) * maxz * iSERIES;
+                UINT halfspeclen = speclen / 2;
 
                 for (UINT chno = 0; chno < index[ixx].nChunks; chno++)
                 {
@@ -590,9 +591,13 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                     /* Query all fragments in each spectrum */
                     for (UINT k = 0; k < qspeclen; k++)
                     {
+                        /* Do this to save mem boundedness */
+                        auto qion = QAPtr[k];
+
+#if 0
                         /* Check for any zeros
                          * Zero = Trivial query */
-                        if (QAPtr[k] > dF && QAPtr[k] < ((maxmass * scale) - 1 - dF))
+                        if (qion > dF && qion < ((maxmass * scale) - 1 - dF))
                         {
                             /* Locate iAPtr start and end */
                             UINT start = bAPtr[QAPtr[k] - dF];
@@ -625,6 +630,54 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
 
                             }
                         }
+#else
+                        /* Check for any zeros
+                         * Zero = Trivial query */
+                        if (qion > dF && qion < ((maxmass * scale) - 1 - dF))
+                        {
+                            for (auto bin = qion - dF; bin < qion + 1 + dF; bin++)
+                            {
+                                /* Locate iAPtr start and end */
+                                UINT start = bAPtr[bin];
+                                UINT end = bAPtr[bin + 1];
+
+                                /* If no ions in the bin */
+                                if (end - start < 1)
+                                {
+                                    continue;
+                                }
+
+                                auto ptr = std::lower_bound(iAPtr + start, iAPtr + end, minlimit * speclen);
+                                INT stt = start + std::distance(iAPtr + start, ptr);
+
+                                ptr = std::upper_bound(iAPtr + stt, iAPtr + end, (((maxlimit + 1) * speclen) - 1));
+                                INT ends = stt + std::distance(iAPtr + stt, ptr) - 1;
+
+                                /* Loop through located iAions */
+                                for (auto ion = stt; ion <= ends; ion++)
+                                {
+                                    UINT raw = iAPtr[ion];
+                                    UINT intn = iPtr[k];
+
+                                    /* Calculate parent peptide ID */
+                                    INT ppid = (raw / speclen);
+
+                                    /* b-ion matched */
+                                    if ((raw % speclen) < halfspeclen)
+                                    {
+                                        bycPtr[ppid].bc += 1;
+                                        ibycPtr[ppid].ibc += intn;
+                                    }
+                                    /* y-ion matched */
+                                    else
+                                    {
+                                        bycPtr[ppid].yc += 1;
+                                        ibycPtr[ppid].iyc += intn;
+                                    }
+                                }
+                            }
+                        }
+#endif
                     }
 
                     /* Compute the chunksize to look further into */
@@ -633,25 +686,30 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                     /* Look for candidate PSMs */
                     for (INT it = minlimit; it <= maxlimit; it++)
                     {
+                        USHORT bcc = bycPtr[it].bc;
+                        USHORT ycc = bycPtr[it].yc;
+                        USHORT shpk = bcc + ycc;
+
                         /* Filter by the min shared peaks */
-                        if (bycPtr[it].bc + bycPtr[it].yc >= params.min_shp)
+                        if (shpk >= params.min_shp)
                         {
+                            ULONGLONG pp = UTILS_Factorial(bcc) *
+                                    UTILS_Factorial(ycc);
+
                             /* Create a heap cell */
                             hCell cell;
 
                             /* Fill in the information */
-                            cell.hyperscore = log10(0.001 +
-                                                    UTILS_Factorial(ULONGLONG(bycPtr[it].bc)) *
-                                                    UTILS_Factorial(ULONGLONG(bycPtr[it].yc)) *
-                                                    ibycPtr[it].ibc *
-                                                    ibycPtr[it].iyc) - 6;
+                            cell.hyperscore = 0.001 + pp * ibycPtr[it].ibc * ibycPtr[it].iyc;
+
+                            cell.hyperscore = log10(cell.hyperscore) - 6;
 
                             /* hyperscore < 0 means either b- or y- ions were not matched */
                             if (cell.hyperscore > 0)
                             {
                                 cell.idxoffset = ixx;
                                 cell.psid = it;
-                                cell.sharedions = bycPtr[it].bc + bycPtr[it].yc;
+                                cell.sharedions = shpk;
                                 cell.totalions = speclen;
                                 cell.pmass = pmass;
 
@@ -737,16 +795,16 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk, partRes *tx
                     DOUBLE b = resPtr->beta;
 
                     w /= 1e6;
-                    b /=1e6;
+                    b /= 1e6;
 
                     /* Estimate the log (s(x)); x = log(hyperscore) */
-                    DOUBLE lgs_x = w * resPtr->maxhypscore + b;
+                    DOUBLE lgs_x = (w * resPtr->maxhypscore) + b;
 
                     /* Compute the s(x) */
-                    DOUBLE s_x = pow(10, lgs_x);
+                    DOUBLE e_x = pow(10, lgs_x);
 
                     /* e(x) = n * s(x) */
-                    DOUBLE e_x = resPtr->cpsms * s_x;
+                    e_x *= resPtr->cpsms;
 
 #else
                     status = expPtr->ModelSurvivalFunction(resPtr);
@@ -1279,13 +1337,13 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 
 VOID *DSLIM_FOut_Thread_Entry(VOID *argv)
 {
-    STATUS status = SLM_SUCCESS;
+    //STATUS status = SLM_SUCCESS;
     INT batchNo = 0;
     INT clbuff = -1;
 
-    while (status == SLM_SUCCESS)
+    for (;;)
     {
-        status = sem_wait(&writer);
+        /*status = */sem_wait(&writer);
 
         ebuffer *lbuff = iBuff + ((clbuff+1) % NIBUFFS);
 

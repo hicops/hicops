@@ -532,19 +532,19 @@ typedef struct _queries
 /* Score entry that goes into the heap */
 typedef struct _heapEntry
 {
-    /* The index * + offset */
-    USHORT   idxoffset;
-
     /* Number of shared ions in the spectra */
-    USHORT sharedions;
+    UCHAR   sharedions;
+
+    /* The index * + offset */
+    UCHAR    idxoffset;
 
     /* Total ions in spectrum */
     USHORT totalions;
 
     /* Parent spectrum ID in the respective chunk of index */
-    UINT  psid;
+    INT        psid;
 
-    FLOAT pmass;
+    FLOAT     pmass;
 
     /* Computed hyperscore */
     FLOAT hyperscore;
@@ -563,26 +563,23 @@ typedef struct _heapEntry
     /* Copy constructor */
     _heapEntry(const _heapEntry &obj)
     {
-        idxoffset  = obj.idxoffset;
+        memcpy(this, &obj, sizeof(_heapEntry));
+
+        /*idxoffset  = obj.idxoffset;
         psid       = obj.psid;
         hyperscore = obj.hyperscore;
         sharedions = obj.sharedions;
         totalions  = obj.totalions;
-        pmass      = obj.pmass;
+        pmass      = obj.pmass;*/
     }
 
     /* Overload = operator */
     _heapEntry& operator=(const _heapEntry& rhs)
     {
         /* Check for self assignment */
-        if (this != &rhs)
+        if (this != &rhs) 
         {
-            this->idxoffset  = rhs.idxoffset;
-            this->psid       = rhs.psid;
-            this->hyperscore = rhs.hyperscore;
-            this->sharedions = rhs.sharedions;
-            this->totalions  = rhs.totalions;
-            this->pmass      = rhs.pmass;
+            memcpy(this, &rhs, sizeof(_heapEntry));
         }
 
         return *this;
@@ -629,7 +626,8 @@ typedef struct _heapEntry
 } hCell;
 
 /* Structure to contain a communication request */
-typedef struct _commRqst{
+typedef struct _commRqst
+{
     UINT btag;
     UINT bsize;
     UINT buff;
@@ -647,10 +645,9 @@ typedef struct _commRqst{
         /* Check for self assignment */
         if (this != &rhs)
         {
-            this->btag  = rhs.btag;
-            this->bsize = rhs.bsize;
-            this->buff  = rhs.buff;
+            memcpy(this, &rhs, sizeof(_commRqst));
         }
+
         return *this;
     }
 
@@ -725,15 +722,14 @@ typedef struct _Results
 typedef struct _partResult
 {
     /* Convert: x10 + 0.5 */
-    INT min;
-    INT max2;
-    INT max;
+    USHORT min;
+    USHORT max2;
+    USHORT sno;
+    USHORT max;
 
     /* Total number of samples scored */
     INT N;
     INT qID;
-    INT sno;
-
 
     /* Default contructor */
     _partResult()
@@ -784,11 +780,7 @@ typedef struct _partResult
         /* Check for self assignment */
         if (this != &rhs)
         {
-            min = rhs.min;
-            max = rhs.max;
-            N = rhs.N;
-            max2 = rhs.max2;
-            qID = rhs.qID;
+            std::memcpy(this, &rhs, sizeof(_partResult));
         }
 
         return *this;
@@ -867,9 +859,7 @@ typedef struct _fResult
         /* Check for self assignment */
         if (this != &rhs)
         {
-            this->eValue = rhs.eValue;
-            this->specID = rhs.specID;
-            this->npsms = rhs.npsms;
+            memcpy(this, &rhs, sizeof(_fResult));
         }
 
         return *this;

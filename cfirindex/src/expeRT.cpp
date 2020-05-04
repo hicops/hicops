@@ -84,7 +84,7 @@ expeRT::~expeRT()
     hyp = vaa = 0;
 }
 
-dvector expeRT::vrange(INT stt, INT end)
+inline dvector expeRT::vrange(INT stt, INT end)
 {
     dvector xx (end-stt+1);
 
@@ -99,7 +99,7 @@ dvector expeRT::vrange(INT stt, INT end)
     return xx;
 }
 
-darray expeRT::arange(INT stt, INT end)
+inline darray expeRT::arange(INT stt, INT end)
 {
     darray xx (end-stt+1);
 
@@ -122,14 +122,14 @@ STATUS expeRT::ModelSurvivalFunction(Results *rPtr)
     yy = rPtr->survival;
     hyp = rPtr->maxhypscore;
 
-    if (yy == NULL)
+    /*if (yy == NULL)
     {
         status = ERR_INVLD_PARAM;
         mu_t = 0;
         beta_t = 100;
-    }
+    }*/
 
-    if (status == SLM_SUCCESS)
+    //if (status == SLM_SUCCESS)
     {
         /* Find the curve region */
         end1 = rargmax<DOUBLE *>(yy, 0, hyp-1, 1.0);
@@ -577,14 +577,14 @@ STATUS expeRT::ModelTailFit(Results *rPtr)
     yy = rPtr->survival;
     hyp = rPtr->maxhypscore;
 
-    if (yy == NULL)
+    /*if (yy == NULL)
     {
         status = ERR_INVLD_PARAM;
         mu_t = 0;
         beta_t = 100;
-    }
+    }*/
 
-    if (status == SLM_SUCCESS)
+    //if (status == SLM_SUCCESS)
     {
         /* Find the curve region */
         end1 = rargmax<DOUBLE *>(yy, 0, hyp-1, 1.0);
@@ -947,14 +947,14 @@ STATUS expeRT::Model_logWeibull(Results *rPtr)
     yy = rPtr->survival;
     hyp = rPtr->maxhypscore;
 
-    if (yy == NULL)
+    /*if (yy == NULL)
     {
         status = ERR_INVLD_PARAM;
         mu_t = 0;
         beta_t = 100;
-    }
+    }*/
 
-    if (status == SLM_SUCCESS)
+    /*if (status == SLM_SUCCESS)*/
     {
         /* Find the curve region */
         ends = rargmax<DOUBLE *>(yy, 0, SIZE-1, 1.0);
@@ -1186,7 +1186,7 @@ DOUBLE expeRT::logWeibullFit(lwvector<DOUBLE> *yy, INT s, INT e, INT niter, DOUB
     return curerr;
 }
 
-VOID expeRT::logWeibullResponse(DOUBLE mu, DOUBLE beta, INT st, INT en)
+inline VOID expeRT::logWeibullResponse(DOUBLE mu, DOUBLE beta, INT st, INT en)
 {
     // x = arange(st, en)
     p_x->MakeRange(st, en);
@@ -1201,7 +1201,7 @@ VOID expeRT::logWeibullResponse(DOUBLE mu, DOUBLE beta, INT st, INT en)
     }
 }
 
-darray expeRT::alogWeibullResponse(DOUBLE mu, DOUBLE beta, INT st, INT en)
+inline darray expeRT::alogWeibullResponse(DOUBLE mu, DOUBLE beta, INT st, INT en)
 {
     darray xx = arange(st, en);
 
@@ -1213,7 +1213,7 @@ darray expeRT::alogWeibullResponse(DOUBLE mu, DOUBLE beta, INT st, INT en)
 }
 
 template <class T>
-INT expeRT::rargmax(T &data, INT i1, INT i2, DOUBLE value)
+inline INT expeRT::rargmax(T &data, INT i1, INT i2, DOUBLE value)
 {
     INT rv = i2;
 
@@ -1230,7 +1230,7 @@ INT expeRT::rargmax(T &data, INT i1, INT i2, DOUBLE value)
 }
 
 template <class T>
-INT expeRT::argmax(T &data, INT i1, INT i2, DOUBLE value)
+inline INT expeRT::argmax(T &data, INT i1, INT i2, DOUBLE value)
 {
     INT rv = i1;
 
@@ -1247,7 +1247,7 @@ INT expeRT::argmax(T &data, INT i1, INT i2, DOUBLE value)
 }
 
 template <class T>
-INT expeRT::largmax(T &data, INT i1, INT i2, DOUBLE value)
+inline INT expeRT::largmax(T &data, INT i1, INT i2, DOUBLE value)
 {
     INT rv = i1;
 

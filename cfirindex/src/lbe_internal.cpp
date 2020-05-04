@@ -36,7 +36,7 @@ extern DOUBLE memory;
 
 /* Static function Prototypes */
 static STATUS LBE_AllocateMem(Index *index);
-static BOOL CmpPepEntries(pepEntry e1, pepEntry e2);
+static inline BOOL CmpPepEntries(pepEntry e1, pepEntry e2);
 /*
  * FUNCTION: LBE_AllocateMem
  *
@@ -555,7 +555,7 @@ VOID LBE_PrintHeader()
     return;
 }
 
-static BOOL CmpPepEntries(pepEntry e1, pepEntry e2)
+static inline BOOL CmpPepEntries(pepEntry e1, pepEntry e2)
 {
     return e1 < e2;
 }

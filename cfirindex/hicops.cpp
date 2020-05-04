@@ -74,8 +74,8 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 
     if (argc < 2)
     {
-        cout << "ERROR: Missing arguments\n";
-        cout << "Format: ./cfir.exe <uparams.txt>\n";
+        cout << "ABORT: Missing arguments\n";
+        cout << "Format: ./hicops.exe <uparams.txt>\n";
         status = ERR_INVLD_PARAM;
         exit (status);
     }
@@ -598,8 +598,8 @@ static STATUS ParseParams(CHAR* paramfile)
         status = MPI_Comm_rank(MPI_COMM_WORLD, (INT *)&params.myid);
         status = MPI_Comm_size(MPI_COMM_WORLD, (INT *)&params.nodes);
 #else
-        params.myid = 1;
-        params.nodes = 2;
+        params.myid = 0;
+        params.nodes = 1;
 
 #endif /* DISTMEM */
 

@@ -101,14 +101,14 @@ STATUS MSQuery::InitQueryFile(STRING *filename, INT fno)
     INT count = 0;
     INT specsize = 0;
 
-    /* Check allocation */
+    /* Check allocation
     if (qqfile == NULL)
     {
         status = ERR_INVLD_PARAM;
-    }
+    }*/
 
     /* Check if file opened */
-    if (qqfile->is_open() && status == SLM_SUCCESS)
+    if (qqfile->is_open() /*&& status == SLM_SUCCESS*/)
     {
         STRING line;
 
@@ -186,12 +186,12 @@ STATUS MSQuery::ExtractQueryChunk(UINT count, Queries *expSpecs, INT &rem)
     UINT startspec = running_count;
     UINT endspec = running_count + count;
 
-    if (startspec >= QAcount)
+    /*if (startspec >= QAcount)
     {
         status = ERR_INVLD_SIZE;
     }
 
-    if (status == SLM_SUCCESS)
+    if (status == SLM_SUCCESS) */
     {
         if (endspec > QAcount)
         {
@@ -206,17 +206,19 @@ STATUS MSQuery::ExtractQueryChunk(UINT count, Queries *expSpecs, INT &rem)
     if (qfile == NULL || qfile->is_open() == false)
     {
         /* Get a new ifstream object and open file */
-        qfile = new ifstream(*MS2file);
+        qfile = new ifstream;
 
-        /* Check allocation */
+        /* Check allocation
         if (qfile == NULL)
         {
             status = ERR_INVLD_PARAM;
-        }
+        }*/
+
+        qfile->open(MS2file->c_str());
     }
 
     /* Check if file opened */
-    if (qfile->is_open() && status == SLM_SUCCESS)
+    if (qfile->is_open() /*&& status == SLM_SUCCESS*/)
     {
         for (UINT spec = startspec; spec < endspec; spec++)
         {
@@ -225,7 +227,7 @@ STATUS MSQuery::ExtractQueryChunk(UINT count, Queries *expSpecs, INT &rem)
         }
     }
 
-    if (status == SLM_SUCCESS)
+    //if (status == SLM_SUCCESS)
     {
         /* Update the runnning count */
         running_count += count;
@@ -241,6 +243,7 @@ VOID MSQuery::ReadSpectrum()
 {
     STRING line;
     UINT speclen = 0;
+    CHAR *saveptr;
 
     /* Check if this is the first spectrum in file */
     if (currPtr == 0)
@@ -260,8 +263,8 @@ VOID MSQuery::ReadSpectrum()
             }
             else if (line[0] == 'Z')
             {
-                CHAR *mh = strtok((CHAR *) line.c_str(), " \t");
-                mh = strtok(NULL, " \t");
+                CHAR *mh = strtok_r((CHAR *) line.c_str(), " \t", &saveptr);
+                mh = strtok_r(NULL, " \t", &saveptr);
                 STRING val = "1";
 
                 if (mh != NULL)
@@ -271,7 +274,7 @@ VOID MSQuery::ReadSpectrum()
                 }
 
                 val = "0.01";
-                mh = strtok(NULL, " \t");
+                mh = strtok_r(NULL, " \t", &saveptr);
 
                 if (mh != NULL)
                 {
@@ -297,8 +300,8 @@ VOID MSQuery::ReadSpectrum()
                 /* Split line into two DOUBLEs
                  * using space as delimiter */
 
-                CHAR *mz1 = strtok((CHAR *) line.c_str(), " ");
-                CHAR *intn1 = strtok(NULL, " ");
+                CHAR *mz1 = strtok_r((CHAR *) line.c_str(), " ", &saveptr);
+                CHAR *intn1 = strtok_r(NULL, " ", &saveptr);
                 STRING mz = "0.01";
                 STRING intn = "0.01";
 
@@ -337,8 +340,8 @@ VOID MSQuery::ReadSpectrum()
             }
             else if ( line[0] == 'Z')
             {
-                CHAR *mh = strtok((CHAR *) line.c_str(), " \t");
-                mh = strtok(NULL, " \t");
+                CHAR *mh = strtok_r((CHAR *) line.c_str(), " \t", &saveptr);
+                mh = strtok_r(NULL, " \t", &saveptr);
                 STRING val = "1";
 
                 if (mh != NULL)
@@ -348,7 +351,7 @@ VOID MSQuery::ReadSpectrum()
                 }
 
                 val = "0.01";
-                mh = strtok(NULL, " \t");
+                mh = strtok_r(NULL, " \t", &saveptr);
 
                 if (mh != NULL)
                 {
@@ -366,8 +369,8 @@ VOID MSQuery::ReadSpectrum()
             {
                 /* Split line into two DOUBLEs
                  * using space as delimiter */
-                CHAR *mz1 = strtok((CHAR *) line.c_str(), " ");
-                CHAR *intn1 = strtok(NULL, " ");
+                CHAR *mz1 = strtok_r((CHAR *) line.c_str(), " ", &saveptr);
+                CHAR *intn1 = strtok_r(NULL, " ", &saveptr);
 
                 STRING mz = "0.0";
                 STRING intn = "0.0";
@@ -442,6 +445,8 @@ STATUS MSQuery::ProcessQuerySpectrum(Queries *expSpecs)
         std::memcpy(&expSpecs->moz[offset], (mzArray + SpectrumSize - speclen), (speclen * sizeof(UINT)));
         std::memcpy(&expSpecs->intensity[offset], (dIntArr + SpectrumSize - speclen), (speclen * sizeof(UINT)));
     }
+
+    expSpecs->numPeaks += speclen;
 
     currPtr += 1;
 

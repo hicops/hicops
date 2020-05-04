@@ -102,13 +102,13 @@ private:
     VOID LinearFit(T& x, T& y, INT n, DOUBLE &a, DOUBLE &b);
 
     template <class T>
-    INT argmax(T &data, INT i1, INT i2, DOUBLE value);
+    inline INT argmax(T &data, INT i1, INT i2, DOUBLE value);
 
     template <class T>
-    INT rargmax(T &data, INT i1, INT i2, DOUBLE value);
+    inline INT rargmax(T &data, INT i1, INT i2, DOUBLE value);
 
     template <class T>
-    INT largmax(T &data, INT i1, INT i2, DOUBLE value);
+    inline INT largmax(T &data, INT i1, INT i2, DOUBLE value);
 
     dvector vrange(INT, INT);
     darray  arange(INT, INT);
