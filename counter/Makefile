@@ -1,8 +1,8 @@
 BUILD_MODE = RELEASE
 OPENMP = YES
 JOBS=4
-CXXFLAGS = -Wall -fmessage-length=0 -std=gnu++0x
-LNKFLAGS = -Wl,--wrap,memcpy
+CXXFLAGS = -Wall -fmessage-length=0 -std=c++14
+#LNKFLAGS = -Wl,--wrap,memcpy
 
 # Needs gperftools to be installed and configured before use
 PROFILE = NO

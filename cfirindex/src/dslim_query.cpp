@@ -1353,7 +1353,7 @@ VOID *DSLIM_FOut_Thread_Entry(VOID *argv)
         }
 
         ofstream *fh = new ofstream;
-        STRING fn = params.workspace + "/" +
+        STRING fn = params.datapath + "/" +
                     std::to_string(batchNo) +
                     "_" + std::to_string(params.myid) + ".dat";
 

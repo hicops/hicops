@@ -237,7 +237,7 @@ if __name__ == '__main__':
 		sample.write('dF=0.05\n\n')
 
 		sample.write('# Top Matches to report\n')
-		sample.write('top_matches=10\n')
+		sample.write('top_matches=10\n\n')
 
 		sample.write('# Max expect value to report\n')
 		sample.write('expect_max=20.0\n')
@@ -672,14 +672,14 @@ if __name__ == '__main__':
 
 				# Get the available NUMA memory
 				elif (param[:4] == 'node' and param[-4:] == 'free'):
-					mem = int(val[:-3]) - 512
+					mem = int(val[:-3]) - 1024
 					if (mem < numamem):
 						numamem = mem
 
 				elif (param == 'nodedistances'):
 					break
 
-		print ('Available max NUMA memory (- 512 MB) =', numamem)
+		print ('Available max NUMA memory (- 1GB ) =', numamem)
 
 		cores_per_numa = int(cores/numa)
 
@@ -887,22 +887,22 @@ if __name__ == '__main__':
 	modfile.close()
 
 	# Generate the job script
-	genMPI_OpenMPScript(workspace, 'cfir', 'cfir', 'compute', str(nodes), str(cores), jobtime, str(threads), pcdsframepath + '/cfirindex/cfir.exe', str(mpi_per_node), bl, bp, uparams)
+	genMPI_OpenMPScript(workspace, 'hicops', 'hicops', 'compute', str(nodes), str(cores), jobtime, str(threads), pcdsframepath + '/cfirindex/hicops.exe', str(mpi_per_node), bl, bp, uparams)
 
 	# Clean and make a fresh copy of CFIR index if needed
-	if (os.path.isfile(pcdsframepath + '/cfirindex/cfir.exe') == False):
+	if (os.path.isfile(pcdsframepath + '/cfirindex/hicops.exe') == False):
 		cleancfir = call("make -C cfirindex clean", shell=True)
 		makecfir = call("make -C cfirindex", shell=True)
 
 	# Run the HPC PCDSFrame
-	cfir = call('sbatch ' + workspace + '/autogen/cfir', shell=True)
+	cfir = call('sbatch ' + workspace + '/autogen/hicops', shell=True)
 
 	print ('\nThe PCDSFrameHPC job is running now\n')
 	print ('You can check the job progress using: squeue -u ' + username + '\n')
 	print ('The output will be written at: '+ workspace + '/output\n\n')
 
 	print ('\nSUCCESS\n')
-	print ('Thank you for using HPC PCDSFrame software\n')
+	print ('Thank you for using HiCOPS software\n')
 	print ('Please report bugs (if any) at {mhaseeb, fsaeed}@fiu.edu\n')
 
 	print ('########################################################\n')
