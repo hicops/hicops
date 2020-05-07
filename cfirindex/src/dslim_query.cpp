@@ -1152,7 +1152,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 #ifdef BENCHMARK
             duration = omp_get_wtime();
 #endif /* BENCHMARK */
-            
+
             /* Wait for a I/O request */
             status = qPtrs->lockw_();
 
@@ -1348,4 +1348,3 @@ static inline STATUS DSLIM_Deinit_IO()
 
     return status;
 }
-

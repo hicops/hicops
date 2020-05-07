@@ -233,7 +233,7 @@ STATUS DSLIM_Score::CombineResults()
 
         for (INT saa = 0; saa < nSamples; saa++)
         {
-            fn = params.workspace + "/" + std::to_string(vbatch) + "_"
+            fn = params.datapath + "/" + std::to_string(vbatch) + "_"
                     + std::to_string(saa) + ".dat";
 
             fhs[saa].open(fn, ios::in | ios::binary);
