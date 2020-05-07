@@ -32,13 +32,11 @@
 typedef struct _BorrowedData
 {
     /* These pointers will be borrowed */
-    partRes *resPtr;
     expeRT *ePtr;
     hCell *heapArray;
     Index *index;
     INT *sizeArray;
     INT *fileArray;
-    INT *indxArray;
 
     /* Dataset size */
     INT cPSMsize;
@@ -46,14 +44,11 @@ typedef struct _BorrowedData
 
     _BorrowedData()
     {
-        resPtr = NULL;
         ePtr = NULL;
         heapArray = NULL;
         index = NULL;
         sizeArray = NULL;
         fileArray = NULL;
-        indxArray = NULL;
-
         cPSMsize = 0;
         nBatches = 0;
     }
@@ -77,9 +72,7 @@ private:
     /* These pointers will be borrowed */
     INT      *sizeArray;
     INT      *fileArray;
-    INT      *indxArray;
     expeRT   *ePtr;
-    partRes  *resPtr;
     hCell    *heapArray;
     Index    *index;
     THREAD   *comm_thd;

@@ -51,9 +51,6 @@ class MSQuery
 private:
     /* Global Variables */
     UINT currPtr;
-    UINT QAcount;
-    UINT nqchunks;
-    UINT curr_chunk;
     UINT running_count;
     UINT maxslen;
     std::ifstream *qfile;
@@ -65,6 +62,9 @@ private:
     STATUS ProcessQuerySpectrum(Queries *);
 
 public:
+    UINT QAcount;
+    UINT curr_chunk;
+    UINT nqchunks;
 
     MSQuery();
     virtual ~MSQuery();
@@ -75,6 +75,7 @@ public:
     BOOL isDeInit();
     UINT getQfileIndex();
     MSQuery &operator=(const MSQuery &rhs);
+    MSQuery &operator=(const INT &rhs);
 
 };
 

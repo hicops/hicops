@@ -21,7 +21,6 @@
 #include "common.h"
 #include "dslim.h"
 #include "dslim_score.h"
-#include "dslim_comm.h"
 #include "dslim_fileout.h"
 #include "slmerr.h"
 #include "utils.h"
@@ -55,9 +54,7 @@ STATUS DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, expeRT *ePtr, hC
         bdata->heapArray = CandidatePSMS;
         bdata->fileArray = CommHandle->fileArray;
         bdata->sizeArray = CommHandle->sizeArray;
-        bdata->indxArray = CommHandle->indxArray;
-        bdata->nBatches  = CommHandle->sizeOffset;
-        bdata->resPtr    = CommHandle->rxArr;
+        bdata->nBatches  = CommHandle->nBatches;
         bdata->cPSMsize  = cpsmSize;
 
         isCarried = true;

@@ -102,6 +102,25 @@ public:
         }
     }
 
+    lwqueue(T *ar, INT sz, BOOL sem)
+    {
+        cap = sz;
+        arr = ar;
+        filled = sz;
+        head = 0;
+        tail = sz - 1;
+
+        if (sem)
+        {
+            sem_init(&lock, 0, 1);
+            isSem = true;
+        }
+        else
+        {
+            isSem = false;
+        }
+    }
+
     virtual ~lwqueue()
     {
         delete[] arr;
@@ -236,11 +255,11 @@ public:
         {
             res = arr[head];
         }
-		else
-		{
-			res = 0;
-		}
-		
+        else
+        {
+            res = 0;
+        }
+
         if (isSem)
         {
             sem_post (&lock);

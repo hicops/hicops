@@ -39,6 +39,10 @@
 #include <omp.h>
 #endif
 
+#ifdef DISTMEM
+#include <mpi.h>
+#endif /* DISTMEM */
+
 /* Set/Get the bit for modification site in a peptide */
 #define MODSITE(x)                       (1 << (x))
 

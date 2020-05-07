@@ -41,7 +41,7 @@ Scheduler::Scheduler()
     sem_init(&dumpQ, 0, 1);
 
     /* Thresholds */
-    maxpenalty = 3;
+    maxpenalty = 2;
     stopXtra = false;
     minrate = 0.3;
     waitSincelast = 0;
@@ -79,7 +79,7 @@ Scheduler::Scheduler(INT maxio, INT dumpsize)
     sem_init(&dumpQ, 0, 1);
 
     /* Thresholds */
-    maxpenalty = 3;
+    maxpenalty = 2;
     waitSincelast = 0;
 
     Ftplus1 = 0;   /* Forecast  */

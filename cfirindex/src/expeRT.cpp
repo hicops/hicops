@@ -129,7 +129,7 @@ STATUS expeRT::ModelSurvivalFunction(Results *rPtr)
         beta_t = 100;
     }*/
 
-    //if (status == SLM_SUCCESS)
+    if (status == SLM_SUCCESS)
     {
         /* Find the curve region */
         end1 = rargmax<DOUBLE *>(yy, 0, hyp-1, 1.0);
@@ -584,7 +584,7 @@ STATUS expeRT::ModelTailFit(Results *rPtr)
         beta_t = 100;
     }*/
 
-    //if (status == SLM_SUCCESS)
+    if (status == SLM_SUCCESS)
     {
         /* Find the curve region */
         end1 = rargmax<DOUBLE *>(yy, 0, hyp-1, 1.0);
