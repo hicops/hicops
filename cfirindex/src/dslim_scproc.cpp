@@ -39,7 +39,6 @@ extern gParams           params;
 /* Entry function for DSLIM_Score module */
 VOID *DSLIM_Score_Thread_Entry(VOID *);
 DSLIM_Score *ScoreHandle = NULL;
-#endif /* DISTMEM */
 
 STATUS DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, expeRT *ePtr, hCell *CandidatePSMS, INT cpsmSize)
 {
@@ -66,6 +65,7 @@ STATUS DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, expeRT *ePtr, hC
 
     return status;
 }
+#endif /* DISTMEM */
 
 STATUS DSLIM_DistScoreManager()
 {

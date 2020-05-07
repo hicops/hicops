@@ -151,7 +151,9 @@ STATUS DSLIM_DeallocateIonIndex(Index *);
 
 STATUS DSLIM_InitDistScore();
 
+#ifdef DISTMEM
 STATUS DSLIM_CarryForward(Index *, DSLIM_Comm *, expeRT *, hCell *, INT);
+#endif /* DISTMEM */
 
 STATUS DSLIM_DistScoreManager();
 
