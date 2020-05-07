@@ -511,6 +511,19 @@ MSQuery& MSQuery::operator=(const MSQuery &rhs)
     return *this;
 }
 
+MSQuery& MSQuery::operator=(const INT &rhs)
+{
+    this->QAcount = rhs;
+    this->currPtr = rhs;
+    this->curr_chunk = rhs;
+    this->maxslen = rhs;
+    this->nqchunks = rhs;
+    this->running_count = rhs;
+    this->qfileIndex = rhs;
+
+    return *this;
+}
+
 UINT MSQuery::getQfileIndex()
 {
     return qfileIndex;

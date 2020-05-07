@@ -44,11 +44,9 @@ DSLIM_Score::DSLIM_Score()
     /* These pointers will be borrowed */
     sizeArray = NULL;
     fileArray = NULL;
-    indxArray = NULL;
     ePtr      = NULL;
     heapArray = NULL;
     index = NULL;
-    resPtr = NULL;
 
     /* Data size that I expect to
      * receive from other processes */
@@ -88,12 +86,10 @@ DSLIM_Score::DSLIM_Score(BData *bd)
     /* These pointers will be borrowed */
     sizeArray = bd->sizeArray;
     fileArray = bd->fileArray;
-    indxArray = bd->indxArray;
 
     ePtr = bd->ePtr;
     heapArray = bd->heapArray;
     index = bd->index;
-    resPtr = bd->resPtr;
 
     /* Data size that I expect to
      * receive from other processes */
@@ -152,7 +148,6 @@ DSLIM_Score::~DSLIM_Score()
 
     if (txSizes != NULL)
     {
-
         delete[] txSizes;
         txSizes = NULL;
     }
@@ -187,12 +182,6 @@ DSLIM_Score::~DSLIM_Score()
         heapArray = NULL;
     }
 
-    if (resPtr != NULL)
-    {
-        delete[] resPtr;
-        resPtr = NULL;
-    }
-
     if (keys != NULL && myRXsize != 0)
     {
         delete[] keys;
@@ -225,8 +214,7 @@ STATUS DSLIM_Score::CombineResults()
     STATUS status = SLM_SUCCESS;
 
     /* Each node sent its sample */
-    const INT nSamples = params.nodes;
-    auto startPos = 0;
+    const INT nSamples = params.nodes;;
     auto startSpec= 0;
     ifstream *fhs = NULL;
     ebuffer  *iBuffs = NULL;
@@ -252,6 +240,7 @@ STATUS DSLIM_Score::CombineResults()
 
             if (fhs[saa].is_open())
             {
+                fhs[saa].read((CHAR *)iBuffs[saa].packs, bSize * sizeof(partRes));
                 fhs[saa].read(iBuffs[saa].ibuff, bSize * 128 * sizeof(USHORT));
 
                 if (fhs[saa].fail())
@@ -277,12 +266,6 @@ STATUS DSLIM_Score::CombineResults()
 
             INT cpsms = 0;
 
-            /* Compute the spectrum index in rxArray */
-            INT specIDX = startPos + spec;
-
-            /* Compute the stride in rxArray */
-            INT stride = bSize;
-
             /* Record locators */
             INT key = params.nodes;
             INT maxhypscore = -1;
@@ -291,21 +274,7 @@ STATUS DSLIM_Score::CombineResults()
             for (INT sno = 0; sno < nSamples; sno++)
             {
                 /* Pointer to Result sample */
-                partRes *sResult = resPtr + (specIDX + (stride * sno));
-
-                /* Sanity check */
-                if (specIDX + (stride * sno) >= (this->myRXsize * (nSamples)))
-                {
-                    cout << "FATAL: Segfault caught @: " << params.myid << endl;
-                    cout << "spec: " << spec << endl;
-                    cout << "currCount: " << startPos << endl;
-                    cout << "myRXsize: " << this->myRXsize << endl;
-                    cout << "specIDX: " << specIDX << endl;
-                    cout << "batchNum: " << batchNum << endl;
-                    cout << "sizeArray: " << sizeArray[batchNum] << endl;
-
-                    exit(-11);
-                }
+                partRes *sResult = iBuffs[sno].packs + spec;
 
                 if (*sResult == 0)
                 {
@@ -319,13 +288,13 @@ STATUS DSLIM_Score::CombineResults()
                 if (sResult->N >= 1)
                 {
                     /* Reconstruct the partial histogram */
-                    expPtr->Reconstruct(&iBuffs[sResult->sno], spec, sResult);
+                    expPtr->Reconstruct(&iBuffs[sno], spec, sResult);
 
                     /* Record the maxhypscore and its key */
                     if (sResult->max > 0 && sResult->max > maxhypscore)
                     {
                         maxhypscore = sResult->max;
-                        key = sResult->sno;
+                        key = sno;
                     }
                 }
             }
@@ -348,8 +317,10 @@ STATUS DSLIM_Score::CombineResults()
                 /* If the scores are good enough */
                 if (e_x < params.expect_max)
                 {
+                    partRes *ssResult = iBuffs[key].packs + spec;
+
                     psm->eValue = e_x * 1e6;
-                    psm->specID = indxArray[batchNum] + spec;
+                    psm->specID = ssResult-> qID;
                     psm->npsms = cpsms;
 
                     /* Must be an atomic update */
@@ -383,7 +354,6 @@ STATUS DSLIM_Score::CombineResults()
 
         /* Update the counters */
         startSpec += sizeArray[batchNum];
-        startPos += sizeArray[batchNum] * (nSamples);
 
         /* Remove the files when no longer needed */
         for (INT saa = 0; saa < nSamples; saa++)

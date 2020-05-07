@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2019 Muhammad Haseeb, Fahad Saeed
- * Florida International University, Miami, FL
+ * Copyright (C) 2020  Muhammad Haseeb, and Fahad Saeed
+ * Florida International University (FIU), Miami, FL
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,176 +17,35 @@
  *
  */
 
-#ifndef INCLUDE_DSLIM_COMM_H_
-#define INCLUDE_DSLIM_COMM_H_
+#ifndef DSLIM_COMM_H_
+#define DSLIM_COMM_H_
 
-#include "config.h"
-
-#ifdef DISTMEM
-/* Include headers */
-#include <mpi.h>
-#endif /* DISTMEM */
-
-#include <semaphore.h>
-#include <unistd.h>
 #include "common.h"
 #include "slm_dsts.h"
-#include "slmerr.h"
-#include "utils.h"
-#include "msquery.h"
-#include "config.h"
-#include "lwqueue.h"
 #include "expeRT.h"
+#include "dslim.h"
 
-#define TXARRAYS                   4
+#ifdef DISTMEM
 
-/* Class for DSLIM MPI Communication */
 class DSLIM_Comm
 {
 private:
+    INT nBatches;
 
-    /* Number of data batches processed (either Tx or Rx'ed) */
-    UINT    nBatches;
+    INT *sizeArray;
+    INT *fileArray;
 
-    /* RX buffer size in terms of
-     * how many partRes it can contain */
-    INT    rxbuffsize;
-
-    /* MPI Communication thread */
-    THREAD commThd;
-
-    /* Rx array */
-    partRes *rxArr;
-
-    /* Array to keep track of sizes
-     * of buffers received
-     */
-    INT     *sizeArray;
-    INT     *fileArray;
-    INT     *indxArray;
-
-    /* currPtr */
-    INT  sizeOffset;
-
-    INT cumulate;
-
-    /* Semaphore for Rx array */
-    LOCK rxLock;
-
-    /* currRxOffset */
-    INT currRxOffset;
-
-    /* 2 Tx arrays */
-    partRes *txArr[TXARRAYS];
-
-    /* Lock for control variables */
-    LOCK control;
-
-    /* Exit Signal */
-    BOOL exitSignal;
-
-    /* Wake up event */
-    LOCK wakeup;
-
-    /* Wake4mIO Signal*/
-    BOOL Wake4mIO;
-
-    /* Signal for Rx ready */
-    BOOL isRxready;
-
-    /* Mismatch counter */
-    INT mismatch;
-
-    lwqueue<UINT> *rxQueue;
-
-    INT RxTag;
-
-#ifdef DISTMEM
-
-    /* Handle for Rx request(S) */
-    MPI_Request *RxRqsts;
-
-    INT *RxStat;
-
-    /* Handle for the Tx request */
-    MPI_Request *TxRqsts;
-
-    INT *TxStat;
-
-
-#endif /* DISTMEM */
-
-    VOID Init_Locks();
-
-    VOID InitTx();
-
-    VOID InitRx();
-
-    VOID Destroy_Locks();
-
-    STATUS FlushRxBuffer();
-
-    STATUS DestroyRxBuffers();
-
-    STATUS InitComm_DataTypes();
-
-    STATUS FreeComm_DataTypes();
-
-    VOID * Thread_Entry(VOID *argv);
-
-    partRes *getCurrTxArr();
-
-    partRes *getCurrRxArr();
+    INT myRXsize;
 
 public:
 
-    /* Default constructor */
+    friend STATUS DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, expeRT *ePtr, hCell *CandidatePSMS, INT cpsmSize);
     DSLIM_Comm();
-
-    /* Destructor */
+    DSLIM_Comm(INT);
     virtual ~DSLIM_Comm();
-
-    friend STATUS DSLIM_CarryForward(Index *, DSLIM_Comm *,
-                                     expeRT *, hCell *, INT);
-
-    partRes *getTxBuffer(INT batchtag, INT batchsize, INT&);
-
-    STATUS Tx(INT, INT, INT);
-
-    STATUS Rx(INT, INT);
-
-    STATUS Rx();
-
-    STATUS ComputeResults();
-
-    STATUS Wait4Event();
-
-    STATUS SignalExit();
-
-    STATUS SignalWakeup();
-
-    BOOL   checkExitSignal();
-
-    BOOL   checkWakeup();
-
-    BOOL   getRxReadyPermission();
-
-    BOOL   checkMismatch();
-
-    BOOL   checkEndCondition();
-
-    STATUS Wait4Completion();
-
-    STATUS AddBufferEntry(INT, INT);
-
-    INT    getRxBufferSize();
-
-#if 0
-    STATUS Wait4Rx();
-
-    STATUS CheckRx();
-#endif
-
+    STATUS AddBatch(INT, INT, INT);
 };
 
-#endif /* INCLUDE_DSLIM_COMM_H_ */
+#endif /* DISTMEM */
+
+#endif /* DSLIM_COMM_H_ */

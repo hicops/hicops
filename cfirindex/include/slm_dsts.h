@@ -438,11 +438,13 @@ typedef struct _queries
     FLOAT  *precurse; /* Stores the precursor mass of each spectrum. */
     INT    numPeaks;
     INT    numSpecs; /* Number of theoretical spectra */
+    INT    batchNum;
 
     void reset()
     {
         numPeaks = 0;
         numSpecs = 0;
+        batchNum = 0;
     }
 
     _queries()
@@ -453,6 +455,7 @@ typedef struct _queries
         this->intensity = NULL;
         numPeaks        = 0;
         numSpecs        = 0;
+        batchNum = 0;
     }
 
     VOID init()
@@ -463,12 +466,14 @@ typedef struct _queries
         this->intensity = new UINT[QCHUNK * QALEN];
         numPeaks        = 0;
         numSpecs        = 0;
+        batchNum = 0;
     }
 
     VOID deinit()
     {
         numPeaks = -1;
         numSpecs = -1;
+        batchNum = -1;
 
         /* Deallocate the memory */
         if (this->moz != NULL)
@@ -496,10 +501,11 @@ typedef struct _queries
         }
     }
 
-    virtual ~_queries()
+    ~_queries()
     {
         numPeaks = 0;
         numSpecs = 0;
+        batchNum = 0;
 
         /* Deallocate the memory */
         if (this->moz != NULL)
@@ -718,14 +724,12 @@ typedef struct _Results
 } Results;
 
 /* Data structure for partial result Tx/Rx */
-/* Data structure for partial result Tx/Rx */
 typedef struct _partResult
 {
     /* Convert: x10 + 0.5 */
     USHORT min;
     USHORT max2;
-    USHORT sno;
-    USHORT max;
+    INT max;
 
     /* Total number of samples scored */
     INT N;
@@ -739,7 +743,6 @@ typedef struct _partResult
         N  = 0;
         max = 0;
         qID = 0;
-        sno = 0;
     }
 
     _partResult(INT def)
@@ -749,18 +752,16 @@ typedef struct _partResult
         N  = def;
         max = def;
         qID = 0;
-        sno = 0;
     }
 
     /* Destructor */
-    virtual ~_partResult()
+    ~_partResult()
     {
         min = 0;
         max = 0;
         N  = 0;
         max2 = 0;
         qID = 0;
-        sno = 0;
     }
 
     _partResult& operator=(const INT& rhs)
@@ -780,7 +781,11 @@ typedef struct _partResult
         /* Check for self assignment */
         if (this != &rhs)
         {
-            std::memcpy(this, &rhs, sizeof(_partResult));
+            min = rhs.min;
+            max2 = rhs.max2;
+            N = rhs.N;
+            max = rhs.max;
+            qID = rhs.qID;
         }
 
         return *this;
@@ -880,18 +885,28 @@ typedef struct _fResult
 typedef struct _ebuffer
 {
     CHAR *ibuff;
+    partRes *packs;
     INT currptr;
+    INT batchNum;
     BOOL isDone;
 
     _ebuffer()
     {
-        ibuff = new CHAR[128 * sizeof (USHORT) * QCHUNK];
+        packs = new partRes[QCHUNK];
+        ibuff = new CHAR[(128 * sizeof (USHORT)) * QCHUNK];
         currptr = 0;
+        batchNum = -1;
         isDone = true;
     }
 
     ~_ebuffer()
     {
+        if (packs != NULL)
+        {
+            delete[] packs;
+            packs = NULL;
+        }
+
         if (ibuff != NULL)
         {
             delete[] ibuff;
@@ -899,6 +914,7 @@ typedef struct _ebuffer
         }
 
         currptr = 0;
+        batchNum = -1;
         isDone = true;
     }
 
