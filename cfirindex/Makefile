@@ -1,16 +1,19 @@
 BUILD_MODE = RELEASE
 OPENMP = YES
-MPI = YES
+MPI = NO
 JOBS=22
 CXXFLAGS = -Wall -fmessage-length=0 -std=c++14
-#LNKFLAGS = -Wl,--wrap,memcpy
+LIBS = -ldslim
 
 # Change CXX to MPIC++ when MPI enabled
 ifeq ($(MPI),YES)
 	ifneq ($(OS),Windows_NT)
 		CXX:= mpicxx
-		CXXFLAGS += -DDISTMEM
+	else
+		LIBS += -lmsmpi
 	endif
+
+	CXXFLAGS += -DDISTMEM
 endif
 
 # Needs gperftools to be installed and configured before use
@@ -21,7 +24,6 @@ SRC = $(PROJECT_ROOT)/src
 
 DEPS = src/dslim_query.cpp src/dslim_comm.cpp src/scheduler.cpp src/dslim.cpp src/dslim_fileout.cpp src/lbe_internal.cpp src/utils.cpp src/mods.cpp src/msquery.cpp src/dslim_score.cpp src/dslim_scproc.cpp src/expeRT.cpp src/sgsmooth.cpp include/common.h include/config.h include/dslim_fileout.h include/keyval.h include/utils.h include/mods.h include/msquery.h include/slm_dsts.h include/dslim.h include/slmerr.h include/lbe.h include/sgsmooth.h include/expeRT.h include/lwvector.h include/dslim_score.h include/dslim_comm.h include/scheduler.h include/lwbuff.h include/lwqueue.h include/minheap.h
 
-LIBS = -ldslim
 LIBPATHS = -L$(SRC)
 EXECUTEABLE = hicops.exe
 
