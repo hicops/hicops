@@ -461,10 +461,11 @@ STATUS DSLIM_SearchManager(Index *index)
 
         sem_destroy(&writer);
 
-        delete[] iBuff;
-
-        iBuff = NULL;
-
+        if (iBuff != NULL)
+        {
+            delete[] iBuff;
+            iBuff = NULL;
+        }
 
 #ifdef DIAGNOSE
         std::cout << "ExitSignal: " << params.myid << endl;
@@ -477,9 +478,11 @@ STATUS DSLIM_SearchManager(Index *index)
         status = DSLIM_CarryForward(index, CommHandle, ePtrs, CandidatePSMS, spectrumID);
 
         /* Delete the instance of CommHandle */
-        delete CommHandle;
-
-        CommHandle = NULL;
+        if (CommHandle != NULL)
+        {
+            delete CommHandle;
+            CommHandle = NULL;
+        }
 
     }
 #endif /* DISTMEM */
