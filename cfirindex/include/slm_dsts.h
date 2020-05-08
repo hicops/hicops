@@ -852,7 +852,7 @@ typedef struct _fResult
         npsms = 0;
     }
 
-    virtual ~_fResult()
+    ~_fResult()
     {
         this->eValue = 0;
         this->specID = 0;
