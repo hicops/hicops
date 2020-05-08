@@ -887,12 +887,12 @@ if __name__ == '__main__':
 	modfile.close()
 
 	# Generate the job script
-	genMPI_OpenMPScript(workspace, 'hicops', 'hicops', 'compute', str(nodes), str(cores), jobtime, str(threads), pcdsframepath + '/cfirindex/hicops.exe', str(mpi_per_node), bl, bp, uparams)
+	genMPI_OpenMPScript(workspace, 'hicops', 'hicops', 'compute', str(nodes), str(cores), jobtime, str(threads), pcdsframepath + '/source/hicops.exe', str(mpi_per_node), bl, bp, uparams)
 
 	# Clean and make a fresh copy of CFIR index if needed
-	if (os.path.isfile(pcdsframepath + '/cfirindex/hicops.exe') == False):
-		cleancfir = call("make -C cfirindex clean", shell=True)
-		makecfir = call("make -C cfirindex", shell=True)
+	if (os.path.isfile(pcdsframepath + '/source/hicops.exe') == False):
+		cleancfir = call("make -C source clean", shell=True)
+		makecfir = call("make -C source", shell=True)
 
 	# Run the HPC PCDSFrame
 	cfir = call('sbatch ' + workspace + '/autogen/hicops', shell=True)
