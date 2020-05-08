@@ -38,9 +38,12 @@ FLOAT *hyperscores         = NULL;
 UCHAR *sCArr               = NULL;
 BOOL   ExitSignal          = false;
 
+#ifdef DISTMEM
 DSLIM_Comm *CommHandle    = NULL;
-Scheduler  *SchedHandle    = NULL;
 hCell      *CandidatePSMS  = NULL;
+#endif /* DISTMEM */
+
+Scheduler  *SchedHandle    = NULL;
 expeRT     *ePtrs          = NULL;
 
 ebuffer    *iBuff          = NULL;
@@ -766,6 +769,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
                 }
             }
 
+#ifdef DISTMEM
             /* Distributed memory mode - Model partial Gumbel
              * and transmit parameters to rx machine */
             if (params.nodes > 1)
@@ -809,6 +813,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
             /* Shared memory mode - Do complete
              * modeling and print results */
             else
+#endif /* DISTMEM */
             {
                 /* Check for minimum number of PSMs */
                 if (resPtr->cpsms >= params.min_cpsm)
@@ -1282,11 +1287,12 @@ VOID *DSLIM_FOut_Thread_Entry(VOID *argv)
 
         if (lbuff->isDone == true)
         {
+            //cout << "FOut_Thread_Exiting @: " << params.myid <<endl;
             break;
         }
 
         ofstream *fh = new ofstream;
-        STRING fn = params.workspace + "/" +
+        STRING fn = params.datapath + "/" +
                     std::to_string(lbuff->batchNum) +
                     "_" + std::to_string(params.myid) + ".dat";
 

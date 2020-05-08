@@ -19,6 +19,8 @@
 
 #include "dslim_comm.h"
 
+#ifdef DISTMEM
+
 /* Global params */
 extern gParams params;
 
@@ -81,3 +83,5 @@ STATUS DSLIM_Comm::AddBatch(INT batchNum, INT batchSize, INT fileID)
 
     return SLM_SUCCESS;
 }
+
+#endif /* DISTMEM */
