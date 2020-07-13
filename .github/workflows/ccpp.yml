@@ -1,4 +1,4 @@
-name: C/C++ CI
+name: HiCOPS C/C++ CI
 
 on:
   push:
@@ -13,9 +13,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: setup
+      run: mkdir -p build && cd build
     - name: configure
-      run: mkdir -p build
-      run: cd build
       run: cmake -DCMAKE_INSTALL_PREFIX=../install ..
     - name: build
       run: make
