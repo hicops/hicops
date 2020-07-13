@@ -14,8 +14,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: make
-      run: make -C cfirindex
+      run: make -C source
     - name: make clean
-      run: make -C cfirindex clean
-    - name: make distclean
-      run: make -C cfirindex distclean
+      run: make -C source clean
