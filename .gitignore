@@ -15,6 +15,10 @@ dbparams.txt
 mods.txt
 sampleparams.txt
 *.tsv
+build*
+build*/
+install*
+install*/
 
 # Precompiled Headers
 *.gch
