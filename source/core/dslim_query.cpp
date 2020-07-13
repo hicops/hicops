@@ -461,10 +461,11 @@ STATUS DSLIM_SearchManager(Index *index)
 
         sem_destroy(&writer);
 
-        delete[] iBuff;
-
-        iBuff = NULL;
-
+        if (iBuff != NULL)
+        {
+            delete[] iBuff;
+            iBuff = NULL;
+        }
 
 #ifdef DIAGNOSE
         std::cout << "ExitSignal: " << params.myid << endl;
@@ -477,9 +478,11 @@ STATUS DSLIM_SearchManager(Index *index)
         status = DSLIM_CarryForward(index, CommHandle, ePtrs, CandidatePSMS, spectrumID);
 
         /* Delete the instance of CommHandle */
-        delete CommHandle;
-
-        CommHandle = NULL;
+        if (CommHandle != NULL)
+        {
+            delete CommHandle;
+            CommHandle = NULL;
+        }
 
     }
 #endif /* DISTMEM */
@@ -632,43 +635,6 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
                         /* Do this to save mem boundedness */
                         auto qion = QAPtr[k];
 
-#if 0
-                        /* Check for any zeros
-                         * Zero = Trivial query */
-                        if (qion > dF && qion < ((maxmass * scale) - 1 - dF))
-                        {
-                            /* Locate iAPtr start and end */
-                            UINT start = bAPtr[QAPtr[k] - dF];
-                            UINT end = bAPtr[QAPtr[k] + 1 + dF];
-
-                            /* Loop through located iAions */
-                            for (UINT ion = start; ion < end; ion++)
-                            {
-                                UINT raw = iAPtr[ion];
-
-                                /* Calculate parent peptide ID */
-                                INT ppid = (raw / speclen);
-
-                                if (ppid >= minlimit && ppid <= maxlimit)
-                                {
-                                    /* Update corresponding scorecard entries */
-                                    /* b-ion matched */
-                                    if ((raw % speclen) < speclen / 2)
-                                    {
-                                        bycPtr[ppid].bc += 1;
-                                        ibycPtr[ppid].ibc += iPtr[k];
-                                    }
-                                    /* y-ion matched */
-                                    else
-                                    {
-                                        bycPtr[ppid].yc += 1;
-                                        ibycPtr[ppid].iyc += iPtr[k];
-                                    }
-                                }
-
-                            }
-                        }
-#else
                         /* Check for any zeros
                          * Zero = Trivial query */
                         if (qion > dF && qion < ((maxmass * scale) - 1 - dF))
@@ -715,7 +681,6 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
                                 }
                             }
                         }
-#endif
                     }
 
                     /* Compute the chunksize to look further into */
