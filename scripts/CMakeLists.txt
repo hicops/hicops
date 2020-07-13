@@ -10,7 +10,7 @@ add_subdirectory(dbtools)
 #   ms2data scripts
 #----------------------------------------------------------------------------------------#
 message(STATUS "Adding ms2data scripts...")
-add_subdirectory(ms2data)
+add_subdirectory(ms2processor)
 
 #----------------------------------------------------------------------------------------#
 #   preprocessor scripts
