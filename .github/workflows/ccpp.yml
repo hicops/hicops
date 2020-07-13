@@ -13,7 +13,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: make
-      run: make -C source
-    - name: make clean
-      run: make -C source clean
+    - name: configure
+      run: mkdir -p build
+      run: cd build
+      run: cmake -DCMAKE_INSTALL_PREFIX=../install ..
+    - name: build
+      run: make
+    - name: install
+      run: make install
