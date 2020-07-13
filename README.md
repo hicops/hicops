@@ -1,4 +1,4 @@
-https://github.com/mhaseeb123/hicops/workflows/HiCOPS%20C/C++%20CI/badge.svg
+![](https://github.com/mhaseeb123/hicops/workflows/HiCOPS%20C/C++%20CI/badge.svg)
 # HiCOPS
 HiCOPS: A comprehensive software framework for identification of peptides from DDA LC-MS/MS data using an HPC system (specifically optmized for XSEDE COMET HPC Cluster)
 
