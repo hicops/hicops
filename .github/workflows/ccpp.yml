@@ -14,14 +14,14 @@ jobs:
     - name: setup
       run: mkdir -p build 
     - name: configure
-      run: |
+      run:
         working-directory: build
-        cmake -DCMAKE_INSTALL_PREFIX=../install ..
+        command: cmake -DCMAKE_INSTALL_PREFIX=../install ..
     - name: build
-      run: |
+      run:
         working-directory: build
         command: make
     - name: install
-      run: |
+      run:
         working-directory: build
         command: make install
