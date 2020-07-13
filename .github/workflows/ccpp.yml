@@ -8,15 +8,15 @@ on:
 
 jobs:
   build:
-
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
     - name: setup
-      run: mkdir -p build && cd build
+      run: mkdir -p build 
     - name: configure
-      run: cmake -DCMAKE_INSTALL_PREFIX=../install ..
+      run: |
+        cd build
+        cmake -DCMAKE_INSTALL_PREFIX=../install ..
     - name: build
       run: make
     - name: install
