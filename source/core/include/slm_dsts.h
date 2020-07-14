@@ -292,26 +292,17 @@ typedef struct _BYC
 {
     USHORT   bc;        /* b ion count */
     USHORT   yc;        /* y ion count */
+    UINT    ibc;
+    UINT    iyc;
 
     _BYC()
     {
         bc = 0;
         yc = 0;
-    }
-
-} BYC;
-
-typedef struct _iBYC
-{
-    UINT ibc;
-    UINT iyc;
-
-    _iBYC()
-    {
-        ibc = 0;
+        ibc= 0;
         iyc = 0;
     }
-} iBYC;
+} BYC;
 
 typedef struct _SLMchunk
 {
@@ -826,13 +817,11 @@ typedef struct _partResult
 typedef struct _BYICount
 {
     BYC     *byc;       /* Both counts */
-    iBYC   *ibyc;       /* Sum of b/y ion intensities */
     Results  res;
 
     _BYICount()
     {
         byc = NULL;
-        ibyc = NULL;
     }
 
 } BYICount;

@@ -191,15 +191,6 @@ static STATUS DSLIM_InitializeMS2Data()
     /* Compute the total number of batches in the dataset */
     nBatches = ptrs[nfiles-1]->curr_chunk + ptrs[nfiles-1]->nqchunks;
 
-
-#ifndef DIAGNOSE
-                if (params.myid == 0)
-                {
-                    //std::cout << "\nQuery File: " << queryfiles[qfid_lcl] << endl;
-                    //std::cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
-                }
-#endif /* DIAGNOSE */
-
 #ifdef BENCHMARK
                 fileio += omp_get_wtime() - duration;
 #endif /* BENCHMARK */
@@ -595,7 +586,6 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
             UINT thno = omp_get_thread_num();
 
             BYC *bycPtr = Score[thno].byc;
-            iBYC *ibycPtr = Score[thno].ibyc;
             Results *resPtr = &Score[thno].res;
             expeRT  *expPtr = ePtrs + thno;
             ebuffer *inBuff = inBuff + thno;
@@ -666,18 +656,21 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
                                     /* Calculate parent peptide ID */
                                     INT ppid = (raw / speclen);
 
-                                    /* b-ion matched */
-                                    if ((raw % speclen) < halfspeclen)
-                                    {
-                                        bycPtr[ppid].bc += 1;
-                                        ibycPtr[ppid].ibc += intn;
-                                    }
-                                    /* y-ion matched */
-                                    else
-                                    {
-                                        bycPtr[ppid].yc += 1;
-                                        ibycPtr[ppid].iyc += intn;
-                                    }
+                                    /* Calculate the residue */
+                                    INT residue = (raw % speclen);
+
+                                    /* Either 0 or 1 */
+                                    INT uB = residue / halfspeclen;
+
+                                    /* Get the map element */
+                                    BYC *elmnt = bycPtr + ppid;
+
+                                    /* Update */
+                                    elmnt->bc += uB;
+                                    elmnt->ibc += intn * uB;
+
+                                    elmnt->yc += (1 - uB);
+                                    elmnt->iyc += intn * (1 - uB);
                                 }
                             }
                         }
@@ -695,15 +688,15 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
 
                         /* Filter by the min shared peaks */
                         if (shpk >= params.min_shp)
-                        {
-                            ULONGLONG pp = UTILS_Factorial(bcc) *
-                                    UTILS_Factorial(ycc);
-
+                        {                            
                             /* Create a heap cell */
                             hCell cell;
 
+                            ULONGLONG pp = UTILS_Factorial(bcc) *
+                                    UTILS_Factorial(ycc);
+
                             /* Fill in the information */
-                            cell.hyperscore = 0.001 + pp * ibycPtr[it].ibc * ibycPtr[it].iyc;
+                            cell.hyperscore = 0.001 + pp * bycPtr[it].ibc * bycPtr[it].iyc;
 
                             cell.hyperscore = log10(cell.hyperscore) - 6;
 
@@ -730,7 +723,6 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
 
                     /* Clear the scorecard */
                     std::memset(bycPtr + minlimit, 0x0, sizeof(BYC) * csize);
-                    std::memset(ibycPtr + minlimit, 0x0, sizeof(iBYC) * csize);
                 }
             }
 

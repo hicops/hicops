@@ -527,10 +527,7 @@ STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs)
         for (UINT thd = 0; thd < params.threads; thd++)
         {
             Score[thd].byc = new BYC[sAize];
-            memset(Score[thd].byc, 0x0, 2 * sizeof(USHORT) * sAize);
-
-            Score[thd].ibyc = new iBYC[sAize];
-            memset(Score[thd].ibyc, 0x0, 2 * sizeof(UINT) * sAize);
+            memset(Score[thd].byc, 0x0, sizeof(BYC) * sAize);
 
             /* Initialize the histogram */
             Score[thd].res.survival = new DOUBLE[1 + (MAX_HYPERSCORE * 10) + 1]; // +2 for accumulation
@@ -884,11 +881,9 @@ STATUS DSLIM_DeallocateSC()
         for (UINT thd = 0; thd < params.threads; thd++)
         {
             delete[] Score[thd].byc;
-            delete[] Score[thd].ibyc;
             delete[] Score[thd].res.survival;
 
             Score[thd].byc = NULL;
-            Score[thd].ibyc = NULL;
             Score[thd].res.survival = NULL;
         }
 
