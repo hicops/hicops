@@ -20,7 +20,7 @@
 #include "dslim_score.h"
 #include "dslim_fileout.h"
 
-#ifdef DISTMEM
+#ifdef USE_MPI
 
 using namespace std;
 
@@ -254,9 +254,9 @@ STATUS DSLIM_Score::CombineResults()
             fn.clear();
         }
 
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for schedule (dynamic, 4) num_threads(params.threads)
-#endif /* _OPENMP */
+#endif /* USE_OMP */
         for (INT spec = 0; spec < bSize; spec++)
         {
             INT thno = omp_get_thread_num();
@@ -324,12 +324,12 @@ STATUS DSLIM_Score::CombineResults()
                     psm->npsms = cpsms;
 
                     /* Must be an atomic update */
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp atomic update
                     txSizes[key] += 1;
 #else
                     txSizes[key] += 1;
-#endif /* _OPENMP */
+#endif /* USE_OMP */
 
                     /* Update the key */
                     keys[startSpec + spec] = key;
@@ -712,9 +712,9 @@ STATUS DSLIM_Score::DisplayResults()
     fResult *myPtr = TxValues + offset;
 
     /* Display the data */
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(params.threads)
-#endif /* _OPENMP */
+#endif /* USE_OMP */
     for (auto ik = myPtr; ik < myPtr + mysize; ik++)
     {
         hCell *psm = heapArray + ik->specID;
@@ -731,9 +731,9 @@ STATUS DSLIM_Score::DisplayResults()
         mysize += *pt;
     }
 
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(params.threads)
-#endif /* _OPENMP */
+#endif /* USE_OMP */
     for (auto ik = myPtr; ik < myPtr + mysize; ik++)
     {
         hCell *psm = heapArray + ik->specID;
@@ -768,4 +768,4 @@ STATUS DSLIM_Score::FreeDataTypes()
     return SLM_SUCCESS;
 }
 
-#endif /* DISTMEM */
+#endif /* USE_MPI */

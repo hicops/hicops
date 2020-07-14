@@ -35,7 +35,7 @@ BData       *bdata       = NULL;
 
 extern gParams           params;
 
-#ifdef DISTMEM
+#ifdef USE_MPI
 /* Entry function for DSLIM_Score module */
 VOID *DSLIM_Score_Thread_Entry(VOID *);
 DSLIM_Score *ScoreHandle = NULL;
@@ -65,13 +65,13 @@ STATUS DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, expeRT *ePtr, hC
 
     return status;
 }
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
 STATUS DSLIM_DistScoreManager()
 {
     STATUS status = SLM_SUCCESS;
 
-#ifdef DISTMEM
+#ifdef USE_MPI
     /* Check if parameters have been brought */
     if (isCarried == false && params.nodes > 1)
     {
@@ -151,13 +151,13 @@ STATUS DSLIM_DistScoreManager()
         }
     }
 
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
     /* Return the status of execution */
     return status;
 }
 
-#ifdef DISTMEM
+#ifdef USE_MPI
 /* Entry function for the score communicator */
 VOID *DSLIM_Score_Thread_Entry(VOID *argv)
 {
@@ -267,7 +267,7 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
 
     return NULL;
 }
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
 #ifdef DIAGNOSE
 INT DSLIM_TestBData()

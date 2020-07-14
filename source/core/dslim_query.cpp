@@ -38,10 +38,10 @@ FLOAT *hyperscores         = NULL;
 UCHAR *sCArr               = NULL;
 BOOL   ExitSignal          = false;
 
-#ifdef DISTMEM
+#ifdef USE_MPI
 DSLIM_Comm *CommHandle    = NULL;
 hCell      *CandidatePSMS  = NULL;
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
 Scheduler  *SchedHandle    = NULL;
 expeRT     *ePtrs          = NULL;
@@ -64,7 +64,7 @@ Queries *workPtr           = NULL;
 
 /****************************************************************/
 
-#ifdef DISTMEM
+#ifdef USE_MPI
 VOID *DSLIM_FOut_Thread_Entry(VOID *argv);
 #endif
 
@@ -72,13 +72,6 @@ VOID *DSLIM_FOut_Thread_Entry(VOID *argv);
 lwqueue<MSQuery *> *ioQ = NULL;
 LOCK ioQlock;
 /****************************************************************/
-
-#ifdef BENCHMARK
-static DOUBLE duration = 0;
-extern DOUBLE compute;
-extern DOUBLE fileio;
-extern DOUBLE memory;
-#endif /* BENCHMARK */
 
 VOID *DSLIM_IO_Threads_Entry(VOID *argv);
 
@@ -167,7 +160,7 @@ static STATUS DSLIM_InitializeMS2Data()
     /* Initialize the queue with already created nfiles */
     qfPtrs = new lwqueue<MSQuery*>(nfiles, false);
 
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for schedule (dynamic, 1)
 #endif/* _OPENMP */
     for (auto fid = 0; fid < nfiles; fid++)
@@ -190,10 +183,6 @@ static STATUS DSLIM_InitializeMS2Data()
 
     /* Compute the total number of batches in the dataset */
     nBatches = ptrs[nfiles-1]->curr_chunk + ptrs[nfiles-1]->nqchunks;
-
-#ifdef BENCHMARK
-                fileio += omp_get_wtime() - duration;
-#endif /* BENCHMARK */
 
     return status;
 }
@@ -221,9 +210,9 @@ STATUS DSLIM_SearchManager(Index *index)
     INT maxlen = params.max_len;
     INT minlen = params.min_len;
 
-#ifdef DISTMEM
+#ifdef USE_MPI
     THREAD *wthread = new THREAD;
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
     /* The mutex for queryfile vector */
     if (status == SLM_SUCCESS)
@@ -283,7 +272,7 @@ STATUS DSLIM_SearchManager(Index *index)
     {
         status = DFile_InitFiles();
     }
-#ifdef DISTMEM
+#ifdef USE_MPI
     else if (status == SLM_SUCCESS && params.nodes > 1)
     {
         iBuff = new ebuffer[NIBUFFS];
@@ -296,10 +285,10 @@ STATUS DSLIM_SearchManager(Index *index)
             status = pthread_create(wthread, NULL, &DSLIM_FOut_Thread_Entry, (VOID *)NULL);
         }
     }
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
     /* Initialize the Comm module */
-#ifdef DISTMEM
+#ifdef USE_MPI
 
     /* Only required if nodes > 1 */
     if (params.nodes > 1)
@@ -326,7 +315,7 @@ STATUS DSLIM_SearchManager(Index *index)
         }
     }
 
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
     /* Create a new Scheduler handle */
     if (status == SLM_SUCCESS)
@@ -388,13 +377,13 @@ STATUS DSLIM_SearchManager(Index *index)
             status = DSLIM_QuerySpectrum(workPtr, index, (maxlen - minlen + 1));
         }
 
-#ifdef DISTMEM
+#ifdef USE_MPI
         /* Transfer my partial results to others */
         if (status == SLM_SUCCESS && params.nodes > 1)
         {
             status = sem_post(&writer);
         }
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
         status = qPtrs->lockw_();
 
@@ -432,7 +421,7 @@ STATUS DSLIM_SearchManager(Index *index)
         SchedHandle = NULL;
     }
 
-#ifdef DISTMEM
+#ifdef USE_MPI
     /* Deinitialize the Communication module */
     if (params.nodes > 1)
     {
@@ -476,7 +465,7 @@ STATUS DSLIM_SearchManager(Index *index)
         }
 
     }
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
     if (status == SLM_SUCCESS && params.nodes == 1)
     {
@@ -532,18 +521,9 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
         LBE_UNUSED_PARAM(liBuff);
     }
 
-#ifdef BENCHMARK
-    DOUBLE tcons[threads];
-    std::memset(tcons, 0x0, threads * sizeof(DOUBLE));
-#endif /* BENCHMARK */
-
 #ifndef _OPENMP
     LBE_UNUSED_PARAM(threads);
-#endif /* _OPENMP */
-
-#ifdef BENCHMARK
-    duration = omp_get_wtime();
-#endif /* BENCHMARK */
+#endif /* USE_OMP */
 
     /* Sanity checks */
     if (Score == NULL || (txArray == NULL && params.nodes > 1))
@@ -570,14 +550,11 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
         /* Process all the queries in the chunk.
          * Setting chunk size to 4 to avoid false sharing
          */
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(dynamic, 4)
-#endif /* _OPENMP */
+#endif /* USE_OMP */
         for (INT queries = 0; queries < ss->numSpecs; queries++)
         {
-#ifdef BENCHMARK
-            DOUBLE stime = omp_get_wtime();
-#endif
             /* Pointer to each query spectrum */
             UINT *QAPtr = ss->moz + ss->idx[queries];
             FLOAT pmass = ss->precurse[queries];
@@ -726,7 +703,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
                 }
             }
 
-#ifdef DISTMEM
+#ifdef USE_MPI
             /* Distributed memory mode - Model partial Gumbel
              * and transmit parameters to rx machine */
             if (params.nodes > 1)
@@ -770,7 +747,7 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
             /* Shared memory mode - Do complete
              * modeling and print results */
             else
-#endif /* DISTMEM */
+#endif /* USE_MPI */
             {
                 /* Check for minimum number of PSMs */
                 if (resPtr->cpsms >= params.min_cpsm)
@@ -822,10 +799,6 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
 
             /* Reset the results */
             resPtr->reset();
-
-#ifdef BENCHMARK
-            tcons[thno] += omp_get_wtime() - stime;
-#endif
         }
 
         if (params.nodes > 1)
@@ -836,15 +809,6 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT idxchunk)
         /* Update the number of queried spectra */
         spectrumID += ss->numSpecs;
     }
-
-#ifdef BENCHMARK
-    compute += omp_get_wtime() - duration;
-
-    for (unsigned int thd = 0; thd < params.threads; thd++)
-    {
-        std::cout << "\nThread #: " << thd << "\t" << tcons[thd];
-    }
-#endif
 
 #ifndef DIAGNOSE
     if (params.myid == 0)
@@ -1051,11 +1015,6 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
     /* Initialize and process Query Spectra */
     for (;status == SLM_SUCCESS;)
     {
-
-#ifdef BENCHMARK
-        duration = omp_get_wtime();
-#endif /* BENCHMARK */
-
         /* Check if the Query object is not initialized */
         if (Query == NULL || Query->isDeInit())
         {
@@ -1110,11 +1069,6 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
         /* All set - Run the DSLIM Query Algorithm */
         if (status == SLM_SUCCESS)
         {
-            start = chrono::system_clock::now();
-#ifdef BENCHMARK
-            duration = omp_get_wtime();
-#endif /* BENCHMARK */
-
             /* Wait for a I/O request */
             status = qPtrs->lockw_();
 
@@ -1159,13 +1113,13 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
             /* Lock the ready queue */
             qPtrs->lockr_();
 
-#ifdef DISTMEM
+#ifdef USE_MPI
             if (params.nodes > 1)
             {
                 /* Add an entry of the added buffer to the CommHandle */
                 status = CommHandle->AddBatch(ioPtr->batchNum, ioPtr->numSpecs, Query->getQfileIndex());
             }
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
             /*************************************
              * Add available data to ready queue *
@@ -1175,9 +1129,6 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
             /* Unlock the ready queue */
             qPtrs->unlockr_();
 
-#ifdef BENCHMARK
-            fileio += omp_get_wtime() - duration;
-#endif /* BENCHMARK */
             end = chrono::system_clock::now();
 
             /* Compute Duration */
@@ -1228,7 +1179,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
     return NULL;
 }
 
-#ifdef DISTMEM
+#ifdef USE_MPI
 VOID *DSLIM_FOut_Thread_Entry(VOID *argv)
 {
     //STATUS status = SLM_SUCCESS;
@@ -1267,7 +1218,7 @@ VOID *DSLIM_FOut_Thread_Entry(VOID *argv)
 
     return argv;
 }
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
 static inline STATUS DSLIM_Deinit_IO()
 {

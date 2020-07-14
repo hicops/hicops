@@ -19,7 +19,7 @@
 
 #include "dslim_comm.h"
 
-#ifdef DISTMEM
+#ifdef USE_MPI
 
 /* Global params */
 extern gParams params;
@@ -84,4 +84,4 @@ STATUS DSLIM_Comm::AddBatch(INT batchNum, INT batchSize, INT fileID)
     return SLM_SUCCESS;
 }
 
-#endif /* DISTMEM */
+#endif /* USE_MPI */

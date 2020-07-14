@@ -27,13 +27,6 @@ ifstream file;
 
 extern gParams params;
 
-#ifdef BENCHMARK
-static DOUBLE duration = 0;
-extern DOUBLE compute;
-extern DOUBLE fileio;
-extern DOUBLE memory;
-#endif /* BENCHMARK */
-
 /* Static function Prototypes */
 static STATUS LBE_AllocateMem(Index *index);
 static inline BOOL CmpPepEntries(pepEntry e1, pepEntry e2);
@@ -132,21 +125,14 @@ STATUS LBE_Initialize(Index *index)
     STRING seq;
     STRING modconditions = params.modconditions;
 
-#ifdef _OPENMP
+#ifdef USE_OMP
     UINT threads = params.threads;
-#endif /* _OPENMP */
+#endif /* USE_OMP */
 
     /* Check if ">" entries are > 0 */
     if (index->lclpepCnt > 0)
     {
-#ifdef BENCHMARK
-        duration = omp_get_wtime();
-#endif
         status = LBE_AllocateMem(index);
-
-#ifdef BENCHMARK
-        memory += omp_get_wtime() - duration;
-#endif
     }
     else
     {
@@ -158,15 +144,11 @@ STATUS LBE_Initialize(Index *index)
     {
         UINT seqlen = Seqs.at(0).length();
 
-#ifdef BENCHMARK
-        duration = omp_get_wtime();
-#endif
-
 #ifdef DEBUG
         cout << seq << endl;
 #endif /* DEBUG */
 
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule (static) reduction(+: iCount)
 #endif
         for (UINT i = 0; i < Seqs.size(); i++)
@@ -187,10 +169,6 @@ STATUS LBE_Initialize(Index *index)
 
         /* Get the peptide count */
         iCount /= 2;
-
-#ifdef BENCHMARK
-        memory += omp_get_wtime() - duration;
-#endif
     }
     else
     {
@@ -207,14 +185,8 @@ STATUS LBE_Initialize(Index *index)
 
     if (index->lclmodCnt > 0)
     {
-#ifdef BENCHMARK
-        duration = omp_get_wtime();
-#endif
         /* Fill in the mods entry */
         status = MODS_GenerateMods(index);
-#ifdef BENCHMARK
-        compute += omp_get_wtime() - duration;
-#endif
     }
 #endif /* VMODS */
 
@@ -249,13 +221,13 @@ STATUS LBE_GeneratePeps(Index *index)
     pepEntry *entries = index->pepEntries;
     UINT seqlen = Seqs.at(0).length();
 
-#ifdef _OPENMP
+#ifdef USE_OMP
     UINT threads = params.threads;
-#endif /* _OPENMP */
+#endif /* USE_OMP */
 
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(static)
-#endif /* _OPENMP */
+#endif /* USE_OMP */
     for (UINT fill = 0; fill < interval; fill++)
     {
         UINT idd = DSLIM_GenerateIndex(index, fill);
@@ -427,10 +399,6 @@ STATUS LBE_CountPeps(CHAR *filename, Index *index, UINT explen)
 #ifndef VMODS
     LBE_UNUSED_PARAM(modconditions);
 #endif /* VMODS */
-    
-#ifdef BENCHMARK
-    duration = omp_get_wtime();
-#endif
 
     /* Open file */
     file.open(filename);
@@ -477,10 +445,6 @@ STATUS LBE_CountPeps(CHAR *filename, Index *index, UINT explen)
         status = ERR_INVLD_PARAM;
     }
 
-#ifdef BENCHMARK
-    fileio += omp_get_wtime() - duration;
-#endif
-
     /* Allocate teh varCount array */
     if (status == SLM_SUCCESS)
     {
@@ -492,15 +456,7 @@ STATUS LBE_CountPeps(CHAR *filename, Index *index, UINT explen)
      * modification information */
     if (status == SLM_SUCCESS)
     {
-#ifdef BENCHMARK
-        duration = omp_get_wtime();
-#endif
-
         index->modCount = MODS_ModCounter(index);
-
-#ifdef BENCHMARK
-        compute += omp_get_wtime() - duration;
-#endif
     }
 
 #endif /* VMODS */

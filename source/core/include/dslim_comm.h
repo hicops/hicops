@@ -25,7 +25,7 @@
 #ifndef DSLIM_COMM_H_
 #define DSLIM_COMM_H_
 
-#ifdef DISTMEM
+#ifdef USE_MPI
 
 class DSLIM_Comm
 {
@@ -46,6 +46,6 @@ public:
     STATUS AddBatch(INT, INT, INT);
 };
 
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
 #endif /* DSLIM_COMM_H_ */

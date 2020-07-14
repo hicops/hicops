@@ -122,11 +122,11 @@ static STATUS ParseParams(CHAR* paramfile)
 
         /* Get the max threads to use */
         getline(pfile, line);
-#ifdef _OPENMP
+#ifdef USE_OMP
         params.threads = std::atoi(line.c_str());
 #else
         params.threads = 1;
-#endif /* _OPENMP */
+#endif /* USE_OMP */
 
         /* Get the min peptide length */
         getline(pfile, line);

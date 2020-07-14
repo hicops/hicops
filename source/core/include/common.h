@@ -35,13 +35,13 @@
 #include "config.h"
 #include "slmerr.h"
 
-#ifdef _OPENMP
+#ifdef USE_OMP
 #include <omp.h>
 #endif
 
-#ifdef DISTMEM
+#ifdef USE_MPI
 #include <mpi.h>
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
 /* Set/Get the bit for modification site in a peptide */
 #define MODSITE(x)                       (1 << (x))

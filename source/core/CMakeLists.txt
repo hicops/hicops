@@ -17,10 +17,8 @@ set(hicops_glob_headers
 
 add_library (hicops-core SHARED ${c_sources} ${cxx_sources})
 
-if(USE_MPI)
-    if(MPI_FOUND)
-        target_compile_options(hicops-core PUBLIC -DDISTMEM)
-    endif()
+if(USE_MPI AND MPI_FOUND)
+    target_compile_options(hicops-core PUBLIC -DUSE_MPI)
 endif()
 
 install(TARGETS hicops-core DESTINATION lib)

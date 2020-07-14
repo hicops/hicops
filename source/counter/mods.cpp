@@ -263,7 +263,7 @@ ULONGLONG MODS_ModCounter()
         (VOID) MODS_GenCombinations();
 
         /* Parallel modcounter */
-#ifdef _OPENMP
+#ifdef USE_OMP
             /* The parallel for loop */
 #pragma omp parallel for num_threads (threads) schedule(static) reduction(+: cumulative)
             for (UINT i = 0; i < Seqs.size(); i++)
@@ -279,7 +279,7 @@ ULONGLONG MODS_ModCounter()
             cumulative += count(Seqs.at(i), conditions) - 1;
        }
 
-#endif /* _OPENMP */
+#endif /* USE_OMP */
 
 #endif /* VMODS */
 

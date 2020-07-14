@@ -1,7 +1,7 @@
 /*
  * The MIT License (MIT)
  *
- * Copyright (c) 2016 Eduard López
+ * Copyright (c) 2016 Eduard Lï¿½pez
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,7 @@
 #include <omp.h>
 #include "common.h"
 
-#ifdef _OPENMP
+#ifdef USE_OMP
 /*
  * FUNCTION: KeyVal_Parallel_Internal
  *
@@ -132,7 +132,7 @@ VOID KeyVal_Parallel(K* key, V *val, UINT lenArray, UINT numThreads)
     }
 }
 
-#endif /* _OPENMP */
+#endif /* USE_OMP */
 
 /*
  * FUNCTION: KeyVal_Serial_Internal

@@ -24,17 +24,6 @@
 
 /* Contains MACROS that configure SLM Index build */
 
-/* Manually switch _OPENMP */
-//#undef _OPENMP
-
-/* Manually switch MPI */
-//#undef DISTMEM
-
-//#define DIAGNOSE
-
-/* Switch the benchmarking */
-//#define BENCHMARK
-
 #define TAILFIT
 
 #define MAX_SEQ_LEN              60

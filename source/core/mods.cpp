@@ -422,7 +422,7 @@ ULONGLONG MODS_ModCounter(Index *index)
     if (limit > 0)
     {
         /* Parallel modcounter */
-#ifdef _OPENMP
+#ifdef USE_OMP
             /* The parallel for loop */
 #pragma omp parallel for num_threads (threads) schedule(static) reduction(+: cumulative)
             for (UINT i = 0; i < Seqs.size(); i++)
@@ -440,7 +440,7 @@ ULONGLONG MODS_ModCounter(Index *index)
             cumulative += varCount[i];
        }
 
-#endif /* _OPENMP */
+#endif /* USE_OMP */
 
 #endif /* VMODS */
 
@@ -507,9 +507,9 @@ STATUS MODS_GenerateMods(Index *index)
     mods = new STRING[modCount];
 #endif /* DEBUG */
 
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(params.threads) schedule (static)
-#endif /* _OPENMP */
+#endif /* USE_OMP */
     for (UINT i = 0; i < Seqs.size(); i++)
     {
 #ifdef DEBUG

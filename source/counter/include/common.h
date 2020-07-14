@@ -34,7 +34,7 @@
 #include "config.h"
 #include "slmerr.h"
 
-#ifdef _OPENMP
+#ifdef USE_OMP
 #include <omp.h>
 #endif
 

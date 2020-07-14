@@ -19,9 +19,9 @@
 
 #include "lbe.h"
 
-#ifdef DISTMEM
+#ifdef USE_MPI
 #include <mpi.h>
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
 #ifdef _PROFILE
  #include <gperftools/profiler.h>
@@ -37,13 +37,6 @@ vector<STRING> queryfiles;
 STRING dbfile;
 
 gParams params;
-
-#ifdef BENCHMARK
-static DOUBLE duration = 0;
-DOUBLE compute = 0;
-DOUBLE fileio = 0;
-DOUBLE memory = 0;
-#endif /* BENCHMARK */
 
 static STATUS ParseParams(CHAR* paramfile);
 
@@ -80,7 +73,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         exit (status);
     }
 
-#ifdef DISTMEM
+#ifdef USE_MPI
     status = MPI_Init(&argc, &argv);
 #endif /* MPI_INCLUDED */
 
@@ -350,7 +343,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         slm_index = NULL;
     }
 
-#ifdef DISTMEM
+#ifdef USE_MPI
 
     if (status == SLM_SUCCESS && params.nodes > 1)
     {
@@ -360,7 +353,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
 
     status = MPI_Finalize();
 
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
     /* Print end time */
     auto end_tim = chrono::system_clock::now();
@@ -375,18 +368,6 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         /* Print final program status */
         cout << "\n\nEnded with status: \t\t" << status << endl << endl;
     }
-
-#ifdef BENCHMARK
-    cout << "File I/O Time: \t\t\t" << fileio << 's' << endl;
-    cout << "Compute Time: \t\t\t" << compute << 's' << endl;
-    cout << "Memory Time: \t\t\t" << memory << 's' << endl << endl;
-
-    DOUBLE total_time = (fileio + compute + memory) / 100;
-
-    cout << "% File I/O Time: \t\t" << fileio/total_time << '%' << endl;
-    cout << "% Compute  Time: \t\t" << compute/total_time << '%' << endl;
-    cout << "% Memory   Time: \t\t" << memory/total_time << '%' << endl;
-#endif /* BENCHMARK */
 
 #ifdef _PROFILE
     ProfilerFlush();
@@ -456,11 +437,11 @@ static STATUS ParseParams(CHAR* paramfile)
         /* Get the max threads to use */
         getline(pfile, line);
 
-#ifdef _OPENMP
+#ifdef USE_OMP
         params.threads = std::atoi(line.c_str());
 #else
         params.threads = 1;
-#endif /* _OPENMP */
+#endif /* USE_OMP */
 
         /* Get the min peptide length */
         getline(pfile, line);
@@ -594,14 +575,14 @@ static STATUS ParseParams(CHAR* paramfile)
             params.perf[nn] = 1.0;
         }
 
-#ifdef DISTMEM
+#ifdef USE_MPI
         status = MPI_Comm_rank(MPI_COMM_WORLD, (INT *)&params.myid);
         status = MPI_Comm_size(MPI_COMM_WORLD, (INT *)&params.nodes);
 #else
         params.myid = 0;
         params.nodes = 1;
 
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
         pfile.close();
     }

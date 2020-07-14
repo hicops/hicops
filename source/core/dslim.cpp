@@ -31,12 +31,6 @@ extern gParams params;
 BOOL          *features;
 #endif
 
-#ifdef BENCHMARK
-static DOUBLE duration = 0;
-extern DOUBLE compute;
-extern DOUBLE fileio;
-extern DOUBLE memory;
-#endif /* BENCHMARK */
 
 /* FUNCTION: DSLIM_Construct
  *
@@ -63,9 +57,6 @@ STATUS DSLIM_Construct(Index *index)
     LBE_UNUSED_PARAM(modInfo);
 #endif /* VMODS */
 
-#ifdef BENCHMARK
-    duration = omp_get_wtime();
-#endif
     if (status == SLM_SUCCESS && SpecArr == NULL)
     {
         /* Spectra Array (SA) */
@@ -78,46 +69,25 @@ STATUS DSLIM_Construct(Index *index)
         }
     }
 
-#ifdef BENCHMARK
-    memory += omp_get_wtime() - duration;
-#endif
 
     if (status == SLM_SUCCESS)
     {
-#ifdef BENCHMARK
-        duration = omp_get_wtime();
-#endif
         /* Allocate memory for all chunks */
         status = DSLIM_AllocateMemory(index);
 
-#ifdef BENCHMARK
-        memory += omp_get_wtime() - duration;
-#endif
         /* Construct DSLIM.iA */
         if (status == SLM_SUCCESS)
         {
             /* Distributed SLM Ions Array construction */
             for (UINT chno = 0; chno < index->nChunks && status == SLM_SUCCESS; chno++)
             {
-#ifdef BENCHMARK
-                duration = omp_get_wtime();
-#endif
                 /* Construct each DSLIM chunk in Parallel */
                 status = DSLIM_ConstructChunk(threads, index, chno);
 
-#ifdef BENCHMARK
-                memory += omp_get_wtime() - duration;
-#endif
                 /* Apply SLM-Transform on the chunk */
                 if (status == SLM_SUCCESS)
                 {
-#ifdef BENCHMARK
-                    duration = omp_get_wtime();
-#endif
                     status = DSLIM_SLMTransform(threads, index, chno);
-#ifdef BENCHMARK
-                    compute += omp_get_wtime() - duration;
-#endif
                 }
             }
         }
@@ -125,15 +95,12 @@ STATUS DSLIM_Construct(Index *index)
 
     if (status == SLM_SUCCESS)
     {
-#ifdef BENCHMARK
-        duration = omp_get_wtime();
-#endif
         UINT speclen = peplen_1 * maxz * iSERIES;
 
         /* Construct DSLIM.bA */
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
-#endif /* _OPENMP */
+#endif /* USE_OMP */
         for (UINT chunk_number = 0; chunk_number < index->nChunks; chunk_number++)
         {
             UINT *bAPtr = index->ionIndex[chunk_number].bA;
@@ -171,9 +138,6 @@ STATUS DSLIM_Construct(Index *index)
                 status = ERR_INVLD_SIZE;
             }
         }
-#ifdef BENCHMARK
-        compute += omp_get_wtime() - duration;
-#endif
     }
 
 
@@ -280,7 +244,7 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
     /* Check if this chunk is the last chunk */
     BOOL lastChunk = (chunk_number == (index->nChunks - 1))? true: false;
 
-#ifdef _OPENMP
+#ifdef USE_OMP
     /* SA ptr for each thread */
     UINT *SAPtrs[threads];
 
@@ -316,7 +280,7 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
     UINT SAPtr[speclen] = {};
     std::memset(index->ionIndex[chunk_number].bA, 0x0, (((params.scale * params.max_mass) + 1) * sizeof(UINT)));
 
-#endif /* _OPENMP */
+#endif /* USE_OMP */
 
     if (status == SLM_SUCCESS)
     {
@@ -329,15 +293,15 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
             interval = index->lastchunksize;
         }
 
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(dynamic, 1) /* schedule(dynamic, 1) */
-#endif /* _OPENMP */
+#endif /* USE_OMP */
         for (UINT k = start_idx; k < (start_idx + interval); k++)
         {
             /* Filling point */
             UINT nfilled = (k - start_idx) * speclen;
 
-#ifdef _OPENMP
+#ifdef USE_OMP
             UINT *Spec = SAPtrs[omp_get_thread_num()];
             UINT *bAPtr  = BAPtrs[omp_get_thread_num()];
 #else
@@ -400,7 +364,7 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
             }
         }
 
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule (static)
         for (UINT i = 0; i < (UINT)(maxmass * scale); i++)
         {
@@ -412,11 +376,11 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
                 index->ionIndex[chunk_number].bA[i] += BAPtrs[j][i];
             }
         }
-#endif /* _OPENMP */
+#endif /* USE_OMP */
 
     }
 
-#ifdef _OPENMP
+#ifdef USE_OMP
     delete[] bA;
     bA = NULL;
 #endif /* OPENMP */
@@ -455,28 +419,28 @@ STATUS DSLIM_SLMTransform(UINT threads, Index *index, UINT chunk_number)
 #endif /* VALIDATE_SLM */
 
     /* Construct DSLIM.iA */
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(static)
-#endif /* _OPENMP */
+#endif /* USE_OMP */
     for (UINT k = 0; k < iAsize; k++)
     {
         iAPtr[k] = k;
     }
 
-#ifdef _OPENMP
+#ifdef USE_OMP
     /* Parallel Key Value Sort */
     KeyVal_Parallel<UINT>(SpecArr, iAPtr, iAsize, threads);
 #else
     KeyVal_Serial<UINT>(SpecArr, iAPtr, iAsize);
-#endif /* _OPENMP */
+#endif /* USE_OMP */
 
     /* Check integrity of SLM-Transform */
 #ifdef VALIDATE_SLM
     BOOL integrity = true;
 
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(static)
-#endif /* _OPENMP */
+#endif /* USE_OMP */
     for (UINT k = 1; k < iAsize; k++)
     {
         if (integ[iAPtr[k]] < integ[iAPtr[k - 1]])
@@ -512,18 +476,13 @@ STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs)
     }
 
     sAize = std::min(sz2, sAize);
-
-#ifdef BENCHMARK
-    duration = omp_get_wtime();
-#endif
-
     Score = new BYICount[params.threads];
 
     if (Score != NULL)
     {
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for schedule(static, 1) num_threads(params.threads)
-#endif /* _OPENMP */
+#endif /* USE_OMP */
         for (UINT thd = 0; thd < params.threads; thd++)
         {
             Score[thd].byc = new BYC[sAize];
@@ -546,10 +505,6 @@ STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs)
     {
         status = ERR_INVLD_MEMORY;
     }
-
-#ifdef BENCHMARK
-    memory += omp_get_wtime() - duration;
-#endif
 
     return status;
 }
@@ -574,14 +529,14 @@ STATUS DSLIM_Optimize(Index *index, UINT chunk_number)
     UINT *iAPtr = index->ionIndex[chunk_number].iA;
     UINT *bAPtr = index->ionIndex[chunk_number].bA;
 
-#ifdef _OPENMP
+#ifdef USE_OMP
     UINT interval = 50 *params.scale;
     UINT threads = params.threads;
-#endif /* _OPENMP */
+#endif /* USE_OMP */
 
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(dynamic, interval)
-#endif /* _OPENMP */
+#endif /* USE_OMP */
     /* Stablize the entries in iAPtr */
     for (UINT kk = 0; kk < (params.max_mass * params.scale); kk++)
     {
@@ -619,10 +574,10 @@ STATUS DSLIM_Analyze(UINT threads, DOUBLE &avg, DOUBLE &std)
     DOUBLE sum_std = 0;
     ULONGLONG truecount = 1;
 
-#ifdef _OPENMP
+#ifdef USE_OMP
     DOUBLE stds[threads] = {};
     ULONGLONG count[threads] = {};
-#endif /* _OPENMP */
+#endif /* USE_OMP */
 
     if (nchunks <= 1)
     {
@@ -638,9 +593,9 @@ STATUS DSLIM_Analyze(UINT threads, DOUBLE &avg, DOUBLE &std)
         arr[0] = 0x0;
 
         /* Compute the means */
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(static)
-#endif /* _OPENMP */
+#endif /* USE_OMP */
         for (UINT i = 1; i < (MAX_MASS * SCALE) -1; i++)
         {
             arr[i] = 0x0;
@@ -654,16 +609,16 @@ STATUS DSLIM_Analyze(UINT threads, DOUBLE &avg, DOUBLE &std)
 
             if (arr[i] > 0)
             {
-#ifdef _OPENMP
+#ifdef USE_OMP
                 count[omp_get_thread_num()]++;
 #else
                 truecount++;
-#endif /* _OPENMP */
+#endif /* USE_OMP */
             }
         }
 
         /* Gather the counts to truecount */
-#ifdef _OPENMP
+#ifdef USE_OMP
         for (UINT kk = 0; kk < threads; kk++)
         {
             truecount += count[kk];
@@ -671,9 +626,9 @@ STATUS DSLIM_Analyze(UINT threads, DOUBLE &avg, DOUBLE &std)
 #endif /* OPENMP */
 
         /* Compute the Standard Deviations */
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(static)
-#endif /* _OPENMP */
+#endif /* USE_OMP */
         for (UINT i = 1; i < (MAX_MASS * SCALE) - 1; i++)
         {
             DOUBLE mean = arr[i];
@@ -694,20 +649,20 @@ STATUS DSLIM_Analyze(UINT threads, DOUBLE &avg, DOUBLE &std)
         }
 
         /* Compute mean of stdevs */
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(static)
-#endif /* _OPENMP */
+#endif /* USE_OMP */
         for (UINT i = 0; i < MAX_MASS * SCALE; i++)
         {
-#ifdef _OPENMP
+#ifdef USE_OMP
             stds[omp_get_thread_num()] += arr[i];
 #else
             sum_std += arr[i];
-#endif /* _OPENMP */
+#endif /* USE_OMP */
         }
 
 /* Gather the counts to truecount */
-#ifdef _OPENMP
+#ifdef USE_OMP
         for (UINT kk = 0; kk < threads; kk++)
         {
             sum_std += stds[kk];
@@ -721,20 +676,20 @@ STATUS DSLIM_Analyze(UINT threads, DOUBLE &avg, DOUBLE &std)
         sum_std = 0;
 
         /* Compute stdev of stdevs */
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(static)
-#endif /* _OPENMP */
+#endif /* USE_OMP */
         for (UINT i = 0; i < MAX_MASS * SCALE; i++)
         {
-#ifdef _OPENMP
+#ifdef USE_OMP
             stds[omp_get_thread_num()] += ((arr[i] - avg) * (arr[i] - avg));
 #else
             sum_std += ((arr[i] - avg) * (arr[i] - avg));
-#endif /* _OPENMP */
+#endif /* USE_OMP */
         }
 
         /* Gather the counts to truecount */
-#ifdef _OPENMP
+#ifdef USE_OMP
         for (UINT kk = 0; kk < threads; kk++)
         {
             sum_std += stds[kk];
@@ -843,19 +798,11 @@ STATUS DSLIM_DeallocatePepIndex(Index *index)
 
 STATUS DSLIM_DeallocateSpecArr()
 {
-#ifdef BENCHMARK
-    duration = omp_get_wtime();
-#endif
-
     if (SpecArr != NULL)
     {
         delete[] SpecArr;
         SpecArr= NULL;
     }
-
-#ifdef BENCHMARK
-    memory += omp_get_wtime() - duration;
-#endif
 
     /* Nothing really to return
      * so success */
