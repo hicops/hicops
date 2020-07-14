@@ -7,10 +7,8 @@ target_include_directories(hicops PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../core/incl
 target_link_libraries(hicops PRIVATE hicops-core)
 target_link_libraries(hicops PRIVATE ${MPI_LIBRARIES})
 
-if(USE_MPI)
-    if(MPI_FOUND)
-        target_compile_options(hicops PUBLIC -DDISTMEM)
-    endif()
+if(USE_MPI AND MPI_FOUND)
+    target_compile_options(hicops PUBLIC -DUSE_MPI)
 endif()
 
 set_target_properties(hicops PROPERTIES INSTALL_RPATH_USE_LINK_PATH ON)
