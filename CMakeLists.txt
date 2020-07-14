@@ -41,7 +41,6 @@ set(CMAKE_ENABLE_EXPORTS ON CACHE BOOL "Executable exports symbols for loadable 
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON CACHE BOOL "Append directories in the linker search path")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "Build position independent code")
 
-
 ##########################################################################################
 #       CMake settings
 ##########################################################################################

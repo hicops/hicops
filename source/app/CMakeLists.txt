@@ -11,7 +11,13 @@ if(USE_MPI AND MPI_FOUND)
     target_compile_options(hicops PUBLIC -DUSE_MPI)
 endif()
 
-set_target_properties(hicops PROPERTIES INSTALL_RPATH_USE_LINK_PATH ON)
+set_target_properties(hicops-core
+    PROPERTIES
+        CXX_STANDARD 14
+        CXX_STANDARD_REQUIRED YES
+        CXX_EXTENSIONS NO
+        INSTALL_RPATH_USE_LINK_PATH ON
+)
 
 # installation
 install(TARGETS hicops DESTINATION ${CMAKE_INSTALL_LIBDIR})

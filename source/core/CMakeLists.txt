@@ -24,6 +24,13 @@ if(USE_MPI AND MPI_FOUND)
     target_compile_options(hicops-core PUBLIC -DUSE_MPI)
 endif()
 
+set_target_properties(hicops-core
+    PROPERTIES
+        CXX_STANDARD 14
+        CXX_STANDARD_REQUIRED YES
+        CXX_EXTENSIONS NO
+)
+
 install(TARGETS hicops-core DESTINATION lib)
 
 INSTALL (
