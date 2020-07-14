@@ -1,13 +1,16 @@
+
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
 include_directories(BEFORE ${CMAKE_CURRENT_LIST_DIR}/include)
+
 set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME library)
 
 #----------------------------------------------------------------------------------------#
 # Locate sources and headers for this project
 # - headers are included so they will show up in IDEs
 #
-file(GLOB c_headers                      ${CMAKE_CURRENT_LIST_DIR}/include/*.h)
-file(GLOB cxx_headers                    ${CMAKE_CURRENT_LIST_DIR}/include/*.hpp)
+file(GLOB c_headers                 ${CMAKE_CURRENT_LIST_DIR}/include/*.h)
+file(GLOB cxx_headers               ${CMAKE_CURRENT_LIST_DIR}/include/*.hpp)
 file(GLOB c_sources                 ${CMAKE_CURRENT_LIST_DIR}/*.c)
 file(GLOB cxx_sources               ${CMAKE_CURRENT_LIST_DIR}/*.cpp)
 

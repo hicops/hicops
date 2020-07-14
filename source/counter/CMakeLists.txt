@@ -1,6 +1,6 @@
 
-file(GLOB c_headers                      ${CMAKE_CURRENT_LIST_DIR}/include/*.h)
-file(GLOB cxx_headers                    ${CMAKE_CURRENT_LIST_DIR}/include/*.hpp)
+file(GLOB c_headers                 ${CMAKE_CURRENT_LIST_DIR}/include/*.h)
+file(GLOB cxx_headers               ${CMAKE_CURRENT_LIST_DIR}/include/*.hpp)
 file(GLOB c_sources                 ${CMAKE_CURRENT_LIST_DIR}/*.c)
 file(GLOB cxx_sources               ${CMAKE_CURRENT_LIST_DIR}/*.cpp)
 
