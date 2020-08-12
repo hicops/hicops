@@ -463,7 +463,6 @@ STATUS DSLIM_SearchManager(Index *index)
             delete CommHandle;
             CommHandle = NULL;
         }
-
     }
 #endif /* USE_MPI */
 
@@ -473,6 +472,17 @@ STATUS DSLIM_SearchManager(Index *index)
 
         delete[] ePtrs;
         ePtrs = NULL;
+    }
+
+    /* Delete the memory */
+    if (ptrs)
+    {
+        for (auto fi = 0; fi < queryfiles.size(); fi++)
+        {
+            delete ptrs[fi];
+        }
+
+        delete[] ptrs;
     }
 
     /* Return the status of execution */
