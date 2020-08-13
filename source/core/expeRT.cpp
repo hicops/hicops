@@ -31,12 +31,12 @@ expeRT::expeRT()
 
     yy  = NULL;
 
-    p_x = new lwvector<DOUBLE>(SIZE);
-    sx = new lwvector<DOUBLE>(SIZE);
-    X = new lwvector<DOUBLE>(SIZE);
+    p_x = new lwvector<double_t>(SIZE);
+    sx = new lwvector<double_t>(SIZE);
+    X = new lwvector<double_t>(SIZE);
 
     /* Remember the constructor for valarrays */
-    pdata = new lwvector<DOUBLE>(SIZE, 0.0);
+    pdata = new lwvector<double_t>(SIZE, 0.0);
     pN = 0;
 
     mu_t = 0.0;
@@ -84,11 +84,11 @@ expeRT::~expeRT()
     hyp = vaa = 0;
 }
 
-inline dvector expeRT::vrange(INT stt, INT end)
+inline dvector expeRT::vrange(int_t stt, int_t end)
 {
     dvector xx (end-stt+1);
 
-    INT k = stt;
+    int_t k = stt;
 
     for (auto &r : xx)
     {
@@ -99,11 +99,11 @@ inline dvector expeRT::vrange(INT stt, INT end)
     return xx;
 }
 
-inline darray expeRT::arange(INT stt, INT end)
+inline darray expeRT::arange(int_t stt, int_t end)
 {
     darray xx (end-stt+1);
 
-    INT k = stt;
+    int_t k = stt;
 
     for (auto &r : xx)
     {
@@ -114,9 +114,9 @@ inline darray expeRT::arange(INT stt, INT end)
     return xx;
 }
 
-STATUS expeRT::ModelSurvivalFunction(Results *rPtr)
+status_t expeRT::ModelSurvivalFunction(Results *rPtr)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     /* Assign to internal variables */
     yy = rPtr->survival;
@@ -132,8 +132,8 @@ STATUS expeRT::ModelSurvivalFunction(Results *rPtr)
     if (status == SLM_SUCCESS)
     {
         /* Find the curve region */
-        end1 = rargmax<DOUBLE *>(yy, 0, hyp-1, 1.0);
-        stt1 = argmax<DOUBLE *>(yy, 0, end1, 1.0);
+        end1 = rargmax<double_t *>(yy, 0, hyp-1, 1.0);
+        stt1 = argmax<double_t *>(yy, 0, end1, 1.0);
 
         /* To handle special cases */
         if (stt1 == end1)
@@ -145,9 +145,9 @@ STATUS expeRT::ModelSurvivalFunction(Results *rPtr)
         /* Slice off yyt between stt1 and end1 */
         p_x->Assign(yy + stt1, yy + end1 + 1);
 
-        lwvector<DOUBLE> *yyt = p_x;
+        lwvector<double_t> *yyt = p_x;
 
-        lwvector<DOUBLE> *yhat = NULL;
+        lwvector<double_t> *yhat = NULL;
 
         /* Database size
          * vaa = accumulate(yy, yy + hyp + 1, 0); */
@@ -167,8 +167,8 @@ STATUS expeRT::ModelSurvivalFunction(Results *rPtr)
         if (status == SLM_SUCCESS)
         {
             /* Smoothen the curve using Savitzky-Golay filter */
-            INT svgl = std::min(7, end1 - stt1);
-            INT pln = 5;
+            int_t svgl = std::min(7, end1 - stt1);
+            int_t pln = 5;
 
             /* mu estimation markers */
             auto l = std::max_element(yy + stt1, (yy + end1 + 1)) -
@@ -187,21 +187,21 @@ STATUS expeRT::ModelSurvivalFunction(Results *rPtr)
                 /* Polynomial = 5 or max */
                 pln = std::min(5, svgl - 1);
 
-                if ((INT) yyt->Size() >= (svgl-1+2))
+                if ((int_t) yyt->Size() >= (svgl-1+2))
                 {
-                    yhat = new lwvector<DOUBLE>(yyt->Size(), 0.0);
+                    yhat = new lwvector<double_t>(yyt->Size(), 0.0);
 
                     /* Smoothen the curve using SavGol: window length=7, provide win=(window-1)/2, polynomial=5 */
                     sg_smooth(yyt, yhat, std::max(1, (svgl-1)/2), pln);
 
                     /* Adjust for negatives */
-                    std::replace_if(yhat->begin(), yhat->end(), isNegative<DOUBLE>, 0);
+                    std::replace_if(yhat->begin(), yhat->end(), isNegative<double_t>, 0);
 
                     /* Normalize yhat */
-                    yhat->divide((DOUBLE)std::max(std::accumulate(yhat->begin(), yhat->end(), 1), vaa));
+                    yhat->divide((double_t)std::max(std::accumulate(yhat->begin(), yhat->end(), 1), vaa));
 
                     /* Normalize yy */
-                    yyt->divide((DOUBLE)vaa);
+                    yyt->divide((double_t)vaa);
 
                     /* Update the marker */
                     k = std::max_element(yhat->begin(),yhat->end()) -
@@ -222,14 +222,14 @@ STATUS expeRT::ModelSurvivalFunction(Results *rPtr)
                     k = l;
 
                     /* Normalize yy */
-                    yyt->divide((DOUBLE)vaa);
+                    yyt->divide((double_t)vaa);
                 }
             }
             else
             {
                 /* Normalize yhat */
-                const INT vaa2 = std::max(accumulate(yyt->begin(), yyt->end(), 1), vaa);
-                yyt->divide((DOUBLE)vaa2);
+                const int_t vaa2 = std::max(accumulate(yyt->begin(), yyt->end(), 1), vaa);
+                yyt->divide((double_t)vaa2);
             }
 
             /* Training parameters */
@@ -256,19 +256,19 @@ STATUS expeRT::ModelSurvivalFunction(Results *rPtr)
             std::partial_sum(p_x->begin(), p_x->end(), sx->begin());
 
             /* Survival function s(x) */
-            sx->divide((DOUBLE)vaa);
-            sx->add((DOUBLE)-1);
+            sx->divide((double_t)vaa);
+            sx->add((double_t)-1);
             sx->negative();
 
             /* Adjust for > 1 */
-            std::replace_if(sx->begin(), sx->end(), isLargerThan1<DOUBLE>, 0.999);
+            std::replace_if(sx->begin(), sx->end(), isLargerThan1<double_t>, 0.999);
 
             /* Adjust for negatives */
-            INT replacement = rargmax(*sx, 0, sx->Size()-1, 1e-4);
-            std::replace_if(sx->begin(), sx->end(), isZeroNegative<DOUBLE>, (*sx)[replacement]);
+            int_t replacement = rargmax(*sx, 0, sx->Size()-1, 1e-4);
+            std::replace_if(sx->begin(), sx->end(), isZeroNegative<double_t>, (*sx)[replacement]);
 
             /* log10(s(x)) */
-            std::transform(sx->begin(), sx->end(), sx->begin(), [](DOUBLE& c) {   return log10(c);});
+            std::transform(sx->begin(), sx->end(), sx->begin(), [](double_t& c) {   return log10(c);});
 
             /* Offset markers */
             auto mark = 0;
@@ -278,10 +278,10 @@ STATUS expeRT::ModelSurvivalFunction(Results *rPtr)
             /* If length > 4, then find thresholds */
             if (sx->Size() > 3)
             {
-                mark = largmax<lwvector<DOUBLE>>(*sx, 0, sx->Size()-1, (*sx)[0] + hgt * 0.22) - 1;
-                mark2 = rargmax<lwvector<DOUBLE>>(*sx, 0, sx->Size()-1, (*sx)[0] + hgt*0.87);
+                mark = largmax<lwvector<double_t>>(*sx, 0, sx->Size()-1, (*sx)[0] + hgt * 0.22) - 1;
+                mark2 = rargmax<lwvector<double_t>>(*sx, 0, sx->Size()-1, (*sx)[0] + hgt*0.87);
 
-                if (mark2 == (INT)sx->Size())
+                if (mark2 == (int_t)sx->Size())
                 {
                     mark2 -= 1;
                 }
@@ -317,7 +317,7 @@ STATUS expeRT::ModelSurvivalFunction(Results *rPtr)
             /* Make the y-axis */
             sx->clip(mark, mark2);
 
-            LinearFit<lwvector<DOUBLE>>(*X, *sx, sx->Size(), mu_t, beta_t);
+            LinearFit<lwvector<double_t>>(*X, *sx, sx->Size(), mu_t, beta_t);
 
             sx->Erase();
             X->Erase();
@@ -352,9 +352,9 @@ STATUS expeRT::ModelSurvivalFunction(Results *rPtr)
     return status;
 }
 
-STATUS expeRT::ModelSurvivalFunction(DOUBLE &eValue, const INT max1)
+status_t expeRT::ModelSurvivalFunction(double_t &eValue, const int_t max1)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     /* Get hyp from the packet */
     hyp = max1;
@@ -366,8 +366,8 @@ STATUS expeRT::ModelSurvivalFunction(DOUBLE &eValue, const INT max1)
     /* Slice off yyt between stt1 and end1 */
     p_x->Assign(pdata->begin() + stt1, pdata->begin() + end1 + 1);
 
-    lwvector<DOUBLE> *yyt = p_x;
-    lwvector<DOUBLE> *yhat = NULL;
+    lwvector<double_t> *yyt = p_x;
+    lwvector<double_t> *yhat = NULL;
 
     /* Database size
      * vaa = accumulate(yy, yy + hyp + 1, 0); */
@@ -387,8 +387,8 @@ STATUS expeRT::ModelSurvivalFunction(DOUBLE &eValue, const INT max1)
     if (status == SLM_SUCCESS)
     {
         /* Smoothen the curve using Savitzky-Golay filter */
-        INT svgl = std::min(7, end1 - stt1);
-        INT pln = 5;
+        int_t svgl = std::min(7, end1 - stt1);
+        int_t pln = 5;
 
         /* mu estimation markers */
         auto l = std::max_element(yyt->begin(), yyt->end()) - yyt->begin();
@@ -406,21 +406,21 @@ STATUS expeRT::ModelSurvivalFunction(DOUBLE &eValue, const INT max1)
             /* Polynomial = 5 or max */
             pln = std::min(5, svgl - 1);
 
-            if ((INT) yyt->Size() >= (svgl - 1 + 2))
+            if ((int_t) yyt->Size() >= (svgl - 1 + 2))
             {
-                yhat = new lwvector<DOUBLE>(yyt->Size(), 0.0);
+                yhat = new lwvector<double_t>(yyt->Size(), 0.0);
 
                 /* Smoothen the curve using SavGol: window length=7, provide win=(window-1)/2, polynomial=5 */
                 sg_smooth(yyt, yhat, std::max(1, (svgl - 1) / 2), pln);
 
                 /* Aor negatives */
-                std::replace_if(yhat->begin(), yhat->end(), isNegative<DOUBLE>, 0);
+                std::replace_if(yhat->begin(), yhat->end(), isNegative<double_t>, 0);
 
                 /* Normalize yhat */
-                yhat->divide((DOUBLE) std::max(accumulate(yhat->begin(), yhat->end(), 1), vaa));
+                yhat->divide((double_t) std::max(accumulate(yhat->begin(), yhat->end(), 1), vaa));
 
                 /* Normalize yy */
-                yyt->divide((DOUBLE) vaa);
+                yyt->divide((double_t) vaa);
 
                 /* Update the marker */
                 k = std::max_element(yhat->begin(), yhat->end()) - yhat->begin();
@@ -440,14 +440,14 @@ STATUS expeRT::ModelSurvivalFunction(DOUBLE &eValue, const INT max1)
                 k = l;
 
                 /* Normalize yy */
-                yyt->divide((DOUBLE) vaa);
+                yyt->divide((double_t) vaa);
             }
         }
         else
         {
             /* Normalize yhat */
-            const INT vaa2 = std::max(accumulate(yyt->begin(), yyt->end(), 1), vaa);
-            yyt->divide((DOUBLE) vaa2);
+            const int_t vaa2 = std::max(accumulate(yyt->begin(), yyt->end(), 1), vaa);
+            yyt->divide((double_t) vaa2);
         }
 
         /* Training parameters */
@@ -474,19 +474,19 @@ STATUS expeRT::ModelSurvivalFunction(DOUBLE &eValue, const INT max1)
         std::partial_sum(p_x->begin(), p_x->end(), sx->begin());
 
         /* Survival function s(x) */
-        sx->divide((DOUBLE) vaa);
-        sx->add((DOUBLE) -1);
+        sx->divide((double_t) vaa);
+        sx->add((double_t) -1);
         sx->negative();
 
         /* Adjust for > 1 */
-        std::replace_if(sx->begin(), sx->end(), isLargerThan1<DOUBLE>, 0.999);
+        std::replace_if(sx->begin(), sx->end(), isLargerThan1<double_t>, 0.999);
 
         /* Adjust for negatives */
-        INT replacement = rargmax(*sx, 0, sx->Size() - 1, 1e-4);
-        std::replace_if(sx->begin(), sx->end(), isZeroNegative<DOUBLE>, (*sx)[replacement]);
+        int_t replacement = rargmax(*sx, 0, sx->Size() - 1, 1e-4);
+        std::replace_if(sx->begin(), sx->end(), isZeroNegative<double_t>, (*sx)[replacement]);
 
         /* log10(s(x)) */
-        std::transform(sx->begin(), sx->end(), sx->begin(), [](DOUBLE& c)
+        std::transform(sx->begin(), sx->end(), sx->begin(), [](double_t& c)
         {   return log10(c);});
 
         /* Offset markers */
@@ -497,10 +497,10 @@ STATUS expeRT::ModelSurvivalFunction(DOUBLE &eValue, const INT max1)
         /* If length > 4, then find thresholds */
         if (sx->Size() > 3)
         {
-            mark = largmax<lwvector<DOUBLE>>(*sx, 0, sx->Size() - 1, (*sx)[0] + hgt * 0.22) - 1;
-            mark2 = rargmax<lwvector<DOUBLE>>(*sx, 0, sx->Size() - 1, (*sx)[0] + hgt * 0.87);
+            mark = largmax<lwvector<double_t>>(*sx, 0, sx->Size() - 1, (*sx)[0] + hgt * 0.22) - 1;
+            mark2 = rargmax<lwvector<double_t>>(*sx, 0, sx->Size() - 1, (*sx)[0] + hgt * 0.87);
 
-            if (mark2 == (INT) sx->Size())
+            if (mark2 == (int_t) sx->Size())
             {
                 mark2 -= 1;
             }
@@ -536,7 +536,7 @@ STATUS expeRT::ModelSurvivalFunction(DOUBLE &eValue, const INT max1)
         /* Make the y-axis */
         sx->clip(mark, mark2);
 
-        LinearFit<lwvector<DOUBLE>>(*X, *sx, sx->Size(), mu_t, beta_t);
+        LinearFit<lwvector<double_t>>(*X, *sx, sx->Size(), mu_t, beta_t);
 
         sx->Erase();
         X->Erase();
@@ -569,9 +569,9 @@ STATUS expeRT::ModelSurvivalFunction(DOUBLE &eValue, const INT max1)
     return status;
 }
 
-STATUS expeRT::ModelTailFit(Results *rPtr)
+status_t expeRT::ModelTailFit(Results *rPtr)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     /* Assign to internal variables */
     yy = rPtr->survival;
@@ -587,8 +587,8 @@ STATUS expeRT::ModelTailFit(Results *rPtr)
     if (status == SLM_SUCCESS)
     {
         /* Find the curve region */
-        end1 = rargmax<DOUBLE *>(yy, 0, hyp-1, 1.0);
-        stt1 = argmax<DOUBLE *>(yy, 0, end1, 1.0);
+        end1 = rargmax<double_t *>(yy, 0, hyp-1, 1.0);
+        stt1 = argmax<double_t *>(yy, 0, end1, 1.0);
 
         /* To handle special cases */
         if (stt1 == end1)
@@ -628,19 +628,19 @@ STATUS expeRT::ModelTailFit(Results *rPtr)
             std::partial_sum(p_x->begin(), p_x->end(), sx->begin());
 
             /* Survival function s(x) */
-            sx->divide((DOUBLE)vaa);
-            sx->add((DOUBLE)-1);
+            sx->divide((double_t)vaa);
+            sx->add((double_t)-1);
             sx->negative();
 
             /* Adjust for > 1 */
-            std::replace_if(sx->begin(), sx->end(), isLargerThan1<DOUBLE>, 0.999);
+            std::replace_if(sx->begin(), sx->end(), isLargerThan1<double_t>, 0.999);
 
             /* Adjust for negatives */
-            INT replacement = rargmax(*sx, 0, sx->Size()-1, 1e-4);
-            std::replace_if(sx->begin(), sx->end(), isZeroNegative<DOUBLE>, (*sx)[replacement]);
+            int_t replacement = rargmax(*sx, 0, sx->Size()-1, 1e-4);
+            std::replace_if(sx->begin(), sx->end(), isZeroNegative<double_t>, (*sx)[replacement]);
 
             /* log10(s(x)) */
-            std::transform(sx->begin(), sx->end(), sx->begin(), [](DOUBLE& c) {   return log10(c);});
+            std::transform(sx->begin(), sx->end(), sx->begin(), [](double_t& c) {   return log10(c);});
 
             /* Offset markers */
             auto mark = 0;
@@ -650,10 +650,10 @@ STATUS expeRT::ModelTailFit(Results *rPtr)
             /* If length > 4, then find thresholds */
             if (sx->Size() > 3)
             {
-                mark = largmax<lwvector<DOUBLE>>(*sx, 0, sx->Size()-1, (*sx)[0] + hgt * 0.22) - 1;
-                mark2 = rargmax<lwvector<DOUBLE>>(*sx, 0, sx->Size()-1, (*sx)[0] + hgt*0.87);
+                mark = largmax<lwvector<double_t>>(*sx, 0, sx->Size()-1, (*sx)[0] + hgt * 0.22) - 1;
+                mark2 = rargmax<lwvector<double_t>>(*sx, 0, sx->Size()-1, (*sx)[0] + hgt*0.87);
 
-                if (mark2 == (INT)sx->Size())
+                if (mark2 == (int_t)sx->Size())
                 {
                     mark2 -= 1;
                 }
@@ -689,7 +689,7 @@ STATUS expeRT::ModelTailFit(Results *rPtr)
             /* Make the y-axis */
             sx->clip(mark, mark2);
 
-            LinearFit<lwvector<DOUBLE>>(*X, *sx, sx->Size(), mu_t, beta_t);
+            LinearFit<lwvector<double_t>>(*X, *sx, sx->Size(), mu_t, beta_t);
 
             sx->Erase();
             X->Erase();
@@ -717,9 +717,9 @@ STATUS expeRT::ModelTailFit(Results *rPtr)
     return status;
 }
 
-STATUS expeRT::ModelTailFit(DOUBLE &eValue, const INT max1)
+status_t expeRT::ModelTailFit(double_t &eValue, const int_t max1)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     /* Get hyp from the packet */
     hyp = max1;
@@ -749,9 +749,9 @@ STATUS expeRT::ModelTailFit(DOUBLE &eValue, const INT max1)
     if (status == SLM_SUCCESS)
     {
         /* Normalize yhat */
-        const INT vaa2 = std::max(accumulate(p_x->begin(), p_x->end(), 1), vaa);
+        const int_t vaa2 = std::max(accumulate(p_x->begin(), p_x->end(), 1), vaa);
 
-        p_x->divide((DOUBLE) vaa2);
+        p_x->divide((double_t) vaa2);
 
         /* Filter p_x again */
         ends = end1;
@@ -764,18 +764,18 @@ STATUS expeRT::ModelTailFit(DOUBLE &eValue, const INT max1)
         std::partial_sum(p_x->begin(), p_x->end(), sx->begin());
 
         /* Survival function s(x) */
-        sx->add((DOUBLE) -1);
+        sx->add((double_t) -1);
         sx->negative();
 
         /* Adjust for > 1 */
-        std::replace_if(sx->begin(), sx->end(), isLargerThan1<DOUBLE>, 0.999);
+        std::replace_if(sx->begin(), sx->end(), isLargerThan1<double_t>, 0.999);
 
         /* Adjust for negatives */
-        INT replacement = rargmax(*sx, 0, sx->Size() - 1, 1e-4);
-        std::replace_if(sx->begin(), sx->end(), isZeroNegative<DOUBLE>, (*sx)[replacement]);
+        int_t replacement = rargmax(*sx, 0, sx->Size() - 1, 1e-4);
+        std::replace_if(sx->begin(), sx->end(), isZeroNegative<double_t>, (*sx)[replacement]);
 
         /* log10(s(x)) */
-        std::transform(sx->begin(), sx->end(), sx->begin(), [](DOUBLE& c)
+        std::transform(sx->begin(), sx->end(), sx->begin(), [](double_t& c)
         {   return log10(c);});
 
         /* Offset markers */
@@ -786,10 +786,10 @@ STATUS expeRT::ModelTailFit(DOUBLE &eValue, const INT max1)
         /* If length > 4, then find thresholds */
         if (sx->Size() > 3)
         {
-            mark = largmax<lwvector<DOUBLE>>(*sx, 0, sx->Size() - 1, (*sx)[0] + hgt * 0.22) - 1;
-            mark2 = rargmax<lwvector<DOUBLE>>(*sx, 0, sx->Size() - 1, (*sx)[0] + hgt * 0.87);
+            mark = largmax<lwvector<double_t>>(*sx, 0, sx->Size() - 1, (*sx)[0] + hgt * 0.22) - 1;
+            mark2 = rargmax<lwvector<double_t>>(*sx, 0, sx->Size() - 1, (*sx)[0] + hgt * 0.87);
 
-            if (mark2 == (INT) sx->Size())
+            if (mark2 == (int_t) sx->Size())
             {
                 mark2 -= 1;
             }
@@ -825,7 +825,7 @@ STATUS expeRT::ModelTailFit(DOUBLE &eValue, const INT max1)
         /* Make the y-axis */
         sx->clip(mark, mark2);
 
-        LinearFit<lwvector<DOUBLE>>(*X, *sx, sx->Size(), mu_t, beta_t);
+        LinearFit<lwvector<double_t>>(*X, *sx, sx->Size(), mu_t, beta_t);
 
         sx->Erase();
         X->Erase();
@@ -864,11 +864,11 @@ VOID expeRT::ResetPartialVectors()
 
 }
 
-STATUS expeRT::StoreIResults(Results *rPtr, INT spec, ebuffer *ofs)
+status_t expeRT::StoreIResults(Results *rPtr, int_t spec, ebuffer *ofs)
 {
-    STATUS status = 0;
+    status_t status = 0;
 
-    INT curptr = spec * 128 * sizeof(USHORT);
+    int_t curptr = spec * 128 * sizeof(ushort_t);
     yy = rPtr->survival;
 
     if (yy == NULL)
@@ -879,19 +879,19 @@ STATUS expeRT::StoreIResults(Results *rPtr, INT spec, ebuffer *ofs)
     if (status == SLM_SUCCESS)
     {
         /* Find the curve region */
-        ends = rargmax<DOUBLE *>(yy, 0, SIZE - 1, 0.99);
-        stt = argmax<DOUBLE *>(yy, 0, ends, 0.99);
+        ends = rargmax<double_t *>(yy, 0, SIZE - 1, 0.99);
+        stt = argmax<double_t *>(yy, 0, ends, 0.99);
 
         //rPtr->mu = curptr;
 
         for (auto ii = stt; ii <= ends; ii++)
         {
-            USHORT k = (yy[ii]);
+            ushort_t k = (yy[ii]);
 
             /* Encode into 65500 levels */
             if (rPtr->cpsms > 65500)
             {
-                k = (USHORT)(((DOUBLE)(k * 65500))/rPtr->cpsms);
+                k = (ushort_t)(((double_t)(k * 65500))/rPtr->cpsms);
             }
 
             memcpy(ofs->ibuff + curptr, (const VOID *) &k, sizeof(k));
@@ -900,7 +900,7 @@ STATUS expeRT::StoreIResults(Results *rPtr, INT spec, ebuffer *ofs)
 
         rPtr->minhypscore = stt;
         rPtr->nexthypscore = ends;
-        //rPtr->beta = rPtr->mu + 128 * sizeof(USHORT);
+        //rPtr->beta = rPtr->mu + 128 * sizeof(ushort_t);
     }
 
     yy = NULL;
@@ -910,22 +910,22 @@ STATUS expeRT::StoreIResults(Results *rPtr, INT spec, ebuffer *ofs)
     return status;
 }
 
-STATUS expeRT::Reconstruct(ebuffer *ebs, INT specno, partRes *fR)
+status_t expeRT::Reconstruct(ebuffer *ebs, int_t specno, partRes *fR)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     auto min  = fR->min;
     auto max2 = fR->max2;
 
     pN += fR->N;
 
-    CHAR *buffer = ebs->ibuff + (specno * 256);
+    char_t *buffer = ebs->ibuff + (specno * 256);
 
     for (auto jj = min; jj <= max2; jj++)
     {
-        USHORT *val = (USHORT*) (buffer + (jj - min) * 2);
+        ushort_t *val = (ushort_t*) (buffer + (jj - min) * 2);
 
-        DOUBLE val1 = (*val);
+        double_t val1 = (*val);
 
         /* Decode from 65500 levels */
         if (fR->N > 65500)
@@ -939,9 +939,9 @@ STATUS expeRT::Reconstruct(ebuffer *ebs, INT specno, partRes *fR)
     return status;
 }
 
-STATUS expeRT::Model_logWeibull(Results *rPtr)
+status_t expeRT::Model_logWeibull(Results *rPtr)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     /* */
     yy = rPtr->survival;
@@ -957,13 +957,13 @@ STATUS expeRT::Model_logWeibull(Results *rPtr)
     /*if (status == SLM_SUCCESS)*/
     {
         /* Find the curve region */
-        ends = rargmax<DOUBLE *>(yy, 0, SIZE-1, 1.0);
-        stt = argmax<DOUBLE *>(yy, 0, ends, 1.0);
+        ends = rargmax<double_t *>(yy, 0, SIZE-1, 1.0);
+        stt = argmax<double_t *>(yy, 0, ends, 1.0);
 
         /* Slice off yyt between stt1 and end1 */
         p_x->Assign(yy + stt, yy + ends + 1);
-        lwvector<DOUBLE> *yyt = p_x;
-        lwvector<DOUBLE> *yhat = NULL;
+        lwvector<double_t> *yyt = p_x;
+        lwvector<double_t> *yhat = NULL;
 
         /* Database size
          * vaa = accumulate(yy, yy + hyp + 1, 0); */
@@ -986,8 +986,8 @@ STATUS expeRT::Model_logWeibull(Results *rPtr)
         if (status == 0)
         {
             /* Smoothen the curve using Savitzky-Golay filter */
-            INT svgl = std::min(7, ends - stt);
-            INT pln = 3;
+            int_t svgl = std::min(7, ends - stt);
+            int_t pln = 3;
 
             /* Window length = 7 or max odd number */
             if (svgl % 2 == 0)
@@ -1001,18 +1001,18 @@ STATUS expeRT::Model_logWeibull(Results *rPtr)
                 /* Polynomial = 3 or max */
                 pln = std::min(3, svgl - 1);
 
-                if ((INT) yyt->Size() >= (svgl-1+2))
+                if ((int_t) yyt->Size() >= (svgl-1+2))
                 {
-                    yhat = new lwvector<DOUBLE>(yyt->Size(), 0.0);
+                    yhat = new lwvector<double_t>(yyt->Size(), 0.0);
 
                     /* Smoothen the curve using SavGol: window length=7, provide win=(window-1)/2, polynomial=5 */
                     sg_smooth(yyt, yhat, std::max(1, (svgl-1)/2), pln);
 
                     /* Normalize yhat */
-                    yhat->divide((DOUBLE)vaa);
+                    yhat->divide((double_t)vaa);
 
                     /* Normalize yyt */
-                    yyt->divide((DOUBLE)vaa);
+                    yyt->divide((double_t)vaa);
 
                     /* Update the marker */
                     k = std::max_element(yhat->begin(),yhat->end()) -
@@ -1033,7 +1033,7 @@ STATUS expeRT::Model_logWeibull(Results *rPtr)
                     k = l;
 
                     /* Normalize yyt */
-                    yyt->divide((DOUBLE)vaa);
+                    yyt->divide((double_t)vaa);
                 }
             }
             else
@@ -1041,7 +1041,7 @@ STATUS expeRT::Model_logWeibull(Results *rPtr)
                 k = l;
 
                 /* Normalize yyt */
-                yyt->divide((DOUBLE)vaa);
+                yyt->divide((double_t)vaa);
             }
 
             /* Training parameters */
@@ -1071,9 +1071,9 @@ STATUS expeRT::Model_logWeibull(Results *rPtr)
     return status;
 }
 
-STATUS expeRT::AddlogWeibull(INT N, DOUBLE mu, DOUBLE beta, INT Min, INT Max)
+status_t expeRT::AddlogWeibull(int_t N, double_t mu, double_t beta, int_t Min, int_t Max)
 {
-    STATUS status = 0;
+    status_t status = 0;
 
     if (beta > 0)
     {
@@ -1123,7 +1123,7 @@ STATUS expeRT::AddlogWeibull(INT N, DOUBLE mu, DOUBLE beta, INT Min, INT Max)
     }
     else if (beta < 1e-5)
     {
-        (*pdata)[(INT)roundf(mu)] += (DOUBLE)N;
+        (*pdata)[(int_t)roundf(mu)] += (double_t)N;
         pN += N;
     }
     else
@@ -1134,14 +1134,14 @@ STATUS expeRT::AddlogWeibull(INT N, DOUBLE mu, DOUBLE beta, INT Min, INT Max)
     return status;
 }
 
-inline DOUBLE expeRT::MeanSqError(const darray &y)
+inline double_t expeRT::MeanSqError(const darray &y)
 {
     return (y * y).sum();
 }
 
-DOUBLE expeRT::logWeibullFit(lwvector<DOUBLE> *yy, INT s, INT e, INT niter, DOUBLE lr, DOUBLE cutoff)
+double_t expeRT::logWeibullFit(lwvector<double_t> *yy, int_t s, int_t e, int_t niter, double_t lr, double_t cutoff)
 {
-    DOUBLE curerr = INFINITY;
+    double_t curerr = INFINITY;
 
     beta_t = 4.0;
 
@@ -1186,7 +1186,7 @@ DOUBLE expeRT::logWeibullFit(lwvector<DOUBLE> *yy, INT s, INT e, INT niter, DOUB
     return curerr;
 }
 
-inline VOID expeRT::logWeibullResponse(DOUBLE mu, DOUBLE beta, INT st, INT en)
+inline VOID expeRT::logWeibullResponse(double_t mu, double_t beta, int_t st, int_t en)
 {
     // x = arange(st, en)
     p_x->MakeRange(st, en);
@@ -1201,7 +1201,7 @@ inline VOID expeRT::logWeibullResponse(DOUBLE mu, DOUBLE beta, INT st, INT en)
     }
 }
 
-inline darray expeRT::alogWeibullResponse(DOUBLE mu, DOUBLE beta, INT st, INT en)
+inline darray expeRT::alogWeibullResponse(double_t mu, double_t beta, int_t st, int_t en)
 {
     darray xx = arange(st, en);
 
@@ -1213,9 +1213,9 @@ inline darray expeRT::alogWeibullResponse(DOUBLE mu, DOUBLE beta, INT st, INT en
 }
 
 template <class T>
-inline INT expeRT::rargmax(T &data, INT i1, INT i2, DOUBLE value)
+inline int_t expeRT::rargmax(T &data, int_t i1, int_t i2, double_t value)
 {
-    INT rv = i2;
+    int_t rv = i2;
 
     for (auto p = i2; p >= i1; p--)
     {
@@ -1230,9 +1230,9 @@ inline INT expeRT::rargmax(T &data, INT i1, INT i2, DOUBLE value)
 }
 
 template <class T>
-inline INT expeRT::argmax(T &data, INT i1, INT i2, DOUBLE value)
+inline int_t expeRT::argmax(T &data, int_t i1, int_t i2, double_t value)
 {
-    INT rv = i1;
+    int_t rv = i1;
 
     for (auto p = i1; p <= i2; p++)
     {
@@ -1247,9 +1247,9 @@ inline INT expeRT::argmax(T &data, INT i1, INT i2, DOUBLE value)
 }
 
 template <class T>
-inline INT expeRT::largmax(T &data, INT i1, INT i2, DOUBLE value)
+inline int_t expeRT::largmax(T &data, int_t i1, int_t i2, double_t value)
 {
-    INT rv = i1;
+    int_t rv = i1;
 
     for (auto p = i1; p <= i2; p++)
     {
@@ -1302,13 +1302,13 @@ inline INT expeRT::largmax(T &data, INT i1, INT i2, DOUBLE value)
  *    Last Modified: April 12, 2020 Muhammad Haseeb (mhaseeb@fiu.edu)
  ****************************************************************************/
 template <class T>
-VOID expeRT::LinearFit(T& x, T& y, INT n, DOUBLE &a, DOUBLE &b)
+VOID expeRT::LinearFit(T& x, T& y, int_t n, double_t &a, double_t &b)
 {
-    INT i;
-    DOUBLE bot;
-    DOUBLE top;
-    DOUBLE xbar;
-    DOUBLE ybar;
+    int_t i;
+    double_t bot;
+    double_t top;
+    double_t xbar;
+    double_t ybar;
 //
 //  Special case.
 //
@@ -1330,8 +1330,8 @@ VOID expeRT::LinearFit(T& x, T& y, INT n, DOUBLE &a, DOUBLE &b)
         ybar = ybar + y[i];
     }
 
-    xbar = xbar / (DOUBLE) n;
-    ybar = ybar / (DOUBLE) n;
+    xbar = xbar / (double_t) n;
+    ybar = ybar / (double_t) n;
 //
 //  Compute Beta.
 //
@@ -1352,9 +1352,9 @@ VOID expeRT::LinearFit(T& x, T& y, INT n, DOUBLE &a, DOUBLE &b)
 }
 
 #if 0
-STATUS expeRT::ModelSurvivalFunction(DOUBLE &eValue, INT max)
+status_t expeRT::ModelSurvivalFunction(double_t &eValue, int_t max)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     /* Get hyp from the packet */
     hyp = max;
@@ -1400,14 +1400,14 @@ STATUS expeRT::ModelSurvivalFunction(DOUBLE &eValue, INT max)
         sx->negative();
 
         /* Adjust for > 1 */
-        std::replace_if(sx->begin(), sx->end(), isLargerThan1<DOUBLE>, 0.999);
+        std::replace_if(sx->begin(), sx->end(), isLargerThan1<double_t>, 0.999);
 
         /* Adjust for negatives */
-        INT replacement = rargmax(*sx, 0, sx->Size()-1, 1e-4);
-        std::replace_if(sx->begin(), sx->end(), isZeroNegative<DOUBLE>, (*sx)[replacement]);
+        int_t replacement = rargmax(*sx, 0, sx->Size()-1, 1e-4);
+        std::replace_if(sx->begin(), sx->end(), isZeroNegative<double_t>, (*sx)[replacement]);
 
         /* log10(s(x)) */
-        std::transform(sx->begin(), sx->end(), sx->begin(), [](DOUBLE& c) { return log10(c); });
+        std::transform(sx->begin(), sx->end(), sx->begin(), [](double_t& c) { return log10(c); });
 
         /* Offset markers */
         auto mark = 0;
@@ -1417,11 +1417,11 @@ STATUS expeRT::ModelSurvivalFunction(DOUBLE &eValue, INT max)
         /* If length > 4, then find thresholds */
         if (sx->Size() > 3)
         {
-            mark = largmax<lwvector<DOUBLE>>(*sx, 0, sx->Size() - 1, (*sx)[0] + hgt * 0.15) - 1;
-            mark2 = rargmax<lwvector<DOUBLE>>(*sx, 0, sx->Size() - 1,
+            mark = largmax<lwvector<double_t>>(*sx, 0, sx->Size() - 1, (*sx)[0] + hgt * 0.15) - 1;
+            mark2 = rargmax<lwvector<double_t>>(*sx, 0, sx->Size() - 1,
                     (*sx)[0] + hgt * 0.85);
 
-            if (mark2 == (INT) sx->Size())
+            if (mark2 == (int_t) sx->Size())
             {
                 mark2 -= 1;
             }
@@ -1436,7 +1436,7 @@ STATUS expeRT::ModelSurvivalFunction(DOUBLE &eValue, INT max)
         else if (sx->Size() == 3)
         {
             /* Mark the start of the regression point */
-            mark = largmax<lwvector<DOUBLE>>(*sx, 0, sx->Size() - 1, (*sx)[0] + hgt * 0.22) - 1;
+            mark = largmax<lwvector<double_t>>(*sx, 0, sx->Size() - 1, (*sx)[0] + hgt * 0.22) - 1;
             mark2 = sx->Size() - 1;
 
             /* To handle special cases */
@@ -1456,7 +1456,7 @@ STATUS expeRT::ModelSurvivalFunction(DOUBLE &eValue, INT max)
         /* Make the y-axis */
         sx->clip(mark, mark2);
 
-        LinearFit<lwvector<DOUBLE>>(*X, *sx, sx->Size(), mu_t, beta_t);
+        LinearFit<lwvector<double_t>>(*X, *sx, sx->Size(), mu_t, beta_t);
 
         //cout << "y = " << mu_t << "x + " << beta_t << endl;
         //cout << "eValue: " << pow(10, hyp * mu_t + beta_t) * vaa << endl;

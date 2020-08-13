@@ -47,11 +47,11 @@
  * OUTPUT:
  * @status: status of execution
  */
-STATUS DSLIM_Construct(Index *index);
+status_t DSLIM_Construct(Index *index);
 
-INT DSLIM_GenerateIndex(Index *index, UINT key);
+int_t DSLIM_GenerateIndex(Index *index, uint_t key);
 
-STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs);
+status_t DSLIM_InitializeScorecard(Index *index, uint_t idxs);
 /*
  * FUNCTION: DSLIM_AllocateMemory
  *
@@ -64,7 +64,7 @@ STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_AllocateMemory(Index *index);
+status_t DSLIM_AllocateMemory(Index *index);
 
 /*
  * FUNCTION: DSLIM_ConstructChunk
@@ -76,7 +76,7 @@ STATUS DSLIM_AllocateMemory(Index *index);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number);
+status_t DSLIM_ConstructChunk(uint_t threads, Index *index, uint_t chunk_number);
 
 /*
  * FUNCTION: DSLIM_SLMTransform
@@ -90,7 +90,7 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_SLMTransform(UINT threads, Index *index, UINT chunk_number);
+status_t DSLIM_SLMTransform(uint_t threads, Index *index, uint_t chunk_number);
 
 /*
  * FUNCTION: DSLIM_Optimize
@@ -105,7 +105,7 @@ STATUS DSLIM_SLMTransform(UINT threads, Index *index, UINT chunk_number);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_Optimize(Index *index, UINT chunk_number);
+status_t DSLIM_Optimize(Index *index, uint_t chunk_number);
 
 /*
  * FUNCTION: DSLIM_InitializeSC
@@ -118,7 +118,7 @@ STATUS DSLIM_Optimize(Index *index, UINT chunk_number);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_InitializeSC(UINT threads, Index *index);
+status_t DSLIM_InitializeSC(uint_t threads, Index *index);
 
 /*
  * FUNCTION: DSLIM_Analyze
@@ -133,7 +133,7 @@ STATUS DSLIM_InitializeSC(UINT threads, Index *index);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_Analyze(UINT threads, DOUBLE &mean, DOUBLE &std);
+status_t DSLIM_Analyze(uint_t threads, double_t &mean, double_t &std);
 
 /*
  * FUNCTION: DSLIM_Deinitialize
@@ -145,25 +145,25 @@ STATUS DSLIM_Analyze(UINT threads, DOUBLE &mean, DOUBLE &std);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_Deinitialize(Index *);
+status_t DSLIM_Deinitialize(Index *);
 
-STATUS DSLIM_DeallocateIonIndex(Index *);
+status_t DSLIM_DeallocateIonIndex(Index *);
 
-STATUS DSLIM_InitDistScore();
+status_t DSLIM_InitDistScore();
 
 #ifdef USE_MPI
-STATUS DSLIM_CarryForward(Index *, DSLIM_Comm *, expeRT *, hCell *, INT);
+status_t DSLIM_CarryForward(Index *, DSLIM_Comm *, expeRT *, hCell *, int_t);
 #endif /* USE_MPI */
 
-STATUS DSLIM_DistScoreManager();
+status_t DSLIM_DistScoreManager();
 
-STATUS DSLIM_DeallocatePepIndex(Index *);
+status_t DSLIM_DeallocatePepIndex(Index *);
 
-STATUS DSLIM_DeallocateSC();
+status_t DSLIM_DeallocateSC();
 
-STATUS DSLIM_DeallocateSpecArr();
+status_t DSLIM_DeallocateSpecArr();
 
-STATUS DSLIM_SearchManager(Index *);
+status_t DSLIM_SearchManager(Index *);
 
 /* FUNCTION: DSLIM_QuerySpectrum
  *
@@ -179,7 +179,7 @@ STATUS DSLIM_SearchManager(Index *);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT indexchunks);
+status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t indexchunks);
 
 /* FUNCTION: DSLIM_WriteLIBSVM
  *
@@ -192,12 +192,12 @@ STATUS DSLIM_QuerySpectrum(Queries *ss, Index *index, UINT indexchunks);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_WriteLIBSVM(STRING path, UINT peplen, UINT chno);
+status_t DSLIM_WriteLIBSVM(string_t path, uint_t peplen, uint_t chno);
 
-STATUS DSLIM_WriteCSV(STRING path, UINT peplen, UINT chno);
+status_t DSLIM_WriteCSV(string_t path, uint_t peplen, uint_t chno);
 
 #ifdef DIAGNOSE
-INT DSLIM_TestBData();
+int_t DSLIM_TestBData();
 #endif /* DIAGNOSE */
 
 #endif /* DSLIM_H_ */

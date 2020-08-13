@@ -42,8 +42,8 @@ typedef enum _DistPolicy
 typedef struct _SLM_varAA
 {
     AA     residues[4]   ; /* Modified AA residues in this modification - Upto 4 */
-    UINT  modMass        ; /* Scaled mass of the modification                    */
-    USHORT aa_per_peptide; /* Allowed modified residues per peptide sequence     */
+    uint_t  modMass        ; /* Scaled mass of the modification                    */
+    ushort_t aa_per_peptide; /* Allowed modified residues per peptide sequence     */
 
     _SLM_varAA()
     {
@@ -73,8 +73,8 @@ typedef struct _SLM_varAA
 
 typedef struct _SLM_Mods
 {
-    USHORT       vmods_per_pep    ; /* Total allowed modified residues per sequence */
-    USHORT            num_vars    ; /* Number of types of modifications added to index - Max: 7 */
+    ushort_t       vmods_per_pep    ; /* Total allowed modified residues per sequence */
+    ushort_t            num_vars    ; /* Number of types of modifications added to index - Max: 7 */
     SLM_varAA vmods[MAX_MOD_TYPES]; /* Information for each modification added to index */
 
     _SLM_Mods()
@@ -92,7 +92,7 @@ typedef struct _SLM_Mods
             this->vmods_per_pep = rhs.vmods_per_pep;
             this->num_vars = rhs.num_vars;
 
-            for (UINT i = 0; i < MAX_MOD_TYPES; i++)
+            for (uint_t i = 0; i < MAX_MOD_TYPES; i++)
             {
                 this->vmods[i] = rhs.vmods[i];
             }
@@ -106,8 +106,8 @@ typedef struct _SLM_Mods
 typedef struct _pepSeq
 {
     AA        *seqs; /* Stores peptide sequence, could store as strings as well */
-    USHORT   peplen; /* Stores sequence length */
-    UINT        AAs; /* Total number of characters */
+    ushort_t   peplen; /* Stores sequence length */
+    uint_t        AAs; /* Total number of characters */
 
     _pepSeq()
     {
@@ -120,8 +120,8 @@ typedef struct _pepSeq
 } PepSeqs;
 typedef struct _modAA
 {
-    ULONGLONG  sites; /* maxlen(pep) = 60AA + 2 bits (termini mods)      */
-    UINT  modNum    ; /* 4 bits per mods num, Max 8 mods allowed per pep */
+    ull_t  sites; /* maxlen(pep) = 60AA + 2 bits (termini mods)      */
+    uint_t  modNum    ; /* 4 bits per mods num, Max 8 mods allowed per pep */
 
     _modAA()
     {
@@ -146,7 +146,7 @@ typedef struct _modAA
 
 typedef struct _pepEntry
 {
-    FLOAT  Mass; /* Mass of Peptide            */
+    float_t  Mass; /* Mass of Peptide            */
     IDX   seqID; /* Normal Peptide Sequence ID */
     modAA sites; /* Modified AA information    */
 
@@ -191,11 +191,11 @@ typedef struct _pepEntry
 
     BOOL operator>>(const _pepEntry& rhs)
     {
-        INT s1 = 0;
-        INT s2 = 0;
+        int_t s1 = 0;
+        int_t s2 = 0;
 
-        INT s3= MAX_SEQ_LEN;
-        INT s4= MAX_SEQ_LEN;
+        int_t s3= MAX_SEQ_LEN;
+        int_t s4= MAX_SEQ_LEN;
 
         /* compute distance from n-term */
         while ((this->sites.sites >> s1 & 0x1) != 0x1 && s1++ < MAX_SEQ_LEN);
@@ -212,11 +212,11 @@ typedef struct _pepEntry
 
     BOOL operator>>=(const _pepEntry& rhs)
     {
-        INT s1 = 0;
-        INT s2 = 0;
+        int_t s1 = 0;
+        int_t s2 = 0;
 
-        INT s3= MAX_SEQ_LEN;
-        INT s4= MAX_SEQ_LEN;
+        int_t s3= MAX_SEQ_LEN;
+        int_t s4= MAX_SEQ_LEN;
 
         /* compute distance from n-term */
         while ((this->sites.sites >> s1 & 0x1) != 0x1 && s1++ < MAX_SEQ_LEN);
@@ -233,11 +233,11 @@ typedef struct _pepEntry
 
     BOOL operator<<(const _pepEntry& rhs)
     {
-        INT s1 = 0;
-        INT s2 = 0;
+        int_t s1 = 0;
+        int_t s2 = 0;
 
-        INT s3= MAX_SEQ_LEN;
-        INT s4= MAX_SEQ_LEN;
+        int_t s3= MAX_SEQ_LEN;
+        int_t s4= MAX_SEQ_LEN;
 
         /* compute distance from n-term */
         while ((this->sites.sites >> s1 & 0x1) != 0x1 && s1++ < MAX_SEQ_LEN);
@@ -253,11 +253,11 @@ typedef struct _pepEntry
 
     BOOL operator<<=(const _pepEntry& rhs)
     {
-        INT s1 = 0;
-        INT s2 = 0;
+        int_t s1 = 0;
+        int_t s2 = 0;
 
-        INT s3= MAX_SEQ_LEN;
-        INT s4= MAX_SEQ_LEN;
+        int_t s3= MAX_SEQ_LEN;
+        int_t s4= MAX_SEQ_LEN;
 
         /* compute distance from n-term */
         while ((this->sites.sites >> s1 & 0x1) != 0x1 && s1++ < MAX_SEQ_LEN);
@@ -290,10 +290,10 @@ typedef struct _pepEntry
  */
 typedef struct _BYC
 {
-    USHORT   bc;        /* b ion count */
-    USHORT   yc;        /* y ion count */
-    UINT    ibc;
-    UINT    iyc;
+    ushort_t   bc;        /* b ion count */
+    ushort_t   yc;        /* y ion count */
+    uint_t    ibc;
+    uint_t    iyc;
 
     _BYC()
     {
@@ -306,8 +306,8 @@ typedef struct _BYC
 
 typedef struct _SLMchunk
 {
-    UINT    *iA; /* Ions Array (iA)   */
-    UINT    *bA; /* Bucket Array (bA) */
+    uint_t    *iA; /* Ions Array (iA)   */
+    uint_t    *bA; /* Bucket Array (bA) */
 
     _SLMchunk()
     {
@@ -316,23 +316,23 @@ typedef struct _SLMchunk
     }
 
 #ifdef FUTURE
-    UCHAR *bits = NULL; /* Scorecard bits    */
+    uchar_t *bits = NULL; /* Scorecard bits    */
 #endif /* FUTURE */
 } SLMchunk;
 
 /* Structure for each pep file */
 typedef struct _Index
 {
-    UINT pepCount     ;
-    UINT modCount     ;
-    UINT totalCount   ;
+    uint_t pepCount     ;
+    uint_t modCount     ;
+    uint_t totalCount   ;
 
-    UINT lclpepCnt    ;
-    UINT lclmodCnt    ;
-    UINT lcltotCnt    ;
-    UINT nChunks      ;
-    UINT chunksize    ;
-    UINT lastchunksize;
+    uint_t lclpepCnt    ;
+    uint_t lclmodCnt    ;
+    uint_t lcltotCnt    ;
+    uint_t nChunks      ;
+    uint_t chunksize    ;
+    uint_t lastchunksize;
 
     PepSeqs          pepIndex;
     pepEntry      *pepEntries;
@@ -359,35 +359,35 @@ typedef struct _Index
 /* Structure for global Parameters */
 typedef struct _globalParams
 {
-    UINT threads;
-    UINT min_len;
-    UINT max_len;
-    UINT maxz;
-    UINT topmatches;
-    UINT scale;
-    UINT min_shp;
-    UINT min_cpsm;
-    UINT nodes;
-    UINT myid;
-    UINT spadmem;
+    uint_t threads;
+    uint_t min_len;
+    uint_t max_len;
+    uint_t maxz;
+    uint_t topmatches;
+    uint_t scale;
+    uint_t min_shp;
+    uint_t min_cpsm;
+    uint_t nodes;
+    uint_t myid;
+    uint_t spadmem;
 
-    UINT min_mass;
-    UINT max_mass;
-    UINT dF;
+    uint_t min_mass;
+    uint_t max_mass;
+    uint_t dF;
 
-    INT  base_int;
-    INT  min_int;
+    int_t  base_int;
+    int_t  min_int;
 
-    DOUBLE dM;
-    DOUBLE res;
-    DOUBLE expect_max;
+    double_t dM;
+    double_t res;
+    double_t expect_max;
 
-    DOUBLE *perf;
+    double_t *perf;
 
-    STRING dbpath;
-    STRING datapath;
-    STRING workspace;
-    STRING modconditions;
+    string_t dbpath;
+    string_t datapath;
+    string_t workspace;
+    string_t modconditions;
 
     DistPolicy policy;
 
@@ -411,7 +411,7 @@ typedef struct _globalParams
         spadmem = 2048;
         min_mass = 500;
         max_mass = 5000;
-        dF = (UINT) (0.02 * scale);
+        dF = (uint_t) (0.02 * scale);
         dM = 500.0;
         res = 0.01;
         perf = NULL;
@@ -423,13 +423,13 @@ typedef struct _globalParams
 /* Experimental MS/MS spectra data */
 typedef struct _queries
 {
-    UINT        *moz; /* Stores the m/z values of the spectra */
-    UINT  *intensity; /* Stores the intensity values of the experimental spectra */
-    UINT        *idx; /* Row ptr. Starting index of each row */
-    FLOAT  *precurse; /* Stores the precursor mass of each spectrum. */
-    INT    numPeaks;
-    INT    numSpecs; /* Number of theoretical spectra */
-    INT    batchNum;
+    uint_t        *moz; /* Stores the m/z values of the spectra */
+    uint_t  *intensity; /* Stores the intensity values of the experimental spectra */
+    uint_t        *idx; /* Row ptr. Starting index of each row */
+    float_t  *precurse; /* Stores the precursor mass of each spectrum. */
+    int_t    numPeaks;
+    int_t    numSpecs; /* Number of theoretical spectra */
+    int_t    batchNum;
 
     void reset()
     {
@@ -451,10 +451,10 @@ typedef struct _queries
 
     VOID init()
     {
-        this->idx       = new UINT[QCHUNK + 1];
-        this->precurse  = new FLOAT[QCHUNK];
-        this->moz       = new UINT[QCHUNK * QALEN];
-        this->intensity = new UINT[QCHUNK * QALEN];
+        this->idx       = new uint_t[QCHUNK + 1];
+        this->precurse  = new float_t[QCHUNK];
+        this->moz       = new uint_t[QCHUNK * QALEN];
+        this->intensity = new uint_t[QCHUNK * QALEN];
         numPeaks        = 0;
         numSpecs        = 0;
         batchNum = 0;
@@ -530,21 +530,21 @@ typedef struct _queries
 typedef struct _heapEntry
 {
     /* Number of shared ions in the spectra */
-    UCHAR   sharedions;
+    uchar_t   sharedions;
 
     /* The index * + offset */
-    UCHAR    idxoffset;
+    uchar_t    idxoffset;
 
     /* Total ions in spectrum */
-    USHORT totalions;
+    ushort_t totalions;
 
     /* Parent spectrum ID in the respective chunk of index */
-    INT        psid;
+    int_t        psid;
 
-    FLOAT     pmass;
+    float_t     pmass;
 
     /* Computed hyperscore */
-    FLOAT hyperscore;
+    float_t hyperscore;
 
     /* Constructor */
     _heapEntry()
@@ -583,7 +583,7 @@ typedef struct _heapEntry
     }
 
     /* Overload = operator */
-    _heapEntry& operator=(const INT& rhs)
+    _heapEntry& operator=(const int_t& rhs)
     {
         this->idxoffset = rhs;
         this->psid = rhs;
@@ -625,9 +625,9 @@ typedef struct _heapEntry
 /* Structure to contain a communication request */
 typedef struct _commRqst
 {
-    UINT btag;
-    UINT bsize;
-    UINT buff;
+    uint_t btag;
+    uint_t bsize;
+    uint_t buff;
 
     VOID _comRqst()
     {
@@ -655,7 +655,7 @@ typedef struct _commRqst
 typedef struct _Results
 {
     /* Number of candidate PSMs (n) */
-    UINT cpsms;
+    uint_t cpsms;
 
     /* Min heap to keep track of top
      */
@@ -664,15 +664,15 @@ typedef struct _Results
     /* The y ~ logWeibull(X, mu, beta)
      * for data fit
      */
-    INT mu;
-    INT beta;
+    int_t mu;
+    int_t beta;
 
-    INT minhypscore;
-    INT maxhypscore;
-    INT nexthypscore;
+    int_t minhypscore;
+    int_t maxhypscore;
+    int_t nexthypscore;
 
     /* Survival function s(x) vs log(score) */
-    DOUBLE *survival;
+    double_t *survival;
 
     /* Constructor */
     _Results()
@@ -695,7 +695,7 @@ typedef struct _Results
         maxhypscore = 0;
         nexthypscore = 0;
 
-        std::memset(survival, 0x0, sizeof(DOUBLE) * (2 + MAX_HYPERSCORE * 10));
+        std::memset(survival, 0x0, sizeof(double_t) * (2 + MAX_HYPERSCORE * 10));
 
         topK.heap_reset();
     }
@@ -709,7 +709,7 @@ typedef struct _Results
         maxhypscore = 0;
         nexthypscore = 0;
 
-        std::memset(survival, 0x0, sizeof(DOUBLE) * (2 + MAX_HYPERSCORE * 10));
+        std::memset(survival, 0x0, sizeof(double_t) * (2 + MAX_HYPERSCORE * 10));
     }
 
 } Results;
@@ -718,13 +718,13 @@ typedef struct _Results
 typedef struct _partResult
 {
     /* Convert: x10 + 0.5 */
-    USHORT min;
-    USHORT max2;
-    INT max;
+    ushort_t min;
+    ushort_t max2;
+    int_t max;
 
     /* Total number of samples scored */
-    INT N;
-    INT qID;
+    int_t N;
+    int_t qID;
 
     /* Default contructor */
     _partResult()
@@ -736,7 +736,7 @@ typedef struct _partResult
         qID = 0;
     }
 
-    _partResult(INT def)
+    _partResult(int_t def)
     {
         min = def;
         max2 = def;
@@ -755,7 +755,7 @@ typedef struct _partResult
         qID = 0;
     }
 
-    _partResult& operator=(const INT& rhs)
+    _partResult& operator=(const int_t& rhs)
     {
         /* Check for self assignment */
             min = rhs;
@@ -803,7 +803,7 @@ typedef struct _partResult
         return val;
     }
 
-    BOOL operator==(const INT rhs)
+    BOOL operator==(const int_t rhs)
     {
         BOOL val = false;
 
@@ -826,13 +826,13 @@ typedef struct _BYICount
 
 } BYICount;
 
-#define BYISIZE                 (sizeof(USHORT) * 2 + sizeof(UINT) * 2)
+#define BYISIZE                 (sizeof(ushort_t) * 2 + sizeof(uint_t) * 2)
 
 typedef struct _fResult
 {
-    INT eValue;
-    INT specID;
-    INT npsms;
+    int_t eValue;
+    int_t specID;
+    int_t npsms;
 
     _fResult()
     {
@@ -859,7 +859,7 @@ typedef struct _fResult
         return *this;
     }
 
-    _fResult &operator=(const INT& rhs)
+    _fResult &operator=(const int_t& rhs)
     {
         /* Check for self assignment */
         this->eValue = rhs;
@@ -873,16 +873,16 @@ typedef struct _fResult
 
 typedef struct _ebuffer
 {
-    CHAR *ibuff;
+    char_t *ibuff;
     partRes *packs;
-    INT currptr;
-    INT batchNum;
+    int_t currptr;
+    int_t batchNum;
     BOOL isDone;
 
     _ebuffer()
     {
         packs = new partRes[QCHUNK];
-        ibuff = new CHAR[(128 * sizeof (USHORT)) * QCHUNK];
+        ibuff = new char_t[(128 * sizeof (ushort_t)) * QCHUNK];
         currptr = 0;
         batchNum = -1;
         isDone = true;

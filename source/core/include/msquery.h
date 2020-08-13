@@ -27,11 +27,11 @@
 /* Spectrum */
 typedef struct _Spectrum
 {
-    UINT *mz;
-    UINT *intn;
-    UINT SpectrumSize;
-    DOUBLE prec_mz;
-    UINT Z;
+    uint_t *mz;
+    uint_t *intn;
+    uint_t SpectrumSize;
+    double_t prec_mz;
+    uint_t Z;
 
     /* Overload the = operator - Required by MSQuery */
     _Spectrum &operator=(const _Spectrum &rhs)
@@ -50,32 +50,32 @@ class MSQuery
 {
 private:
     /* Global Variables */
-    UINT currPtr;
-    UINT running_count;
-    UINT maxslen;
+    uint_t currPtr;
+    uint_t running_count;
+    uint_t maxslen;
     std::ifstream *qfile;
-    UINT qfileIndex;
-    STRING *MS2file;
+    uint_t qfileIndex;
+    string_t *MS2file;
     Spectrum spectrum;
 
     VOID ReadSpectrum();
-    STATUS ProcessQuerySpectrum(Queries *);
+    status_t ProcessQuerySpectrum(Queries *);
 
 public:
-    UINT QAcount;
-    UINT curr_chunk;
-    UINT nqchunks;
+    uint_t QAcount;
+    uint_t curr_chunk;
+    uint_t nqchunks;
 
     MSQuery();
     virtual ~MSQuery();
-    UINT getQAcount();
-    STATUS InitQueryFile(STRING *filename, INT fno);
-    STATUS ExtractQueryChunk(UINT count, Queries *expSpecs, INT &rem);
-    STATUS DeinitQueryFile();
+    uint_t getQAcount();
+    status_t InitQueryFile(string_t *filename, int_t fno);
+    status_t ExtractQueryChunk(uint_t count, Queries *expSpecs, int_t &rem);
+    status_t DeinitQueryFile();
     BOOL isDeInit();
-    UINT getQfileIndex();
+    uint_t getQfileIndex();
     MSQuery &operator=(const MSQuery &rhs);
-    MSQuery &operator=(const INT &rhs);
+    MSQuery &operator=(const int_t &rhs);
 
 };
 

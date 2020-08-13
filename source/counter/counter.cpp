@@ -23,14 +23,14 @@
 using namespace std;
 
 /* Global Variables */
-STRING dbfile;
+string_t dbfile;
 
-extern ULONGLONG cumusize;
-extern ULONGLONG ions;
+extern ull_t cumusize;
+extern ull_t ions;
 
 gParams params;
 
-static STATUS ParseParams(CHAR* paramfile);
+static status_t ParseParams(char_t* paramfile);
 
 /* FUNCTION: SLM_Main (main)
  *
@@ -41,11 +41,11 @@ static STATUS ParseParams(CHAR* paramfile);
  * OUTPUT
  * @status: Status of execution
  */
-STATUS SLM_Main(INT argc, CHAR* argv[])
+status_t SLM_Main(int_t argc, char_t* argv[])
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
-    CHAR extension[] = ".peps";
+    char_t extension[] = ".peps";
 
     if (argc < 2)
     {
@@ -59,15 +59,15 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     status = ParseParams(argv[1]);
 
     /* Create local variables to avoid trouble */
-    UINT minlen = params.min_len;
-    UINT maxlen = params.max_len;
+    uint_t minlen = params.min_len;
+    uint_t maxlen = params.max_len;
 
-    for (UINT peplen = minlen; peplen <= maxlen; peplen++)
+    for (uint_t peplen = minlen; peplen <= maxlen; peplen++)
     {
         dbfile = params.dbpath + "/" + std::to_string(peplen) + extension;
 
         /* Count the number of ">" entries in FASTA */
-        status = LBE_CountPeps((CHAR *) dbfile.c_str());
+        status = LBE_CountPeps((char_t *) dbfile.c_str());
 
     }
 
@@ -87,11 +87,11 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
  * OUTPUT
  * @status: Status of execution
  */
-static STATUS ParseParams(CHAR* paramfile)
+static status_t ParseParams(char_t* paramfile)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
-    STRING line;
+    string_t line;
 
     ifstream pfile(paramfile);
 
@@ -142,7 +142,7 @@ static STATUS ParseParams(CHAR* paramfile)
 
         /* Get the fragment mass tolerance */
         getline(pfile, line);
-        params.dF = (UINT)(std::atof(line.c_str()) * params.scale);
+        params.dF = (uint_t)(std::atof(line.c_str()) * params.scale);
 
         /* Get the precursor mass tolerance */
         getline(pfile, line);
@@ -195,7 +195,7 @@ static STATUS ParseParams(CHAR* paramfile)
 
         /* Get number of mods */
         getline(pfile, line);
-        params.vModInfo.num_vars = std::atoi((const CHAR *) line.c_str());
+        params.vModInfo.num_vars = std::atoi((const char_t *) line.c_str());
 
         /* If no mods then init to 0 M 0 */
         if (params.vModInfo.num_vars == 0)
@@ -206,11 +206,11 @@ static STATUS ParseParams(CHAR* paramfile)
         {
             /* Get max vmods per peptide sequence */
             getline(pfile, line);
-            params.vModInfo.vmods_per_pep = std::atoi((const CHAR *) line.c_str());
+            params.vModInfo.vmods_per_pep = std::atoi((const char_t *) line.c_str());
             params.modconditions = std::to_string(params.vModInfo.vmods_per_pep);
 
             /* Fill in information for each vmod */
-            for (USHORT md = 0; md < params.vModInfo.num_vars; md++)
+            for (ushort_t md = 0; md < params.vModInfo.num_vars; md++)
             {
                 /* Get and set the modAAs */
                 getline(pfile, line);
@@ -221,7 +221,7 @@ static STATUS ParseParams(CHAR* paramfile)
 
                 /* get and set the modmass */
                 getline(pfile, line);
-                params.vModInfo.vmods[md].modMass = (UINT) (std::atof((const char *) line.c_str()) * params.scale);
+                params.vModInfo.vmods[md].modMass = (uint_t) (std::atof((const char *) line.c_str()) * params.scale);
 
                 /* Get and set the modAAs_per_peptide */
                 getline(pfile, line);
@@ -231,10 +231,10 @@ static STATUS ParseParams(CHAR* paramfile)
             }
         }
 
-        params.perf = new DOUBLE[params.nodes];
+        params.perf = new double_t[params.nodes];
 
         /* Initialize to 1.0 for now */
-        for (UINT nn = 0; nn < params.nodes; nn++)
+        for (uint_t nn = 0; nn < params.nodes; nn++)
         {
             params.perf[nn] = 1.0;
         }

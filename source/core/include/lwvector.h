@@ -29,9 +29,9 @@
 
 using namespace std;
 
-using INT = int;
+using int_t = int;
 using VOID = void;
-using DOUBLE = double;
+using double_t = double;
 
 template<class T>
 class lwvector
@@ -39,15 +39,15 @@ class lwvector
 private:
     T *arr;
 
-    INT head;
-    INT tail;
-    INT cap;
-    INT sze;
+    int_t head;
+    int_t tail;
+    int_t cap;
+    int_t sze;
 
 public:
     lwvector()
     {
-        const INT DSIZE = 2 + (100 * 10);
+        const int_t DSIZE = 2 + (100 * 10);
         arr = new T [DSIZE];
         cap = DSIZE;
         head = 0;
@@ -55,7 +55,7 @@ public:
         sze = 0;
     }
 
-    lwvector(INT dsiz)
+    lwvector(int_t dsiz)
     {
         cap = dsiz;
         arr = new T [cap];
@@ -92,7 +92,7 @@ public:
         }
     }
 
-    lwvector(INT dsiz, T val)
+    lwvector(int_t dsiz, T val)
     {
         arr = new T [dsiz];
         cap = dsiz;
@@ -100,7 +100,7 @@ public:
         tail = dsiz;
         sze = dsiz;
 
-        for (INT l = 0; l < dsiz; l++)
+        for (int_t l = 0; l < dsiz; l++)
         {
             arr[l] = val;
         }
@@ -111,13 +111,13 @@ public:
         memset(arr+head, val, sizeof(T) * sze);
     }
 
-    VOID AddRange(INT stt, INT enda)
+    VOID AddRange(int_t stt, int_t enda)
     {
-        INT ss = enda - stt + 1;
+        int_t ss = enda - stt + 1;
 
         if (sze + ss <= cap)
         {
-            for (INT kk = stt; kk <= enda; kk++)
+            for (int_t kk = stt; kk <= enda; kk++)
             {
                 arr[tail] = kk;
                 tail++;
@@ -126,9 +126,9 @@ public:
         }
     }
 
-    VOID MakeRange(INT stt, INT enda)
+    VOID MakeRange(int_t stt, int_t enda)
     {
-        INT ss = enda - stt + 1;
+        int_t ss = enda - stt + 1;
 
         if (ss <= cap)
         {
@@ -181,19 +181,19 @@ public:
         }
     }
 
-    VOID clip(INT begin, INT end)
+    VOID clip(int_t begin, int_t end)
     {
         tail = head + end + 1;
         head += begin;
         sze = end - begin + 1;
     }
 
-    INT capacity()
+    int_t capacity()
     {
         return cap;
     }
 
-    INT Size()
+    int_t Size()
     {
         return sze;
     }
@@ -222,19 +222,19 @@ public:
         cout << endl;
     }
 
-    VOID print(INT p1, INT p2)
+    VOID print(int_t p1, int_t p2)
     {
         if (p2 > p1)
         {
             cout << "PRINT: head@:" << head << endl;
 
-            for (INT ikr = head + p1; ikr < head + p2; ikr++)
+            for (int_t ikr = head + p1; ikr < head + p2; ikr++)
             {
                 cout << ikr << ", ";
             }
             cout << endl;
 
-            for (INT ikr = head + p1; ikr < head + p2; ikr++)
+            for (int_t ikr = head + p1; ikr < head + p2; ikr++)
             {
                 cout << arr[head + ikr] << ", ";
             }
@@ -251,7 +251,7 @@ public:
         sze = 0;
     }
 
-    VOID multiply(const DOUBLE val)
+    VOID multiply(const double_t val)
     {
         for (auto ii = head; ii < tail; ii++)
         {
@@ -322,7 +322,7 @@ public:
 
     }
 
-    VOID divide(const DOUBLE ii)
+    VOID divide(const double_t ii)
     {
         if (ii == 0)
         {
@@ -385,7 +385,7 @@ public:
         }
     }
 
-    VOID add(const DOUBLE val)
+    VOID add(const double_t val)
     {
         for (auto ii = head; ii < tail; ii++)
         {
@@ -409,7 +409,7 @@ public:
         }
     }
 
-    T& operator[](INT index)
+    T& operator[](int_t index)
     {
         auto actual = head;
 

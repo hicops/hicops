@@ -21,9 +21,9 @@
 #include "lbe.h"
 using namespace std;
 
-vector<STRING> Seqs;
-ULONGLONG cumusize = 0;
-ULONGLONG ions = 0;
+vector<string_t> Seqs;
+ull_t cumusize = 0;
+ull_t ions = 0;
 
 ifstream file;
 
@@ -42,16 +42,16 @@ extern gParams params;
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_CountPeps(CHAR *filename)
+status_t LBE_CountPeps(char_t *filename)
 {
-    STATUS status = SLM_SUCCESS;
-    STRING line;
-    FLOAT pepmass = 0.0;
-    STRING modconditions = params.modconditions;
-    UINT maxmass= params.max_mass;
-    UINT minmass= params.min_mass;
+    status_t status = SLM_SUCCESS;
+    string_t line;
+    float_t pepmass = 0.0;
+    string_t modconditions = params.modconditions;
+    uint_t maxmass= params.max_mass;
+    uint_t minmass= params.min_mass;
 	
-	ULONGLONG localpeps = 0;
+	ull_t localpeps = 0;
 
 #ifndef VMODS
     LBE_UNUSED_PARAM(modconditions);

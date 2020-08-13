@@ -28,8 +28,8 @@
 #include "common.h"
 #include "slm_dsts.h"
 
-using dvector = std::vector<DOUBLE>;
-using darray  = std::valarray<DOUBLE>;
+using dvector = std::vector<double_t>;
+using darray  = std::valarray<double_t>;
 
 template <class T>
 BOOL isNegative(T i) { return i < 0.0; }
@@ -61,57 +61,57 @@ class expeRT
 private:
 
     /* Size of histogram */
-    const INT SIZE = 2 + (MAX_HYPERSCORE * 10);
+    const int_t SIZE = 2 + (MAX_HYPERSCORE * 10);
 
     /* Index number set 1 */
-    INT stt1;
-    INT end1;
+    int_t stt1;
+    int_t end1;
 
     /* Index number set 2 */
-    INT stt;
-    INT ends;
+    int_t stt;
+    int_t ends;
 
-    INT hyp;
+    int_t hyp;
 
-    INT vaa;
+    int_t vaa;
 
-    DOUBLE mu_t;
-    DOUBLE beta_t;
+    double_t mu_t;
+    double_t beta_t;
 
-    DOUBLE* yy = NULL;
+    double_t* yy = NULL;
 
     /* p_x will contain the probability density function */
-    lwvector<DOUBLE> *p_x = NULL;
-    lwvector<DOUBLE> *sx = NULL;
-    lwvector<DOUBLE> *X = NULL;
+    lwvector<double_t> *p_x = NULL;
+    lwvector<double_t> *sx = NULL;
+    lwvector<double_t> *X = NULL;
 
     /* pdata will contain the partial logWeibull data */
-    lwvector<DOUBLE> *pdata = NULL;
-    INT pN;
+    lwvector<double_t> *pdata = NULL;
+    int_t pN;
 
     /* Constructs a log-Weibull distribution */
-    VOID logWeibullResponse(DOUBLE, DOUBLE, INT ,INT);
-    darray alogWeibullResponse(DOUBLE, DOUBLE, INT, INT);
+    VOID logWeibullResponse(double_t, double_t, int_t ,int_t);
+    darray alogWeibullResponse(double_t, double_t, int_t, int_t);
 
     /* Learning Function - Optimizing */
-    DOUBLE logWeibullFit(lwvector<DOUBLE> *, INT, INT, INT niter=6000, DOUBLE lr=0.12, DOUBLE cutoff=1e-3);
+    double_t logWeibullFit(lwvector<double_t> *, int_t, int_t, int_t niter=6000, double_t lr=0.12, double_t cutoff=1e-3);
 
-    inline DOUBLE MeanSqError(const darray &);
-
-    template <class T>
-    VOID LinearFit(T& x, T& y, INT n, DOUBLE &a, DOUBLE &b);
+    inline double_t MeanSqError(const darray &);
 
     template <class T>
-    inline INT argmax(T &data, INT i1, INT i2, DOUBLE value);
+    VOID LinearFit(T& x, T& y, int_t n, double_t &a, double_t &b);
 
     template <class T>
-    inline INT rargmax(T &data, INT i1, INT i2, DOUBLE value);
+    inline int_t argmax(T &data, int_t i1, int_t i2, double_t value);
 
     template <class T>
-    inline INT largmax(T &data, INT i1, INT i2, DOUBLE value);
+    inline int_t rargmax(T &data, int_t i1, int_t i2, double_t value);
 
-    dvector vrange(INT, INT);
-    darray  arange(INT, INT);
+    template <class T>
+    inline int_t largmax(T &data, int_t i1, int_t i2, double_t value);
+
+    dvector vrange(int_t, int_t);
+    darray  arange(int_t, int_t);
 
 public:
 
@@ -124,32 +124,32 @@ public:
     /* Function to reset the data */
     VOID ResetPartialVectors();
 
-    STATUS Reconstruct(ebuffer *ebs, INT specno, partRes *fR);
+    status_t Reconstruct(ebuffer *ebs, int_t specno, partRes *fR);
 
     /* Add distibution data */
-    STATUS AddlogWeibull(INT, DOUBLE, DOUBLE, INT, INT);
+    status_t AddlogWeibull(int_t, double_t, double_t, int_t, int_t);
 
-    STATUS StoreIResults(Results *, INT, ebuffer *);
-
-    /* Model using log-Weibull in DISTMEM */
-    STATUS ModelSurvivalFunction(DOUBLE &, const INT);
-
-    /* Model using log-Weibull in SHM */
-    STATUS ModelSurvivalFunction(Results *);
+    status_t StoreIResults(Results *, int_t, ebuffer *);
 
     /* Model using log-Weibull in DISTMEM */
-    STATUS ModelTailFit(DOUBLE &, const INT);
+    status_t ModelSurvivalFunction(double_t &, const int_t);
 
     /* Model using log-Weibull in SHM */
-    STATUS ModelTailFit(Results *);
+    status_t ModelSurvivalFunction(Results *);
+
+    /* Model using log-Weibull in DISTMEM */
+    status_t ModelTailFit(double_t &, const int_t);
+
+    /* Model using log-Weibull in SHM */
+    status_t ModelTailFit(Results *);
 
 
     /* Model the partial distribution using logWeibull */
-    STATUS Model_logWeibull(Results *);
+    status_t Model_logWeibull(Results *);
 
 #if 0
     /* In case of distributed memory, we will call this */
-    STATUS ModelSurvivalFunction(DOUBLE &, INT);
+    status_t ModelSurvivalFunction(double_t &, int_t);
 #endif
 };
 

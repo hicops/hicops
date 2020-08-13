@@ -23,21 +23,21 @@
 using namespace std;
 
 /* Global Variables */
-map<AA, INT> condLookup;
-UINT lclcntr;
-UINT partcntr;
-STRING *mods;
-vector<STRING> tokens;
-UINT limit = 0;
-ULONGLONG Comb[MAX_COMBS][MAX_COMBS];
+map<AA, int_t> condLookup;
+uint_t lclcntr;
+uint_t partcntr;
+string_t *mods;
+vector<string_t> tokens;
+uint_t limit = 0;
+ull_t Comb[MAX_COMBS][MAX_COMBS];
 
 /* External Variables */
 extern gParams params;
 /* Peptide Sequences */
-extern vector<STRING>     Seqs;
+extern vector<string_t>     Seqs;
 
 /* Static Functions */
-static LONGLONG count(STRING s, STRING conditions);
+static longlong_t count(string_t s, string_t conditions);
 static VOID MODS_GenCombinations();
 
 /*
@@ -82,7 +82,7 @@ static VOID MODS_GenCombinations()
  * OUTPUT:
  * @Comb: nCk
  */
-ULONGLONG combine(int n, int k) {
+ull_t combine(int n, int k) {
     //return factorial(n) / factorial(k) / factorial(n-k);
     return Comb[n][k];
 }
@@ -100,13 +100,13 @@ ULONGLONG combine(int n, int k) {
  * @sum: Number of ways to pick upto b elements
  *       from multiset A.
  */
-LONGLONG partition2(vector<INT> a, INT b)
+longlong_t partition2(vector<int_t> a, int_t b)
 {
-    INT sum = 0;
-    vector<INT> a2;
+    int_t sum = 0;
+    vector<int_t> a2;
 
     /* Set up basic conditions */
-    for (INT t : a)
+    for (int_t t : a)
     {
         sum += t;
     }
@@ -118,7 +118,7 @@ LONGLONG partition2(vector<INT> a, INT b)
 
     if (b <= 0)
     {
-        return (LONGLONG) (b == 0);
+        return (longlong_t) (b == 0);
     }
 
     if (a.size() == 0)
@@ -128,12 +128,12 @@ LONGLONG partition2(vector<INT> a, INT b)
 
     sum = 0;
 
-    for (UINT i = 1; i < a.size(); i++)
+    for (uint_t i = 1; i < a.size(); i++)
     {
         a2.push_back(a[i]);
     }
 
-    for (INT i = 0; i < a[0] + 1; i++)
+    for (int_t i = 0; i < a[0] + 1; i++)
     {
         sum += combine(a[0], i) * partition2(a2, b - i);
     }
@@ -154,7 +154,7 @@ LONGLONG partition2(vector<INT> a, INT b)
  * OUTPUT:
  * @sum:
  */
-LONGLONG partition3(vector<vector<INT> > A, vector<INT> B, INT limit)
+longlong_t partition3(vector<vector<int_t> > A, vector<int_t> B, int_t limit)
 {
     if (A.size() == 1)
     {
@@ -168,17 +168,17 @@ LONGLONG partition3(vector<vector<INT> > A, vector<INT> B, INT limit)
         }
     }
 
-    LONGLONG sum = 0;
-    vector<vector<INT> > A2;
-    vector<INT> B2;
+    longlong_t sum = 0;
+    vector<vector<int_t> > A2;
+    vector<int_t> B2;
 
-    for (UINT i = 1; i < A.size(); i++)
+    for (uint_t i = 1; i < A.size(); i++)
     {
         A2.push_back(A[i]);
         B2.push_back(B[i]);
     }
 
-    for (INT i = 0; i < B[0] + 1; i++)
+    for (int_t i = 0; i < B[0] + 1; i++)
     {
         sum += (partition2(A[0], i) - partition2(A[0], i - 1)) * partition3(A2, B2, limit - i);
     }
@@ -198,21 +198,21 @@ LONGLONG partition3(vector<vector<INT> > A, vector<INT> B, INT limit)
  * OUTPUT:
  * @nmods: Number of mods generated for @s
  */
-static LONGLONG count(STRING s, STRING conditions)
+static longlong_t count(string_t s, string_t conditions)
 {
-    map<CHAR, INT> AAcounts;
-    vector<vector<INT>> A;
-    vector<INT> B;
-    vector<INT> temp;
+    map<char_t, int_t> AAcounts;
+    vector<vector<int_t>> A;
+    vector<int_t> B;
+    vector<int_t> temp;
 
     for (auto c : s)
     {
         AAcounts[c] += 1;
     }
 
-    for (UINT i = 0; i < (tokens.size() - 1) / 2; i++)
+    for (uint_t i = 0; i < (tokens.size() - 1) / 2; i++)
     {
-        for (UINT j = 0; j < tokens[2 * i + 1].length(); j++)
+        for (uint_t j = 0; j < tokens[2 * i + 1].length(); j++)
         {
             temp.push_back(AAcounts[tokens[2 * i + 1][j]]);
         }
@@ -238,15 +238,15 @@ static LONGLONG count(STRING s, STRING conditions)
  * OUTPUT:
  * @cumulative: Number of mods
  */
-ULONGLONG MODS_ModCounter()
+ull_t MODS_ModCounter()
 {
-    ULONGLONG cumulative = 0;
+    ull_t cumulative = 0;
 
-    UINT threads = params.threads;
-    STRING conditions = params.modconditions;
+    uint_t threads = params.threads;
+    string_t conditions = params.modconditions;
 
 #ifdef VMODS
-    STRING token;
+    string_t token;
     stringstream ss(conditions);
 
     while (ss >> token)
@@ -266,7 +266,7 @@ ULONGLONG MODS_ModCounter()
 #ifdef USE_OMP
             /* The parallel for loop */
 #pragma omp parallel for num_threads (threads) schedule(static) reduction(+: cumulative)
-            for (UINT i = 0; i < Seqs.size(); i++)
+            for (uint_t i = 0; i < Seqs.size(); i++)
             {
                 cumulative += count(Seqs.at(i), conditions) - 1;
             }
@@ -274,7 +274,7 @@ ULONGLONG MODS_ModCounter()
 #else
         LBE_UNUSED_PARAM(threads);
 
-       for (UINT i = 0; i < Seqs.size(); i++)
+       for (uint_t i = 0; i < Seqs.size(); i++)
        {
             cumulative += count(Seqs.at(i), conditions) - 1;
        }

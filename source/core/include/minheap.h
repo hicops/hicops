@@ -332,7 +332,7 @@ T minHeap<T>::getMax()
     /* Consider that the last one is the max */
     T maxe = array[size - 1];
 
-    for (INT k = size-2; k > 0; k --)
+    for (int_t k = size-2; k > 0; k --)
     {
         if (array[k] > maxe)
         {

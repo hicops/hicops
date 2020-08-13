@@ -47,9 +47,9 @@
  * OUTPUT: none
  */
 template<class K, class V>
-VOID KeyVal_Parallel_Internal(K *key, V *val, INT left, INT right, INT cutoff)
+VOID KeyVal_Parallel_Internal(K *key, V *val, int_t left, int_t right, int_t cutoff)
 {
-    INT i = left, j = right;
+    int_t i = left, j = right;
     K tmp;
     V tmp2;
 
@@ -119,9 +119,9 @@ VOID KeyVal_Parallel_Internal(K *key, V *val, INT left, INT right, INT cutoff)
  * OUTPUT: none
  */
 template<class K, class V>
-VOID KeyVal_Parallel(K* key, V *val, UINT lenArray, UINT numThreads)
+VOID KeyVal_Parallel(K* key, V *val, uint_t lenArray, uint_t numThreads)
 {
-    INT cutoff = 1000;
+    int_t cutoff = 1000;
 
 #pragma omp parallel num_threads(numThreads)
     {
@@ -148,10 +148,10 @@ VOID KeyVal_Parallel(K* key, V *val, UINT lenArray, UINT numThreads)
  * OUTPUT: none
  */
 template<class K, class V>
-VOID KeyVal_Serial_Internal(K *key, V *val, INT low, INT high)
+VOID KeyVal_Serial_Internal(K *key, V *val, int_t low, int_t high)
 {
-    INT i = low;
-    INT j = high;
+    int_t i = low;
+    int_t j = high;
     K pivotkey = key[(i + j) / 2];
     K tmpkey;
     V tmpval;
@@ -198,7 +198,7 @@ VOID KeyVal_Serial_Internal(K *key, V *val, INT low, INT high)
  * OUTPUT: none
  */
 template<class K, class V>
-VOID KeyVal_Serial(K *key, V *val, UINT lenArray)
+VOID KeyVal_Serial(K *key, V *val, uint_t lenArray)
 {
     KeyVal_Serial_Internal<K, V>(key, val, 0, lenArray-1);
 }

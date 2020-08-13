@@ -40,9 +40,9 @@ extern gParams           params;
 VOID *DSLIM_Score_Thread_Entry(VOID *);
 DSLIM_Score *ScoreHandle = NULL;
 
-STATUS DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, expeRT *ePtr, hCell *CandidatePSMS, INT cpsmSize)
+status_t DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, expeRT *ePtr, hCell *CandidatePSMS, int_t cpsmSize)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     bdata = new BData;
 
@@ -67,9 +67,9 @@ STATUS DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, expeRT *ePtr, hC
 }
 #endif /* USE_MPI */
 
-STATUS DSLIM_DistScoreManager()
+status_t DSLIM_DistScoreManager()
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
 #ifdef USE_MPI
     /* Check if parameters have been brought */
@@ -162,18 +162,18 @@ STATUS DSLIM_DistScoreManager()
 VOID *DSLIM_Score_Thread_Entry(VOID *argv)
 {
     /* Get the number of nodes - 1 */
-    INT nodes   = params.nodes;
+    int_t nodes   = params.nodes;
 
     /* MPI pointers */
     MPI_Request *rxRqsts  = NULL;
-    INT         *rxStats  = NULL;
+    int_t         *rxStats  = NULL;
 
     /* 2X per all other machines */
     rxRqsts = new MPI_Request [nodes];
-    rxStats = new INT[nodes];
+    rxStats = new int_t[nodes];
 
     /* Fill the rxStats with ones - available */
-    for (INT kk = 0; kk < nodes; kk++)
+    for (int_t kk = 0; kk < nodes; kk++)
     {
         rxStats[kk] = 1;
     }
@@ -188,14 +188,14 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
     }
 
     /* Wait 500ms between each loop */
-    for (INT cumulate = 0; cumulate < nodes; usleep(500000))
+    for (int_t cumulate = 0; cumulate < nodes; usleep(500000))
     {
         cumulate = 0;
 
-        for (INT ll = 0; ll < nodes; ll++)
+        for (int_t ll = 0; ll < nodes; ll++)
         {
             /* Only check if not already received */
-            if (rxStats[ll] == 0 && ll != (INT) params.myid)
+            if (rxStats[ll] == 0 && ll != (int_t) params.myid)
             {
                 //cout << (void *)((MPI_Request*)(rxRqsts + ll)) << " rxRqsts@:" << params.myid << endl;
                 MPI_Test(rxRqsts + ll, &rxStats[ll], MPI_STATUS_IGNORE);
@@ -216,7 +216,7 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
     }
 
     /* Fill the rxStats with ones - available */
-    for (INT kk = 0; kk < nodes; kk++)
+    for (int_t kk = 0; kk < nodes; kk++)
     {
         rxStats[kk] = 1;
     }
@@ -224,14 +224,14 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
     ScoreHandle->RXResults(rxRqsts, rxStats);
 
     /* Wait 500ms between each loop */
-    for (INT cumulate = 0; cumulate < nodes; usleep(500000))
+    for (int_t cumulate = 0; cumulate < nodes; usleep(500000))
     {
         cumulate = 0;
 
-        for (INT ll = 0; ll < nodes; ll++)
+        for (int_t ll = 0; ll < nodes; ll++)
         {
             /* Only check if not already received */
-            if (rxStats[ll] == 0 && ll != (INT) params.myid)
+            if (rxStats[ll] == 0 && ll != (int_t) params.myid)
             {
                 //cout << (void *)((MPI_Request*)(rxRqsts + ll)) << " rxRqsts@:" << params.myid << endl;
                 MPI_Test(rxRqsts + ll, &rxStats[ll], MPI_STATUS_IGNORE);
@@ -270,7 +270,7 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
 #endif /* USE_MPI */
 
 #ifdef DIAGNOSE
-INT DSLIM_TestBData()
+int_t DSLIM_TestBData()
 {
     cout << "\nTesting BData object: " << endl;
     if (bdata != NULL)

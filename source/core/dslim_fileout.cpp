@@ -29,7 +29,7 @@ BOOL FilesInit = false;
 /* Data structures for the output file */
 std::ofstream *tsvs = NULL; /* The output files */
 
-static STRING    DFile_Datetime();
+static string_t    DFile_Datetime();
 
 /*
  * FUNCTION: DFile_InitFile
@@ -42,9 +42,9 @@ static STRING    DFile_Datetime();
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DFile_InitFiles()
+status_t DFile_InitFiles()
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     if (FilesInit == false)
     {
@@ -52,7 +52,7 @@ STATUS DFile_InitFiles()
 
         tsvs = new std::ofstream[params.threads];
 
-        STRING common = params.workspace + '/' + DFile_Datetime();
+        string_t common = params.workspace + '/' + DFile_Datetime();
 
         if (tsvs != NULL)
         {
@@ -60,9 +60,9 @@ STATUS DFile_InitFiles()
 
             FilesInit = true;
 
-            for (UINT f = 0; f < params.threads; f++)
+            for (uint_t f = 0; f < params.threads; f++)
             {
-                STRING filename = common + "_" + std::to_string(f) + ".tsv";
+                string_t filename = common + "_" + std::to_string(f) + ".tsv";
                 tsvs[f].open(filename);
 
 #ifndef ANALYSIS
@@ -82,9 +82,9 @@ STATUS DFile_InitFiles()
     return status;
 }
 
-STATUS DFile_DeinitFiles()
+status_t DFile_DeinitFiles()
 {
-    for (UINT i = 0; i < params.threads; i++)
+    for (uint_t i = 0; i < params.threads; i++)
     {
         tsvs[i].close();
     }
@@ -98,10 +98,10 @@ STATUS DFile_DeinitFiles()
     return SLM_SUCCESS;
 }
 
-STATUS  DFile_PrintPartials(UINT specid, Results *resPtr)
+status_t  DFile_PrintPartials(uint_t specid, Results *resPtr)
 {
-    STATUS status = SLM_SUCCESS;
-    UINT thno = omp_get_thread_num();
+    status_t status = SLM_SUCCESS;
+    uint_t thno = omp_get_thread_num();
 
     tsvs[thno]         << std::to_string(specid + 1);
     tsvs[thno] << '\t' << std::to_string(resPtr->cpsms);
@@ -116,26 +116,26 @@ STATUS  DFile_PrintPartials(UINT specid, Results *resPtr)
 
 }
 
-STATUS DFile_PrintScore(Index *index, UINT specid, FLOAT pmass, hCell* psm, DOUBLE e_x, UINT npsms)
+status_t DFile_PrintScore(Index *index, uint_t specid, float_t pmass, hCell* psm, double_t e_x, uint_t npsms)
 {
-    UINT thno = omp_get_thread_num();
+    uint_t thno = omp_get_thread_num();
 
     Index * lclindex = index + psm->idxoffset;
-    INT peplen = lclindex->pepIndex.peplen;
-    INT pepid = psm->psid;
+    int_t peplen = lclindex->pepIndex.peplen;
+    int_t pepid = psm->psid;
 
     /* The size is peplen + 1 to add the \0 character at the end */
-    CHAR pepseq[peplen + 1];
+    char_t pepseq[peplen + 1];
 
     /* Write the \0 character to the last position of pepseq buffer */
     pepseq[peplen] = '\0';
 
     /* Copy the rest of the string to the pepseq buffer */
-    strncpy((CHAR *)&(pepseq[0]), lclindex->pepIndex.seqs +
+    strncpy((char_t *)&(pepseq[0]), lclindex->pepIndex.seqs +
              (lclindex->pepEntries[psm->psid].seqID * peplen), peplen);
 
     /* Make a string from the char [] */
-    STRING pep = pepseq;
+    string_t pep = pepseq;
 
     /* Print the PSM info to the file */
     tsvs[thno]         << std::to_string(specid + 1);
@@ -165,7 +165,7 @@ STATUS DFile_PrintScore(Index *index, UINT specid, FLOAT pmass, hCell* psm, DOUB
  * OUTPUT:
  * @datetime : date & time in string format
  */
-static STRING DFile_Datetime()
+static string_t DFile_Datetime()
 {
     time_t rawtime;
     struct tm * timeinfo;

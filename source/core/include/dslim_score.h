@@ -35,12 +35,12 @@ typedef struct _BorrowedData
     expeRT *ePtr;
     hCell *heapArray;
     Index *index;
-    INT *sizeArray;
-    INT *fileArray;
+    int_t *sizeArray;
+    int_t *fileArray;
 
     /* Dataset size */
-    INT cPSMsize;
-    INT nBatches;
+    int_t cPSMsize;
+    int_t nBatches;
 
     _BorrowedData()
     {
@@ -62,28 +62,28 @@ class DSLIM_Score
 private:
 
     /* Variables */
-    INT       threads;
+    int_t       threads;
 
     /* Dataset sizes */
-    INT       nSpectra;
-    INT       nBatches;
-    INT       myRXsize;
+    int_t       nSpectra;
+    int_t       nBatches;
+    int_t       myRXsize;
 
     /* These pointers will be borrowed */
-    INT      *sizeArray;
-    INT      *fileArray;
+    int_t      *sizeArray;
+    int_t      *fileArray;
     expeRT   *ePtr;
     hCell    *heapArray;
     Index    *index;
-    THREAD   *comm_thd;
+    thread_t   *comm_thd;
 
     /* Data size that I expect to
      * receive from other processes */
-    INT      *rxSizes;
-    INT      *txSizes;
+    int_t      *rxSizes;
+    int_t      *txSizes;
 
     /* key-values */
-    INT      *keys;
+    int_t      *keys;
 
     fResult  *TxValues;
     fResult  *RxValues;
@@ -94,22 +94,22 @@ public:
     DSLIM_Score(BData *bd);
     virtual  ~DSLIM_Score();
 
-    STATUS   CombineResults();
+    status_t   CombineResults();
 
-    STATUS   ScatterScores();
+    status_t   ScatterScores();
 
-    STATUS   TXSizes(MPI_Request *, INT *);
-    STATUS   RXSizes(MPI_Request *, INT *);
+    status_t   TXSizes(MPI_Request *, int_t *);
+    status_t   RXSizes(MPI_Request *, int_t *);
 
-    STATUS   TXResults(MPI_Request *, INT*);
-    STATUS   RXResults(MPI_Request *, INT*);
+    status_t   TXResults(MPI_Request *, int_t*);
+    status_t   RXResults(MPI_Request *, int_t*);
 
-    STATUS   DisplayResults();
+    status_t   DisplayResults();
 
-    STATUS   Wait4RX();
+    status_t   Wait4RX();
 
-    STATUS   InitDataTypes();
-    STATUS   FreeDataTypes();
+    status_t   InitDataTypes();
+    status_t   FreeDataTypes();
 };
 
 #endif /* USE_MPI */

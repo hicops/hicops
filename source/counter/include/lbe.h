@@ -44,6 +44,6 @@
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_CountPeps(CHAR *filename);
+status_t LBE_CountPeps(char_t *filename);
 
 #endif /* LBE_H_ */

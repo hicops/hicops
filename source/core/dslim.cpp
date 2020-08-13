@@ -21,9 +21,9 @@
 using namespace std;
 
 /* Global Variables */
-UINT          *SpecArr = NULL; /* Spectra Array     */
+uint_t          *SpecArr = NULL; /* Spectra Array     */
 BYICount      *Score   = NULL;
-UINT reduce = 0;
+uint_t reduce = 0;
 
 extern gParams params;
 
@@ -43,15 +43,15 @@ BOOL          *features;
  * OUTPUT:
  * @status: status of execution
  */
-STATUS DSLIM_Construct(Index *index)
+status_t DSLIM_Construct(Index *index)
 {
-    STATUS status = SLM_SUCCESS;
-    UINT threads = params.threads;
-    UINT maxz = params.maxz;
-    UINT peplen_1 = index->pepIndex.peplen - 1;
+    status_t status = SLM_SUCCESS;
+    uint_t threads = params.threads;
+    uint_t maxz = params.maxz;
+    uint_t peplen_1 = index->pepIndex.peplen - 1;
 
-    DOUBLE maxmass = params.max_mass;
-    UINT scale = params.scale;
+    double_t maxmass = params.max_mass;
+    uint_t scale = params.scale;
 
 #ifndef VMODS
     LBE_UNUSED_PARAM(modInfo);
@@ -60,7 +60,7 @@ STATUS DSLIM_Construct(Index *index)
     if (status == SLM_SUCCESS && SpecArr == NULL)
     {
         /* Spectra Array (SA) */
-        SpecArr = new UINT[MAX_IONS];
+        SpecArr = new uint_t[MAX_IONS];
 
         /* Check if Spectra Array has been allocated */
         if (SpecArr == NULL)
@@ -79,7 +79,7 @@ STATUS DSLIM_Construct(Index *index)
         if (status == SLM_SUCCESS)
         {
             /* Distributed SLM Ions Array construction */
-            for (UINT chno = 0; chno < index->nChunks && status == SLM_SUCCESS; chno++)
+            for (uint_t chno = 0; chno < index->nChunks && status == SLM_SUCCESS; chno++)
             {
                 /* Construct each DSLIM chunk in Parallel */
                 status = DSLIM_ConstructChunk(threads, index, chno);
@@ -95,30 +95,30 @@ STATUS DSLIM_Construct(Index *index)
 
     if (status == SLM_SUCCESS)
     {
-        UINT speclen = peplen_1 * maxz * iSERIES;
+        uint_t speclen = peplen_1 * maxz * iSERIES;
 
         /* Construct DSLIM.bA */
 #ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
 #endif /* USE_OMP */
-        for (UINT chunk_number = 0; chunk_number < index->nChunks; chunk_number++)
+        for (uint_t chunk_number = 0; chunk_number < index->nChunks; chunk_number++)
         {
-            UINT *bAPtr = index->ionIndex[chunk_number].bA;
+            uint_t *bAPtr = index->ionIndex[chunk_number].bA;
 
             /* Get size of the chunk */
-            UINT csize = ((chunk_number == index->nChunks - 1) && (index->nChunks > 1)) ?
+            uint_t csize = ((chunk_number == index->nChunks - 1) && (index->nChunks > 1)) ?
                            index->lastchunksize                                 :
                            index->chunksize;
 
-            UINT count = bAPtr[0];
+            uint_t count = bAPtr[0];
 
             /* Initialize first and last bA entries */
             bAPtr[0] = 0;
-            bAPtr[(INT)(maxmass * scale)] = (csize * speclen);
+            bAPtr[(int_t)(maxmass * scale)] = (csize * speclen);
 
-            for (UINT li = 1; li <= (UINT)(maxmass * scale); li++)
+            for (uint_t li = 1; li <= (uint_t)(maxmass * scale); li++)
             {
-                UINT tmpcount = bAPtr[li];
+                uint_t tmpcount = bAPtr[li];
                 bAPtr[li] = bAPtr[li - 1] + count;
                 count = tmpcount;
 #ifdef VALIDATE_SLM
@@ -133,7 +133,7 @@ STATUS DSLIM_Construct(Index *index)
             }
 
             /* Check if all correctly done */
-            if (bAPtr[(INT)(maxmass * scale)] != (csize * speclen))
+            if (bAPtr[(int_t)(maxmass * scale)] != (csize * speclen))
             {
                 status = ERR_INVLD_SIZE;
             }
@@ -144,7 +144,7 @@ STATUS DSLIM_Construct(Index *index)
     /* Optimize the CFIR index chunks */
     if (status == SLM_SUCCESS)
     {
-        for (UINT chunk_number = 0; chunk_number < index->nChunks; chunk_number++)
+        for (uint_t chunk_number = 0; chunk_number < index->nChunks; chunk_number++)
         {
             status = DSLIM_Optimize(index, chunk_number);
         }
@@ -165,17 +165,17 @@ STATUS DSLIM_Construct(Index *index)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_AllocateMemory(Index *index)
+status_t DSLIM_AllocateMemory(Index *index)
 {
-    STATUS status = SLM_SUCCESS;
-    UINT chsize = index->chunksize;
-    UINT Chunks = index->nChunks;
+    status_t status = SLM_SUCCESS;
+    uint_t chsize = index->chunksize;
+    uint_t Chunks = index->nChunks;
 
-    UINT maxmass = params.max_mass;
-    UINT maxz = params.maxz;
-    UINT scale = params.scale;
+    uint_t maxmass = params.max_mass;
+    uint_t maxz = params.maxz;
+    uint_t scale = params.scale;
 
-    UINT speclen = ((index->pepIndex.peplen-1) * iSERIES * maxz);
+    uint_t speclen = ((index->pepIndex.peplen-1) * iSERIES * maxz);
 
     /* Initialize DSLIM pepChunks */
     index->ionIndex = new SLMchunk[Chunks];
@@ -184,22 +184,22 @@ STATUS DSLIM_AllocateMemory(Index *index)
     {
 
         /* Counter for Chunk size construction */
-        INT totalpeps = (INT) index->lcltotCnt;
+        int_t totalpeps = (int_t) index->lcltotCnt;
 
         /* At every loop, check for remaining peps and status */
-        for (UINT i = 0; i < Chunks && totalpeps > 0 && status == SLM_SUCCESS; i++)
+        for (uint_t i = 0; i < Chunks && totalpeps > 0 && status == SLM_SUCCESS; i++)
         {
             /* Initialize direct hashing bA */
-            index->ionIndex[i].bA = new UINT[(maxmass * scale) + 1];
+            index->ionIndex[i].bA = new uint_t[(maxmass * scale) + 1];
 
             if (index->ionIndex[i].bA != NULL)
             {
                 /* Calculate the iA chunk size */
-                INT size = ((INT)(totalpeps - chsize)) > 0 ? chsize : totalpeps;
+                int_t size = ((int_t)(totalpeps - chsize)) > 0 ? chsize : totalpeps;
                 totalpeps -= size; // Update the counter
 
                 /* Total Number of Ions = peps * #ion series * ions/ion series */
-                index->ionIndex[i].iA = new UINT[(size * speclen)];
+                index->ionIndex[i].iA = new uint_t[(size * speclen)];
 
                 if (index->ionIndex[i].iA == NULL)
                 {
@@ -230,45 +230,45 @@ STATUS DSLIM_AllocateMemory(Index *index)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
+status_t DSLIM_ConstructChunk(uint_t threads, Index *index, uint_t chunk_number)
 {
-    STATUS status = SLM_SUCCESS;
-    UINT peplen_1 = index->pepIndex.peplen - 1;
-    UINT peplen   = index->pepIndex.peplen;
-    UINT speclen  = params.maxz * iSERIES * peplen_1;
+    status_t status = SLM_SUCCESS;
+    uint_t peplen_1 = index->pepIndex.peplen - 1;
+    uint_t peplen   = index->pepIndex.peplen;
+    uint_t speclen  = params.maxz * iSERIES * peplen_1;
 
-    DOUBLE minmass = params.min_mass;
-    DOUBLE maxmass = params.max_mass;
-    UINT scale = params.scale;
+    double_t minmass = params.min_mass;
+    double_t maxmass = params.max_mass;
+    uint_t scale = params.scale;
 
     /* Check if this chunk is the last chunk */
     BOOL lastChunk = (chunk_number == (index->nChunks - 1))? true: false;
 
 #ifdef USE_OMP
     /* SA ptr for each thread */
-    UINT *SAPtrs[threads];
+    uint_t *SAPtrs[threads];
 
     /* Temporary Array needed for Theoretical Spectra */
-    UINT *Spectra = new UINT[threads * speclen];
+    uint_t *Spectra = new uint_t[threads * speclen];
 
-    UINT *BAPtrs[threads];
-    UINT *bA = new UINT[(INT)(threads * scale * maxmass)];
+    uint_t *BAPtrs[threads];
+    uint_t *bA = new uint_t[(int_t)(threads * scale * maxmass)];
 
     /* Initialize SAPtrs for each thread */
     if (Spectra != NULL && bA != NULL)
     {
-        for (UINT i = 0; i < threads; i++)
+        for (uint_t i = 0; i < threads; i++)
         {
             SAPtrs[i] = Spectra + (i * speclen);
-            BAPtrs[i] = bA + (INT)(i * scale * maxmass);
+            BAPtrs[i] = bA + (int_t)(i * scale * maxmass);
         }
 
         /* Clear the bAPtrs and SAPtrs */
 #pragma omp parallel for num_threads(threads) schedule (static)
-        for (UINT i = 0; i < threads; i++)
+        for (uint_t i = 0; i < threads; i++)
         {
-            std::memset(BAPtrs[i], 0x0, (scale * maxmass * sizeof(UINT)));
-            std::memset(SAPtrs[i], 0x0, (speclen * sizeof(UINT)));
+            std::memset(BAPtrs[i], 0x0, (scale * maxmass * sizeof(uint_t)));
+            std::memset(SAPtrs[i], 0x0, (speclen * sizeof(uint_t)));
         }
     }
     else
@@ -277,15 +277,15 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
     }
 #else
 
-    UINT SAPtr[speclen] = {};
-    std::memset(index->ionIndex[chunk_number].bA, 0x0, (((params.scale * params.max_mass) + 1) * sizeof(UINT)));
+    uint_t SAPtr[speclen] = {};
+    std::memset(index->ionIndex[chunk_number].bA, 0x0, (((params.scale * params.max_mass) + 1) * sizeof(uint_t)));
 
 #endif /* USE_OMP */
 
     if (status == SLM_SUCCESS)
     {
-        UINT start_idx = chunk_number * index->chunksize;
-        UINT interval = index->chunksize;
+        uint_t start_idx = chunk_number * index->chunksize;
+        uint_t interval = index->chunksize;
 
         /* Check for last chunk */
         if (lastChunk == true && index->nChunks > 1)
@@ -296,23 +296,23 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
 #ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(dynamic, 1) /* schedule(dynamic, 1) */
 #endif /* USE_OMP */
-        for (UINT k = start_idx; k < (start_idx + interval); k++)
+        for (uint_t k = start_idx; k < (start_idx + interval); k++)
         {
             /* Filling point */
-            UINT nfilled = (k - start_idx) * speclen;
+            uint_t nfilled = (k - start_idx) * speclen;
 
 #ifdef USE_OMP
-            UINT *Spec = SAPtrs[omp_get_thread_num()];
-            UINT *bAPtr  = BAPtrs[omp_get_thread_num()];
+            uint_t *Spec = SAPtrs[omp_get_thread_num()];
+            uint_t *bAPtr  = BAPtrs[omp_get_thread_num()];
 #else
-            UINT *Spec = SAPtr;
-            UINT *bAPtr = index->ionIndex[chunk_number].bA;
+            uint_t *Spec = SAPtr;
+            uint_t *bAPtr = index->ionIndex[chunk_number].bA;
 #endif /* OPENMP */
 
             /* Extract peptide Information */
-            FLOAT pepMass = 0.0;
-            CHAR *seq = NULL;
-            UINT pepID = LBE_RevDist(k);
+            float_t pepMass = 0.0;
+            char_t *seq = NULL;
+            uint_t pepID = LBE_RevDist(k);
 
             /* Extract from pepEntries */
             pepEntry *entry = index->pepEntries + pepID;
@@ -328,18 +328,18 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
             else
             {
                 /* Generate the Mod. Theoretical Spectrum */
-                pepMass = UTILS_GenerateModSpectrum(seq, (UINT) peplen, Spec, entry->sites);
+                pepMass = UTILS_GenerateModSpectrum(seq, (uint_t) peplen, Spec, entry->sites);
             }
 
             /* If a legal peptide */
             if (pepMass >= minmass && pepMass <= maxmass)
             {
                 /* Sort by ion Series and Mass */
-//                UTILS_Sort<UINT>(Spec, half_len, false);
-//                UTILS_Sort<UINT>((Spec + half_len), half_len, false);
+//                UTILS_Sort<uint_t>(Spec, half_len, false);
+//                UTILS_Sort<uint_t>((Spec + half_len), half_len, false);
 
                 /* Fill the ions */
-                for (UINT ion = 0; ion < speclen; ion++)
+                for (uint_t ion = 0; ion < speclen; ion++)
                 {
                     /* Check if legal b-ion */
                     if (Spec[ion] >= (maxmass * scale))
@@ -359,19 +359,19 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
                  * FIXME: Should not be filled into the chunk
                  *  and be removed from peptide index as well
                  */
-                std::memset(&SpecArr[nfilled], 0x0, sizeof(UINT) * speclen);
+                std::memset(&SpecArr[nfilled], 0x0, sizeof(uint_t) * speclen);
                 bAPtr[0] += speclen; // Update the BA counter
             }
         }
 
 #ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule (static)
-        for (UINT i = 0; i < (UINT)(maxmass * scale); i++)
+        for (uint_t i = 0; i < (uint_t)(maxmass * scale); i++)
         {
             /* Initialize to zero */
             index->ionIndex[chunk_number].bA[i] = 0;
 
-            for (UINT j = 0; j < threads; j++)
+            for (uint_t j = 0; j < threads; j++)
             {
                 index->ionIndex[chunk_number].bA[i] += BAPtrs[j][i];
             }
@@ -400,38 +400,38 @@ STATUS DSLIM_ConstructChunk(UINT threads, Index *index, UINT chunk_number)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_SLMTransform(UINT threads, Index *index, UINT chunk_number)
+status_t DSLIM_SLMTransform(uint_t threads, Index *index, uint_t chunk_number)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     /* Check if this chunk is the last chunk */
-    UINT size = ((chunk_number == index->nChunks - 1) && (index->nChunks > 1))?
+    uint_t size = ((chunk_number == index->nChunks - 1) && (index->nChunks > 1))?
                  index->lastchunksize                                  :
                  index->chunksize;
 
-    UINT speclen = (index->pepIndex.peplen - 1) * params.maxz * iSERIES;
-    UINT *iAPtr = index->ionIndex[chunk_number].iA;
-    UINT iAsize = size * speclen;
+    uint_t speclen = (index->pepIndex.peplen - 1) * params.maxz * iSERIES;
+    uint_t *iAPtr = index->ionIndex[chunk_number].iA;
+    uint_t iAsize = size * speclen;
 
 #ifdef VALIDATE_SLM
-    UINT *integ = new UINT[size * speclen];
-    std::memcpy(integ, SpecArr, sizeof(UINT) * iAsize);
+    uint_t *integ = new uint_t[size * speclen];
+    std::memcpy(integ, SpecArr, sizeof(uint_t) * iAsize);
 #endif /* VALIDATE_SLM */
 
     /* Construct DSLIM.iA */
 #ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(static)
 #endif /* USE_OMP */
-    for (UINT k = 0; k < iAsize; k++)
+    for (uint_t k = 0; k < iAsize; k++)
     {
         iAPtr[k] = k;
     }
 
 #ifdef USE_OMP
     /* Parallel Key Value Sort */
-    KeyVal_Parallel<UINT>(SpecArr, iAPtr, iAsize, threads);
+    KeyVal_Parallel<uint_t>(SpecArr, iAPtr, iAsize, threads);
 #else
-    KeyVal_Serial<UINT>(SpecArr, iAPtr, iAsize);
+    KeyVal_Serial<uint_t>(SpecArr, iAPtr, iAsize);
 #endif /* USE_OMP */
 
     /* Check integrity of SLM-Transform */
@@ -441,7 +441,7 @@ STATUS DSLIM_SLMTransform(UINT threads, Index *index, UINT chunk_number)
 #ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(static)
 #endif /* USE_OMP */
-    for (UINT k = 1; k < iAsize; k++)
+    for (uint_t k = 1; k < iAsize; k++)
     {
         if (integ[iAPtr[k]] < integ[iAPtr[k - 1]])
         {
@@ -459,15 +459,15 @@ STATUS DSLIM_SLMTransform(UINT threads, Index *index, UINT chunk_number)
     return status;
 }
 
-STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs)
+status_t DSLIM_InitializeScorecard(Index *index, uint_t idxs)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     /* Get size of the chunk */
-    UINT sAize = params.spadmem / (BYISIZE * params.threads);
-    UINT sz2 = 0;
+    uint_t sAize = params.spadmem / (BYISIZE * params.threads);
+    uint_t sz2 = 0;
 
-    for (UINT ii = 0; ii < idxs; ii++)
+    for (uint_t ii = 0; ii < idxs; ii++)
     {
         if (index[ii].chunksize > sz2)
         {
@@ -483,19 +483,19 @@ STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs)
 #ifdef USE_OMP
 #pragma omp parallel for schedule(static, 1) num_threads(params.threads)
 #endif /* USE_OMP */
-        for (UINT thd = 0; thd < params.threads; thd++)
+        for (uint_t thd = 0; thd < params.threads; thd++)
         {
             Score[thd].byc = new BYC[sAize];
             memset(Score[thd].byc, 0x0, sizeof(BYC) * sAize);
 
             /* Initialize the histogram */
-            Score[thd].res.survival = new DOUBLE[1 + (MAX_HYPERSCORE * 10) + 1]; // +2 for accumulation
+            Score[thd].res.survival = new double_t[1 + (MAX_HYPERSCORE * 10) + 1]; // +2 for accumulation
 
             /* Evaluate to the nearest power of 2 */
-            UINT num = (params.topmatches == 0)? 1: params.topmatches;
-            num = (UINT)(floor(log2(num) + 0.999));
+            uint_t num = (params.topmatches == 0)? 1: params.topmatches;
+            num = (uint_t)(floor(log2(num) + 0.999));
 
-            std::memset(Score[thd].res.survival, 0x0, sizeof (DOUBLE) * (2 + MAX_HYPERSCORE * 10));
+            std::memset(Score[thd].res.survival, 0x0, sizeof (double_t) * (2 + MAX_HYPERSCORE * 10));
 
             /* Initialize the heap with size = pow(2, num) - 1 */
             Score[thd].res.topK.heap_init((1 << num) - 1);
@@ -522,31 +522,31 @@ STATUS DSLIM_InitializeScorecard(Index *index, UINT idxs)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_Optimize(Index *index, UINT chunk_number)
+status_t DSLIM_Optimize(Index *index, uint_t chunk_number)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
-    UINT *iAPtr = index->ionIndex[chunk_number].iA;
-    UINT *bAPtr = index->ionIndex[chunk_number].bA;
+    uint_t *iAPtr = index->ionIndex[chunk_number].iA;
+    uint_t *bAPtr = index->ionIndex[chunk_number].bA;
 
 #ifdef USE_OMP
-    UINT interval = 50 *params.scale;
-    UINT threads = params.threads;
+    uint_t interval = 50 *params.scale;
+    uint_t threads = params.threads;
 #endif /* USE_OMP */
 
 #ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(dynamic, interval)
 #endif /* USE_OMP */
     /* Stablize the entries in iAPtr */
-    for (UINT kk = 0; kk < (params.max_mass * params.scale); kk++)
+    for (uint_t kk = 0; kk < (params.max_mass * params.scale); kk++)
     {
-        UINT offset = bAPtr[kk];
-        UINT size = bAPtr[kk + 1] - offset;
+        uint_t offset = bAPtr[kk];
+        uint_t size = bAPtr[kk + 1] - offset;
 
         if (size > 1)
         {
             /* Stablize the KeyVal Sort */
-            UTILS_Sort<UINT>((iAPtr + offset), size, false);
+            UTILS_Sort<uint_t>((iAPtr + offset), size, false);
         }
 
     }
@@ -568,15 +568,15 @@ STATUS DSLIM_Optimize(Index *index, UINT chunk_number)
  * @status: Status of execution
  */
 #if 0
-STATUS DSLIM_Analyze(UINT threads, DOUBLE &avg, DOUBLE &std)
+status_t DSLIM_Analyze(uint_t threads, double_t &avg, double_t &std)
 {
-    STATUS status = SLM_SUCCESS;
-    DOUBLE sum_std = 0;
-    ULONGLONG truecount = 1;
+    status_t status = SLM_SUCCESS;
+    double_t sum_std = 0;
+    ull_t truecount = 1;
 
 #ifdef USE_OMP
-    DOUBLE stds[threads] = {};
-    ULONGLONG count[threads] = {};
+    double_t stds[threads] = {};
+    ull_t count[threads] = {};
 #endif /* USE_OMP */
 
     if (nchunks <= 1)
@@ -586,7 +586,7 @@ STATUS DSLIM_Analyze(UINT threads, DOUBLE &avg, DOUBLE &std)
 
     if (status == SLM_SUCCESS)
     {
-        DOUBLE *arr = new DOUBLE[(MAX_MASS * SCALE)+1];
+        double_t *arr = new double_t[(MAX_MASS * SCALE)+1];
 
         /* Trivial to include zeros or last value */
         arr[(MAX_MASS * SCALE)] = 0x0;
@@ -596,11 +596,11 @@ STATUS DSLIM_Analyze(UINT threads, DOUBLE &avg, DOUBLE &std)
 #ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(static)
 #endif /* USE_OMP */
-        for (UINT i = 1; i < (MAX_MASS * SCALE) -1; i++)
+        for (uint_t i = 1; i < (MAX_MASS * SCALE) -1; i++)
         {
             arr[i] = 0x0;
 
-            for (UINT j = 0; j < nchunks; j++)
+            for (uint_t j = 0; j < nchunks; j++)
             {
                 arr[i] += (dslim.pepChunks[j].bA[i+1] - dslim.pepChunks[j].bA[i]);
             }
@@ -619,7 +619,7 @@ STATUS DSLIM_Analyze(UINT threads, DOUBLE &avg, DOUBLE &std)
 
         /* Gather the counts to truecount */
 #ifdef USE_OMP
-        for (UINT kk = 0; kk < threads; kk++)
+        for (uint_t kk = 0; kk < threads; kk++)
         {
             truecount += count[kk];
         }
@@ -629,19 +629,19 @@ STATUS DSLIM_Analyze(UINT threads, DOUBLE &avg, DOUBLE &std)
 #ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(static)
 #endif /* USE_OMP */
-        for (UINT i = 1; i < (MAX_MASS * SCALE) - 1; i++)
+        for (uint_t i = 1; i < (MAX_MASS * SCALE) - 1; i++)
         {
-            DOUBLE mean = arr[i];
+            double_t mean = arr[i];
             arr[i] = 0x0;
 
             if (mean > 0)
             {
-                for (UINT j = 0; j < nchunks; j++)
+                for (uint_t j = 0; j < nchunks; j++)
                 {
-                    arr[i] += (((DOUBLE) dslim.pepChunks[j].bA[i+1]
-                            - (DOUBLE) dslim.pepChunks[j].bA[i] - mean)
-                            * ((DOUBLE) dslim.pepChunks[j].bA[i+1]
-                            - (DOUBLE) dslim.pepChunks[j].bA[i] - mean));
+                    arr[i] += (((double_t) dslim.pepChunks[j].bA[i+1]
+                            - (double_t) dslim.pepChunks[j].bA[i] - mean)
+                            * ((double_t) dslim.pepChunks[j].bA[i+1]
+                            - (double_t) dslim.pepChunks[j].bA[i] - mean));
                 }
 
                 arr[i] = sqrt(arr[i] / nchunks);
@@ -652,7 +652,7 @@ STATUS DSLIM_Analyze(UINT threads, DOUBLE &avg, DOUBLE &std)
 #ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(static)
 #endif /* USE_OMP */
-        for (UINT i = 0; i < MAX_MASS * SCALE; i++)
+        for (uint_t i = 0; i < MAX_MASS * SCALE; i++)
         {
 #ifdef USE_OMP
             stds[omp_get_thread_num()] += arr[i];
@@ -663,7 +663,7 @@ STATUS DSLIM_Analyze(UINT threads, DOUBLE &avg, DOUBLE &std)
 
 /* Gather the counts to truecount */
 #ifdef USE_OMP
-        for (UINT kk = 0; kk < threads; kk++)
+        for (uint_t kk = 0; kk < threads; kk++)
         {
             sum_std += stds[kk];
             stds[kk] = 0;
@@ -679,7 +679,7 @@ STATUS DSLIM_Analyze(UINT threads, DOUBLE &avg, DOUBLE &std)
 #ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(static)
 #endif /* USE_OMP */
-        for (UINT i = 0; i < MAX_MASS * SCALE; i++)
+        for (uint_t i = 0; i < MAX_MASS * SCALE; i++)
         {
 #ifdef USE_OMP
             stds[omp_get_thread_num()] += ((arr[i] - avg) * (arr[i] - avg));
@@ -690,7 +690,7 @@ STATUS DSLIM_Analyze(UINT threads, DOUBLE &avg, DOUBLE &std)
 
         /* Gather the counts to truecount */
 #ifdef USE_OMP
-        for (UINT kk = 0; kk < threads; kk++)
+        for (uint_t kk = 0; kk < threads; kk++)
         {
             sum_std += stds[kk];
         }
@@ -720,9 +720,9 @@ STATUS DSLIM_Analyze(UINT threads, DOUBLE &avg, DOUBLE &std)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS DSLIM_Deinitialize(Index *index)
+status_t DSLIM_Deinitialize(Index *index)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     /* Deallocate the Ion Index */
     status = DSLIM_DeallocateIonIndex(index);
@@ -733,10 +733,10 @@ STATUS DSLIM_Deinitialize(Index *index)
     return status;
 }
 
-STATUS DSLIM_DeallocateIonIndex(Index *index)
+status_t DSLIM_DeallocateIonIndex(Index *index)
 {
     /* Deallocate all the DSLIM chunks */
-    for (UINT chno = 0; chno < index->nChunks; chno++)
+    for (uint_t chno = 0; chno < index->nChunks; chno++)
     {
         SLMchunk curr_chunk = index->ionIndex[chno];
 
@@ -769,7 +769,7 @@ STATUS DSLIM_DeallocateIonIndex(Index *index)
     return SLM_SUCCESS;
 }
 
-STATUS DSLIM_DeallocatePepIndex(Index *index)
+status_t DSLIM_DeallocatePepIndex(Index *index)
 {
     if (index->pepEntries != NULL)
     {
@@ -796,7 +796,7 @@ STATUS DSLIM_DeallocatePepIndex(Index *index)
     return SLM_SUCCESS;
 }
 
-STATUS DSLIM_DeallocateSpecArr()
+status_t DSLIM_DeallocateSpecArr()
 {
     if (SpecArr != NULL)
     {
@@ -820,12 +820,12 @@ STATUS DSLIM_DeallocateSpecArr()
  * OUTPUT:
  * @status: status of execution
  */
-STATUS DSLIM_DeallocateSC()
+status_t DSLIM_DeallocateSC()
 {
     /* Free the Scorecard memory */
     if (Score != NULL)
     {
-        for (UINT thd = 0; thd < params.threads; thd++)
+        for (uint_t thd = 0; thd < params.threads; thd++)
         {
             delete[] Score[thd].byc;
             delete[] Score[thd].res.survival;
@@ -842,13 +842,13 @@ STATUS DSLIM_DeallocateSC()
     return SLM_SUCCESS;
 }
 
-INT DSLIM_GenerateIndex(Index *index, UINT key)
+int_t DSLIM_GenerateIndex(Index *index, uint_t key)
 {
-    INT value = -1;
+    int_t value = -1;
 
     DistPolicy policy = params.policy;
 
-    UINT csize = index->lclpepCnt;
+    uint_t csize = index->lclpepCnt;
 
     if (policy == _chunk)
     {

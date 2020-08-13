@@ -32,9 +32,9 @@ Scheduler::Scheduler()
     eSignal = false;
 
     /* Set to 25% of the total threads available */
-    maxIOThds = std::max((INT)1, (INT)(params.threads/4));
+    maxIOThds = std::max((int_t)1, (int_t)(params.threads/4));
 
-    dump = new lwqueue <THREAD *> (50, false);
+    dump = new lwqueue <thread_t *> (50, false);
 
     /* Lock for above queues */
     sem_init(&manage, 0, 1);
@@ -64,7 +64,7 @@ Scheduler::Scheduler()
     dispatchThread();
 }
 
-Scheduler::Scheduler(INT maxio, INT dumpsize)
+Scheduler::Scheduler(int_t maxio, int_t dumpsize)
 {
     /* Queues to track threads */
     maxIOThds = maxio;
@@ -72,7 +72,7 @@ Scheduler::Scheduler(INT maxio, INT dumpsize)
     eSignal = false;
     stopXtra = 0;
     minrate = 0.30;
-    dump = new lwqueue <THREAD *> (dumpsize, false);
+    dump = new lwqueue <thread_t *> (dumpsize, false);
 
     /* Lock for above queues */
     sem_init(&manage, 0, 1);
@@ -142,7 +142,7 @@ VOID Scheduler::flushDumpQueue()
 
     while (!dump->isEmpty())
     {
-        THREAD * pt = dump->front();
+        thread_t * pt = dump->front();
         dump->pop();
         waitForThread(pt);
         delete pt;
@@ -152,7 +152,7 @@ VOID Scheduler::flushDumpQueue()
     sem_post(&dumpQ);
 }
 
-DOUBLE Scheduler::forecastLASP(DOUBLE yt)
+double_t Scheduler::forecastLASP(double_t yt)
 {
     /* Increase the time interval value */
     t++;
@@ -189,13 +189,13 @@ DOUBLE Scheduler::forecastLASP(DOUBLE yt)
     return Ftplus1;
 }
 
-STATUS Scheduler::waitForThread(THREAD *thd)
+status_t Scheduler::waitForThread(thread_t *thd)
 {
     VOID *ptr = NULL;
     return pthread_join(*thd, &ptr);
 }
 
-DOUBLE Scheduler::forecastLASP(DOUBLE yt, DOUBLE deltaS)
+double_t Scheduler::forecastLASP(double_t yt, double_t deltaS)
 {
     /* Increase the time interval value */
     t++;
@@ -238,13 +238,13 @@ DOUBLE Scheduler::forecastLASP(DOUBLE yt, DOUBLE deltaS)
     return Ftplus1;
 }
 
-BOOL Scheduler::makeDecisions(DOUBLE yt, INT dec)
+BOOL Scheduler::makeDecisions(double_t yt, int_t dec)
 {
     BOOL decision = false;
 
     /* Calculate the current rate of change.
      * Add 0.01s in denominator to attenuate the small yt changes */
-    DOUBLE rate = (yt - ytminus1)/(ytminus1 + 0.01);
+    double_t rate = (yt - ytminus1)/(ytminus1 + 0.01);
 
     /* Add the next predicted rate of change */
     rate += (Ftplus1 - yt) / (yt + 0.01);
@@ -310,16 +310,16 @@ BOOL Scheduler::makeDecisions(DOUBLE yt, INT dec)
     return decision;
 }
 
-STATUS Scheduler::dispatchThread()
+status_t Scheduler::dispatchThread()
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     if (nIOThds < maxIOThds)
     {
         nIOThds += 1;
 
         /* Schedule the thread */
-        THREAD *ptr = new THREAD;
+        thread_t *ptr = new thread_t;
 
         if (ptr != NULL)
         {
@@ -337,11 +337,11 @@ STATUS Scheduler::dispatchThread()
     return status;
 }
 
-STATUS Scheduler::takeControl(VOID *argv)
+status_t Scheduler::takeControl(VOID *argv)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
-    THREAD *ptr = (THREAD *) argv;
+    thread_t *ptr = (thread_t *) argv;
 
     sem_wait(&dumpQ);
 
@@ -393,9 +393,9 @@ BOOL Scheduler::checkSignal()
     return val;
 }
 
-STATUS Scheduler::runManager(DOUBLE yt, INT dec)
+status_t Scheduler::runManager(double_t yt, int_t dec)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     /* The new value of signal is yt + yt -1
      * since input yt is only difference from
@@ -420,11 +420,11 @@ STATUS Scheduler::runManager(DOUBLE yt, INT dec)
     return status;
 }
 
-INT Scheduler::getNumActivThds()
+int_t Scheduler::getNumActivThds()
 {
     sem_wait(&manage);
 
-    INT val = nIOThds;
+    int_t val = nIOThds;
 
     sem_post(&manage);
 

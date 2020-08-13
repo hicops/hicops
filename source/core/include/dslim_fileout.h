@@ -26,10 +26,10 @@
 #include "slmerr.h"
 
 /* Function Definitions */
-STATUS    DFile_PrintPartials(UINT specid, Results *resPtr);
-STATUS    DFile_PrintScore(Index *index, UINT specid, FLOAT pmass,
-                           hCell* psm, DOUBLE e_x, UINT npsms);
-STATUS    DFile_InitFiles();
-STATUS    DFile_DeinitFiles();
+status_t    DFile_PrintPartials(uint_t specid, Results *resPtr);
+status_t    DFile_PrintScore(Index *index, uint_t specid, float_t pmass,
+                           hCell* psm, double_t e_x, uint_t npsms);
+status_t    DFile_InitFiles();
+status_t    DFile_DeinitFiles();
 
 #endif /* DSLIM_FILEOUT */

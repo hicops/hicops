@@ -30,20 +30,20 @@
 class DSLIM_Comm
 {
 private:
-    INT nBatches;
+    int_t nBatches;
 
-    INT *sizeArray;
-    INT *fileArray;
+    int_t *sizeArray;
+    int_t *fileArray;
 
-    INT myRXsize;
+    int_t myRXsize;
 
 public:
 
-    friend STATUS DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, expeRT *ePtr, hCell *CandidatePSMS, INT cpsmSize);
+    friend status_t DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, expeRT *ePtr, hCell *CandidatePSMS, int_t cpsmSize);
     DSLIM_Comm();
-    DSLIM_Comm(INT);
+    DSLIM_Comm(int_t);
     virtual ~DSLIM_Comm();
-    STATUS AddBatch(INT, INT, INT);
+    status_t AddBatch(int_t, int_t, int_t);
 };
 
 #endif /* USE_MPI */

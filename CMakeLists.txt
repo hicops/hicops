@@ -14,20 +14,6 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
     message(WARNING "In-source build")
 endif()
 
-option(TIMEMORY_CCACHE_BUILD "Enable ccache build" OFF)
-mark_as_advanced(TIMEMORY_CCACHE_BUILD)
-if(TIMEMORY_CCACHE_BUILD)
-    find_program(TIMEMORY_CCACHE_EXE ccache PATH_SUFFIXES bin)
-    if(TIMEMORY_CCACHE_EXE)
-        if(NOT EXISTS "${TIMEMORY_CCACHE_EXE}")
-            message(WARNING
-                "TIMEMORY_CCACHE_BUILD is ON but TIMEMORY_CCACHE_EXE (${TIMEMORY_CCACHE_EXE}) does not exist!")
-        else()
-            set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${TIMEMORY_CCACHE_EXE}")
-        endif()
-    endif()
-endif()
-
 cmake_policy(SET CMP0048 NEW)
 cmake_policy(SET CMP0042 NEW)
 if(NOT CMAKE_VERSION VERSION_LESS 3.13)
@@ -46,6 +32,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "Build position independent co
 ##########################################################################################
 option(USE_OMP "Enable OpenMP in hicops" ON)
 option(USE_MPI "Enable MPI in hicops" ON)
+option(USE_TIMEMORY "Enable timemory profiling" OFF)
 
 find_package(OpenMP)
 find_package(MPI)
@@ -61,6 +48,12 @@ if(USE_MPI AND MPI_FOUND)
     list(APPEND _MPI MPI::MPI_CXX)
     include_directories(SYSTEM ${MPI_INCLUDE_PATH})
     target_compile_definitions(MPI::MPI_CXX INTERFACE USE_MPI)
+endif()
+
+if (USE_TIMEMORY)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_TIMEMORY")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_TIMEMORY")
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -DUSE_TIMEMORY")
 endif()
 
 #----------------------------------------------------------------------------------------#
