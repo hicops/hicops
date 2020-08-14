@@ -15,6 +15,7 @@ if (USE_TIMEMORY)
     target_compile_definitions(cpu-fp-double INTERFACE ROOFLINE_FP_BYTES=8)
 endif()
 
+# timemory headers are available
 add_executable(hicops ${_EXCLUDE}
     ${CMAKE_CURRENT_LIST_DIR}/hicops.cpp)
 
@@ -23,7 +24,10 @@ if(USE_MPI AND MPI_FOUND)
 endif()
 
 target_include_directories(hicops PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../core/include)
-target_link_libraries(hicops hicops-core ${MPI_LIBRARIES} timemory-hicops)
+target_link_libraries(hicops hicops-core ${MPI_LIBRARIES})
+if (USE_TIMEMORY)
+    target_link_libraries(hicops timemory-hicops)
+endif()
 
 set_target_properties(hicops-core
     PROPERTIES

@@ -32,7 +32,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "Build position independent co
 ##########################################################################################
 option(USE_OMP "Enable OpenMP in hicops" ON)
 option(USE_MPI "Enable MPI in hicops" ON)
-option(USE_TIMEMORY "Enable timemory profiling" OFF)
+option(USE_TIMEMORY "Enable Timemory instrumentation" OFF)
 
 find_package(OpenMP)
 find_package(MPI)

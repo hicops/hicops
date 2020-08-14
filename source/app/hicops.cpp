@@ -59,6 +59,7 @@ status_t SLM_Main(int_t argc, char_t* argv[])
     /* Benchmarking */
     auto start = std::chrono::system_clock::now();
     auto end   = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_seconds;
 #endif
 
     if (argc < 2)
@@ -200,97 +201,97 @@ status_t SLM_Main(int_t argc, char_t* argv[])
         /* Count the number of ">" entries in FASTA */
         if (status == SLM_SUCCESS)
         {
-            // start = chrono::system_clock::now();
+            MARK(start);
 
             status = LBE_CountPeps((char_t *) dbfile.c_str(), (slm_index + peplen-minlen), peplen);
 
-            // end = chrono::system_clock::now();
+            MARK(end);
 
             /* Compute Duration */
-            // elapsed_seconds = end - start;
+            ELAPSED(elapsed_seconds, start, end);
 
             if (params.myid == 0)
             {
-                std::cout << "Peptide Counting status:\t" << status << std::endl;
-                //std::cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << std::endl << std::endl;
+                std::cout << "DONE: Peptide Counting:\t" << status << std::endl << std::endl;
+                PRINT_ELAPSED(elapsed_seconds);
             }
         }
 
         if (status == SLM_SUCCESS)
         {
-            // start = chrono::system_clock::now();
+            MARK(start);
 
             status  = LBE_CreatePartitions((slm_index + peplen-minlen));
 
-            // end = chrono::system_clock::now();
+            MARK(end);
 
             /* Compute Duration */
-            // elapsed_seconds = end - start;
+            ELAPSED(elapsed_seconds, start, end);
 
             if (params.myid == 0)
             {
-                std::cout << "Partitioned with status:\t" << status << std::endl;
-                //std::cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << std::endl << std::endl;
+                std::cout << "DONE: Partitioning:\t" << status << std::endl << std::endl;
+                PRINT_ELAPSED(elapsed_seconds);
             }
         }
 
         /* Initialize internal structures */
         if (status == SLM_SUCCESS)
         {
-            // start = chrono::system_clock::now();
+            MARK(start);
 
             /* Initialize the LBE */
             status = LBE_Initialize((slm_index + peplen - minlen));
 
-            // end = chrono::system_clock::now();
+            MARK(end);
 
             /* Compute Duration */
-            // elapsed_seconds = end - start;
+            ELAPSED(elapsed_seconds, start, end);
 
             if (params.myid == 0)
             {
-                std::cout << "Initialized with status:\t" << status << std::endl;
-                //std::cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << std::endl << std::endl;
+                std::cout << "DONE: Initialize:\t" << status << std::endl << std::endl;
+                PRINT_ELAPSED(elapsed_seconds);
             }
         }
 
         /* Distribution Algorithm */
         if (status == SLM_SUCCESS)
         {
-            // start = chrono::system_clock::now();
+            MARK(start);
 
             /* Distribute peptides among cores */
             status = LBE_Distribute((slm_index + peplen - minlen));
 
-            // end = chrono::system_clock::now();
+            MARK(end);
 
             /* Compute Duration */
-            // elapsed_seconds = end - start;
+            ELAPSED(elapsed_seconds, start, end);
 
             if (params.myid == 0)
             {
-                std::cout << "Internal Partitions with status:\t" << status << std::endl;
-                //std::cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << std::endl << std::endl;
+                std::cout << "DONE: Internal Partition:\t" << status << std::endl << std::endl;
+                PRINT_ELAPSED(elapsed_seconds);
             }
         }
 
         /* DSLIM-Transform */
         if (status == SLM_SUCCESS)
         {
-            // start = chrono::system_clock::now();
+            MARK(start);
 
             /* Construct DSLIM by SLM Transformation */
             status = DSLIM_Construct((slm_index + peplen - minlen));
 
-            // end = chrono::system_clock::now();
+            MARK(end);
 
             /* Compute Duration */
-            // elapsed_seconds = end - start;
+            ELAPSED(elapsed_seconds, start, end);
 
             if (params.myid == 0)
             {
-                std::cout << "CFIR Index with status:\t\t" << status << std::endl;
-                //std::cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << std::endl << std::endl;
+                std::cout << "DONE: Indexing:\t" << status << std::endl << std::endl;
+                PRINT_ELAPSED(elapsed_seconds);
             }
         }
     }
@@ -307,16 +308,22 @@ status_t SLM_Main(int_t argc, char_t* argv[])
         status = DSLIM_InitializeScorecard(slm_index, (maxlen - minlen + 1));
     }
 
-    if (status == SLM_SUCCESS && params.myid == 0)
-    {
-        //elapsed_seconds = chrono::system_clock::now() - start_tim;
-        //std::cout << "Indexing Time: " << elapsed_seconds.count() << "s" << std::endl;
-    }
-
 #if defined (USE_TIMEMORY)
     // stop measurements for indexing
     index_inst.stop();
 #endif
+
+    // print indexing time
+    if (status == SLM_SUCCESS && params.myid == 0)
+    {
+#if defined (USE_TIMEMORY)
+        auto wc = index_inst.get<wall_clock>();
+        std::cout << "Indexing Time: " << wc->get() << "s" << std::endl;
+#else
+        ELAPSED(elapsed_seconds, start_tim, chrono::system_clock::now());
+        std::cout << "Indexing Time: " << ELAPSED_SECONDS(elapsed_seconds) << "s" << std::endl;
+#endif // USE_TIMEMORY
+    }
 
     // --------------------------------------------------------------------------------------------- //
 
@@ -331,14 +338,14 @@ status_t SLM_Main(int_t argc, char_t* argv[])
     // Perform the distributed database search 
     if (status == SLM_SUCCESS)
     {
-        // start = chrono::system_clock::now();
+        MARK(start);
         status = DSLIM_SearchManager(slm_index);
         //elapsed_seconds = chrono::system_clock::now() - start;
 
         if (params.myid == 0)
         {
             std::cout << "Partial Search with status:\t" << status << std::endl;
-            //std::cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << std::endl << std::endl;
+            PRINT_ELAPSED(elapsed_seconds);
         }
     }
 
@@ -374,14 +381,14 @@ status_t SLM_Main(int_t argc, char_t* argv[])
     /* Compute the distributed scores */
     if (status == SLM_SUCCESS)
     {
-        // start = chrono::system_clock::now();
+        MARK(start);
         status = DSLIM_DistScoreManager();
         //elapsed_seconds = chrono::system_clock::now() - start;
 
         if (params.myid == 0)
         {
             std::cout << "\nResult Merging with status:\t" << status << std::endl;
-            //std::cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << std::endl << std::endl;
+            PRINT_ELAPSED(elapsed_seconds);
         }
     }
 #if defined (USE_TIMEMORY)
@@ -442,7 +449,7 @@ status_t SLM_Main(int_t argc, char_t* argv[])
     auto es = tt->get();
 #else
         elapsed_seconds = end_tim - start_tim;
-        auto es = elapsed_seconds.count();
+        auto es = ELAPSED_SECONDS(elapsed_seconds);;
 #endif
         std::cout << "Total Elapsed Time: " << es << "s" << std::endl;
 

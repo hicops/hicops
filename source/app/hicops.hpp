@@ -63,3 +63,15 @@ using wall_tuple_t = tim::auto_tuple<wall_clock>;
 #ifdef USE_MPI
 #include <mpi.h>
 #endif /* USE_MPI */
+
+#if defined (USE_TIMEMORY)
+#define MARK(mark)
+#define ELAPSED(es, m1, m2)
+#define ELAPSED_SECONDS(es)
+#define PRINT_ELAPSED(es)
+#else
+#define MARK(mark)                mark = chrono::system_clock::now()
+#define ELAPSED(es, m1, m2)       es = m2 - m1
+#define ELAPSED_SECONDS(es)       es.count()
+#define PRINT_ELAPSED(es)         std::cout << "Elapsed Time: " << es.count() << "s" << std::endl << std::endl
+#endif
