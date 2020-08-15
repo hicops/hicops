@@ -41,7 +41,7 @@ SLM_vMods      gModInfo;
 extern gParams params;
 
 /* Amino Acids Masses */
-FLOAT AAMass[26] = {
+float_t AAMass[26] = {
                     71.03712,   // A
                     NAA,        // B
                     103.00919,  // C
@@ -71,7 +71,7 @@ FLOAT AAMass[26] = {
                     };
 
 /* Static Mods for Amino Acids */
-FLOAT StatMods[26] = {
+float_t StatMods[26] = {
                       0,        // A
                       0,        // B
                       57.021464,// C + 57.02
@@ -115,13 +115,13 @@ FLOAT StatMods[26] = {
  * OUTPUT:
  * @mass: Precursor mass of peptide
  */
-FLOAT UTILS_CalculatePepMass(AA *seq, UINT len)
+float_t UTILS_CalculatePepMass(AA *seq, uint_t len)
 {
     /* Initialize mass to H2O */
-    FLOAT mass = H2O;
+    float_t mass = H2O;
 
     /* Calculate peptide mass */
-    for (UINT l = 0; l < len; l++)
+    for (uint_t l = 0; l < len; l++)
     {
         mass += AAMass[AAidx(seq[l])];
     }
@@ -142,9 +142,9 @@ FLOAT UTILS_CalculatePepMass(AA *seq, UINT len)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS UTILS_InitializeModInfo(SLM_vMods *vMods)
+status_t UTILS_InitializeModInfo(SLM_vMods *vMods)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     gModInfo = *vMods;
 
@@ -163,24 +163,24 @@ STATUS UTILS_InitializeModInfo(SLM_vMods *vMods)
  * OUTPUT:
  * @mass: Precursor mass of modified peptide
  */
-FLOAT UTILS_CalculateModMass(AA *seq, UINT len, UINT vModInfo)
+float_t UTILS_CalculateModMass(AA *seq, uint_t len, uint_t vModInfo)
 {
     /* Initialize mass to H2O */
-    FLOAT mass = H2O;
+    float_t mass = H2O;
 
     /* Calculate peptide mass */
-    for (UINT l = 0; l < len; l++)
+    for (uint_t l = 0; l < len; l++)
     {
         mass += AAMass[AAidx(seq[l])];
     }
 
     /* Add the mass of modifications present in the peptide */
-    UINT start = 0x0F;
-    UINT modNum = vModInfo & start;
+    uint_t start = 0x0F;
+    uint_t modNum = vModInfo & start;
 
     while (modNum != 0)
     {
-        mass += ((FLOAT)(gModInfo.vmods[modNum - 1].modMass)/params.scale);
+        mass += ((float_t)(gModInfo.vmods[modNum - 1].modMass)/params.scale);
         start = (start << 4);
         modNum = ((vModInfo & start) >> start);
     }

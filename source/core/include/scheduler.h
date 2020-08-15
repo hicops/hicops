@@ -28,61 +28,61 @@ class Scheduler
 private:
 
     /* Number of IO threads */
-    INT nIOThds;
-    INT maxIOThds;
+    int_t nIOThds;
+    int_t maxIOThds;
 
     BOOL eSignal;
 
     /* Queues to track threads */
-    lwqueue <THREAD *> *dump;
+    lwqueue <thread_t *> *dump;
 
     /* Lock for above queues */
-    LOCK manage;
-    LOCK dumpQ;
+    lock_t manage;
+    lock_t dumpQ;
 
     /* Thresholds */
     BOOL stopXtra;
-    DOUBLE maxpenalty;
-    DOUBLE minrate;
-    DOUBLE waitSincelast;
+    double_t maxpenalty;
+    double_t minrate;
+    double_t waitSincelast;
 
     /* Variables for forecasting penalties  */
-    DOUBLE Ftplus1;   /* Forecast  */
-    DOUBLE t;         /* Time instance */
-    DOUBLE yt;        /* Current observation */
-    DOUBLE ytminus1;  /* Last Observation */
+    double_t Ftplus1;   /* Forecast  */
+    double_t t;         /* Time instance */
+    double_t yt;        /* Current observation */
+    double_t ytminus1;  /* Last Observation */
 
     /* Intermediate equation variables */
-    DOUBLE St;
-    DOUBLE bt;
-    DOUBLE Stminus1;
-    DOUBLE btminus1;
+    double_t St;
+    double_t bt;
+    double_t Stminus1;
+    double_t btminus1;
 
     /* LASP hyper-parameters */
-    DOUBLE alpha;
-    DOUBLE alpha1;
-    DOUBLE gamma;
-    DOUBLE gamma1;
+    double_t alpha;
+    double_t alpha1;
+    double_t gamma;
+    double_t gamma1;
 
 
     /* Private Functions */
-    STATUS waitForThread(THREAD *);
+    status_t waitForThread(thread_t *);
     VOID   flushDumpQueue();
-    DOUBLE forecastLASP(DOUBLE yt);
-    DOUBLE forecastLASP(DOUBLE yt, DOUBLE deltaS);
-    STATUS dispatchThread();
-    BOOL   makeDecisions(DOUBLE yt, INT decisions);
+    double_t forecastLASP(double_t yt);
+    double_t forecastLASP(double_t yt, double_t deltaS);
+    status_t dispatchThread();
+    BOOL   makeDecisions(double_t yt, int_t decisions);
 
 public:
     Scheduler();
-    Scheduler(INT, INT);
+    Scheduler(int_t, int_t);
     virtual ~Scheduler();
 
     VOID   ioComplete();
-    INT    getNumActivThds();
+    int_t    getNumActivThds();
     BOOL   checkPreempt();
-    STATUS takeControl(VOID *argv);
-    STATUS runManager(DOUBLE yt, INT dec);
+    status_t takeControl(VOID *argv);
+    status_t runManager(double_t yt, int_t dec);
     VOID   waitForCompletion();
     BOOL   checkSignal();
 };

@@ -17,15 +17,7 @@
  *
  */
 
-#include "lbe.h"
-
-#ifdef DISTMEM
-#include <mpi.h>
-#endif /* DISTMEM */
-
-#ifdef _PROFILE
- #include <gperftools/profiler.h>
-#endif /* _PROFILE */
+#include "hicops.hpp"
 
 using namespace std;
 
@@ -33,21 +25,14 @@ using namespace std;
 Index *slm_index = NULL;
 DIR*    dir;
 dirent* pdir;
-vector<STRING> queryfiles;
-STRING dbfile;
+vector<string_t> queryfiles;
+string_t dbfile;
 
 gParams params;
 
-#ifdef BENCHMARK
-static DOUBLE duration = 0;
-DOUBLE compute = 0;
-DOUBLE fileio = 0;
-DOUBLE memory = 0;
-#endif /* BENCHMARK */
+static status_t ParseParams(char_t* paramfile);
 
-static STATUS ParseParams(CHAR* paramfile);
-
-/* FUNCTION: SLM_Main (main)
+/* FUNCTION: main
  *
  * DESCRIPTION: Driver Application
  *
@@ -56,50 +41,100 @@ static STATUS ParseParams(CHAR* paramfile);
  * OUTPUT
  * @status: Status of execution
  */
-STATUS SLM_Main(INT argc, CHAR* argv[])
+status_t main(int_t argc, char_t* argv[])
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
-    /* Print start time */
-    auto start_tim = chrono::system_clock::now();
-    time_t start_time = chrono::system_clock::to_time_t(start_tim);
+    // file extensions to find
+    const string_t patt = {".ms2"};
+    const char_t extension[] = ".peps";
 
     /* Benchmarking */
-    auto start = chrono::system_clock::now();
-    auto end   = chrono::system_clock::now();
-    chrono::duration<double> elapsed_seconds = end - start;
+    double_t elapsed_seconds;
 
-    STRING patt = {".ms2"};
-    CHAR extension[] = ".peps";
+    /* Print start time */
+    MARK_START(start_tim);
+    const time_t start_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
+#if defined (USE_TIMEMORY)
+    // reset any previous configuration
+    bundle_t::reset();
+
+    // get extra tools from the environment variable
+    auto env_tool = tim::get_env<std::string>("HICOPS_INST_COMPONENTS", "");
+    auto env_enum = tim::enumerate_components(tim::delimit(env_tool));
+    env_enum.erase(std::remove_if(env_enum.begin(), env_enum.end(),
+                                  [](int c) { return c == WALL_CLOCK || 
+                                                     c == CPU_UTIL   ||  
+                                                     c == THREAD_CPU_UTIL; }),
+                                  env_enum.end());
+
+    // configure PAPI events
+    const std::string def_papi_evts = "PAPI_TOT_INS, PAPI_TOT_CYC, PAPI_L3_TCM, PAPI_L2_TCA, PAPI_L3_TCA";
+    std::string papi_evts = tim::get_env<std::string>("HICOPS_PAPI_EVENTS", def_papi_evts);
+    tim::settings::papi_events() = papi_evts;
+
+    // configure the bundle
+    tim::configure<bundle_t>(env_enum);
+
+    // start a timer
+    time_tuple_t total("total_time");
+#endif
 
     if (argc < 2)
     {
-        cout << "ABORT: Missing arguments\n";
-        cout << "Format: ./hicops.exe <uparams.txt>\n";
+        std::cout << "ABORT: Missing parameters\n";
+        std::cout << "Format: mpirun -np <k> hicops <uparams.txt>\n";
         status = ERR_INVLD_PARAM;
         exit (status);
     }
 
-#ifdef DISTMEM
-    status = MPI_Init(&argc, &argv);
-#endif /* MPI_INCLUDED */
+#ifdef USE_MPI
+#    if defined (USE_TIMEMORY)
+    // timemory MPI settings
+    tim::settings::mpi_thread() = true;
+    tim::settings::mpi_thread_type() = "multiple";
 
+    // init MPI via timemory
+    tim::mpi::initialize(argc, argv);
+
+#   else
+    // init MPI
+    int provided = -1;
+    status = MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
+    
+    // Check if desired MPI level available 
+    if (provided != MPI_THREAD_MULTIPLE)
+    {
+        std::cout << "************************ Warning: ************************\n";
+                "Your MPI distribution does not support MPI_THREAD_MULTIPLE\n";
+                "HiCOPS may not work properly\n";
+                "**********************************************************\n";
+    }
+#   endif // USE_TIMEMORY
+#endif // USE_MPI
+
+    // --------------------------------------------------------------------------------------------- //
+
+    //
+    // Initialization
+    //
+
+#if defined (USE_TIMEMORY)
+    tim::timemory_init(argc, argv);
+#endif // USE_TIMEMORY
+
+    // parse parameters
     if (status == SLM_SUCCESS)
     {
-        /* Parse the parameters */
         status = ParseParams(argv[1]);
     }
 
-#ifdef _PROFILE
-    ProfilerStart("C:/work/lbe.prof");
-#endif /* _PROFILE */
-
+    // Print HiCOPS header after the ranks have been assigned
     if (params.myid == 0)
     {
-        /* Print Header */
         LBE_PrintHeader();
-
-        cout << endl << "Start Time: " << ctime(&start_time) << endl;
+        std::cout << std::endl << "Start Time: " << ctime(&start_time) << std::endl;
     }
 
     /* Add all the query files to the vector */
@@ -110,7 +145,7 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     {
         while ((pdir = readdir(dir)) != NULL)
         {
-            STRING cfile(pdir->d_name);
+            string_t cfile(pdir->d_name);
 
             /* Add the matching files */
             if (cfile.find(patt/* patt[0] */) != std::string::npos)
@@ -138,35 +173,44 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     }
 
     /* Create local variables to avoid trouble */
-    UINT minlen = params.min_len;
-    UINT maxlen = params.max_len;
+    uint_t minlen = params.min_len;
+    uint_t maxlen = params.max_len;
 
     /* Create (max - min + 1) instances of SLM_Index */
     if (status == SLM_SUCCESS)
     {
         slm_index = new Index[maxlen - minlen + 1];
+
+        /* Check if successful memory allocation */
+        if (slm_index == NULL)
+        {
+            status = ERR_INVLD_MEMORY;
+        }
     }
 
-    /* Check if successful memory allocation */
-    if (slm_index == NULL)
-    {
-        status = ERR_INVLD_MEMORY;
-    }
-
-    /* Initialize the mod information */
+    // Initialize the mod information
     if (status == SLM_SUCCESS)
     {
         status = UTILS_InitializeModInfo(&params.vModInfo);
     }
 
-    /* Initialize the ModGen Engine */
+    // Initialize the ModGen Engine
     if (status == SLM_SUCCESS)
     {
         status = MODS_Initialize();
     }
 
-    /* Do not forget to set dbfile as private in OpenMP loop */
-    for (UINT peplen = minlen; peplen <= maxlen; peplen++)
+    // --------------------------------------------------------------------------------------------- //
+
+    //
+    // Indexing
+    //
+
+#if defined (USE_TIMEMORY)
+    time_tuple_t index_inst("indexing");
+#endif
+
+    for (uint_t peplen = minlen; peplen <= maxlen; peplen++)
     {
         dbfile = params.dbpath + "/" + std::to_string(peplen) + extension;
 
@@ -176,102 +220,102 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         /* Count the number of ">" entries in FASTA */
         if (status == SLM_SUCCESS)
         {
-            start = chrono::system_clock::now();
+            MARK_START(lbe_cnt);
 
-            status = LBE_CountPeps((CHAR *) dbfile.c_str(), (slm_index + peplen-minlen), peplen);
+            status = LBE_CountPeps((char_t *) dbfile.c_str(), (slm_index + peplen-minlen), peplen);
 
-            end = chrono::system_clock::now();
+            MARK_END(lbe_cnt);
 
             /* Compute Duration */
-            elapsed_seconds = end - start;
+            elapsed_seconds = ELAPSED_SECONDS(lbe_cnt);
 
             if (params.myid == 0)
             {
-                cout << "Counting with status:\t" << status << endl;
-                cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                std::cout << "DONE: Peptide Counting:\tstatus: " << status << std::endl << std::endl;
+                PRINT_ELAPSED(elapsed_seconds);
             }
         }
 
         if (status == SLM_SUCCESS)
         {
-            start = chrono::system_clock::now();
+            MARK_START(parts);
 
             status  = LBE_CreatePartitions((slm_index + peplen-minlen));
 
-            end = chrono::system_clock::now();
+            MARK_END(parts);
 
             /* Compute Duration */
-            elapsed_seconds = end - start;
+            elapsed_seconds = ELAPSED_SECONDS(parts);
 
             if (params.myid == 0)
             {
-                cout << "Partitioned with status:\t" << status << endl;
-                cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                std::cout << "DONE: Partition:\tstatus: " << status << std::endl << std::endl;
+                PRINT_ELAPSED(elapsed_seconds);
             }
         }
 
         /* Initialize internal structures */
         if (status == SLM_SUCCESS)
         {
-            start = chrono::system_clock::now();
+            MARK_START(lbe_init);
 
             /* Initialize the LBE */
             status = LBE_Initialize((slm_index + peplen - minlen));
 
-            end = chrono::system_clock::now();
+            MARK_END(lbe_init);
 
             /* Compute Duration */
-            elapsed_seconds = end - start;
+            elapsed_seconds = ELAPSED_SECONDS(lbe_init);
 
             if (params.myid == 0)
             {
-                cout << "Initialized with status:\t" << status << endl;
-                cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                std::cout << "DONE: Initialize:\tstatus: " << status << std::endl << std::endl;
+                PRINT_ELAPSED(elapsed_seconds);
             }
         }
 
         /* Distribution Algorithm */
         if (status == SLM_SUCCESS)
         {
-            start = chrono::system_clock::now();
+            MARK_START(lbe_dist);
 
             /* Distribute peptides among cores */
             status = LBE_Distribute((slm_index + peplen - minlen));
 
-            end = chrono::system_clock::now();
+            MARK_END(lbe_dist);
 
             /* Compute Duration */
-            elapsed_seconds = end - start;
+            elapsed_seconds = ELAPSED_SECONDS(lbe_dist);
 
             if (params.myid == 0)
             {
-                cout << "Internal Partitions with status:\t" << status << endl;
-                cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                std::cout << "DONE: Internal Partition:\tstatus: " << status << std::endl << std::endl;
+                PRINT_ELAPSED(elapsed_seconds);
             }
         }
 
         /* DSLIM-Transform */
         if (status == SLM_SUCCESS)
         {
-            start = chrono::system_clock::now();
+            MARK_START(dslim);
 
             /* Construct DSLIM by SLM Transformation */
             status = DSLIM_Construct((slm_index + peplen - minlen));
 
-            end = chrono::system_clock::now();
+            MARK_END(dslim);
 
             /* Compute Duration */
-            elapsed_seconds = end - start;
+            elapsed_seconds = ELAPSED_SECONDS(dslim);
 
             if (params.myid == 0)
             {
-                cout << "CFIR Index with status:\t\t" << status << endl;
-                cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                std::cout << "DONE: Indexing:\tstatus: " << status << std::endl << std::endl;
+                PRINT_ELAPSED(elapsed_seconds);
             }
         }
     }
 
-    /* We don't need the original data anymore - Deallocate */
+        /* We don't need the original data anymore */
     if (status == SLM_SUCCESS)
     {
         status = DSLIM_DeallocateSpecArr();
@@ -283,23 +327,44 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         status = DSLIM_InitializeScorecard(slm_index, (maxlen - minlen + 1));
     }
 
+#if defined (USE_TIMEMORY)
+    // stop measurements for indexing
+    index_inst.stop();
+#endif
+
+    // print indexing time
     if (status == SLM_SUCCESS && params.myid == 0)
     {
-        elapsed_seconds = chrono::system_clock::now() - start_tim;
-        cout << "Indexing Time: " << elapsed_seconds.count() << "s" << endl;
+#if defined (USE_TIMEMORY)
+        auto wc = index_inst.get<wall_clock>();
+        std::cout << "Indexing Time: " << wc->get() << "s" << std::endl;
+#else
+        std::cout << "Indexing Time: " << ELAPSED_SECONDS(start_tim) << "s" << std::endl;
+#endif // USE_TIMEMORY
     }
 
-    /* Perform the distributed database search */
+    // --------------------------------------------------------------------------------------------- //
+
+    //
+    // Distributed Search
+    //
+#if defined (USE_TIMEMORY)
+    time_tuple_t search_inst("search");
+    mem_tuple_t  search_mem_inst("search_mem");
+#endif // USE_TIMEMORY
+
+    // Perform the distributed database search 
     if (status == SLM_SUCCESS)
     {
-        start = chrono::system_clock::now();
+        MARK_START(dslim_search);
         status = DSLIM_SearchManager(slm_index);
-        elapsed_seconds = chrono::system_clock::now() - start;
+        MARK_END(dslim_search);
+        elapsed_seconds = ELAPSED_SECONDS(dslim_search);
 
         if (params.myid == 0)
         {
-            cout << "Partial Search with status:\t" << status << endl;
-            cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+            std::cout << "DONE: Search:\tstatus: " << status << std::endl;
+            PRINT_ELAPSED(elapsed_seconds);
         }
     }
 
@@ -311,36 +376,65 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
     }
 
     /* De-initialize the ion index */
-    for (UINT peplen = minlen; peplen <= maxlen; peplen++)
+    for (uint_t peplen = minlen; peplen <= maxlen; peplen++)
     {
         status = DSLIM_DeallocateIonIndex(slm_index + peplen - minlen);
     }
 
+#if defined (USE_TIMEMORY)
+    // stop instrumentation
+    search_inst.stop();
+    search_mem_inst.stop();
+#endif
+
+    // --------------------------------------------------------------------------------------------- //
+    
+    //
+    // Merging
+    //
+#if defined (USE_TIMEMORY)
+    time_tuple_t merge_inst("merge");
+    mem_tuple_t merge_mem_inst("merge_mem");
+#endif
+
     /* Compute the distributed scores */
     if (status == SLM_SUCCESS)
     {
-        start = chrono::system_clock::now();
+        MARK_START(dist_score);
         status = DSLIM_DistScoreManager();
-        elapsed_seconds = chrono::system_clock::now() - start;
+        MARK_END(dist_score);
+
+        elapsed_seconds = ELAPSED_SECONDS(dist_score);
 
         if (params.myid == 0)
         {
-            cout << "\nResult Merging with status:\t" << status << endl;
-            cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+            std::cout << "\nDONE: Merge:\tstatus: " << status << std::endl;
+            PRINT_ELAPSED(elapsed_seconds);
         }
     }
+#if defined (USE_TIMEMORY)
+    // stop instrumentation
+    merge_inst.stop();
+    merge_mem_inst.stop();
+#endif
+
+    // --------------------------------------------------------------------------------------------- //
+
+    //
+    // Deinitialize
+    //
 
     /* De-initialize the remaining index */
     if (status == SLM_SUCCESS)
     {
-        for (UINT peplen = minlen; peplen <= maxlen; peplen++)
+        for (uint_t peplen = minlen; peplen <= maxlen; peplen++)
         {
             status = DSLIM_DeallocatePepIndex(slm_index + peplen - minlen);
         }
     }
 
 #ifdef DIAGNOSE2
-        cout << "SCProc DONE@ " << params.myid << endl;
+        std::cout << "SCProc DONE@ " << params.myid << std::endl;
 #endif /* DIAGNOSE2 */
 
     /* Delete the index Handle */
@@ -350,51 +444,53 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
         slm_index = NULL;
     }
 
-#ifdef DISTMEM
-
+#ifdef USE_MPI
     if (status == SLM_SUCCESS && params.nodes > 1)
     {
+#   if defined (USE_TIMEMORY)
+        tim::mpi::barrier();
+#   else
         /* Wait for everyone to synchronize */
         status = MPI_Barrier(MPI_COMM_WORLD);
+#endif // USE_TIMEMORY
     }
-
-    status = MPI_Finalize();
-
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
     /* Print end time */
-    auto end_tim = chrono::system_clock::now();
-    time_t end_time = chrono::system_clock::to_time_t(end_tim);
+    const auto end_tim = chrono::system_clock::now();
+    const time_t end_time = chrono::system_clock::to_time_t(end_tim);
 
     if (params.myid == 0)
     {
-        cout << endl << "End Time: " << ctime(&end_time) << endl;
-        elapsed_seconds = end_tim - start_tim;
-        cout << "Total Elapsed Time: " << elapsed_seconds.count() << "s" << endl;
+        std::cout << std::endl << "End Time: " << ctime(&end_time) << std::endl;
+#if defined (USE_TIMEMORY)
+
+    total.stop();
+    auto tt = total.get<wall_clock>();
+    auto es = tt->get();
+#else
+        auto es = ELAPSED_SECONDS(start_tim);
+#endif
+        std::cout << "Total Elapsed Time: " << es << "s" << std::endl;
 
         /* Print final program status */
-        cout << "\n\nEnded with status: \t\t" << status << endl << endl;
+        std::cout << "\n\nEnded with status: \t\t" << status << std::endl << std::endl;
     }
-
-#ifdef BENCHMARK
-    cout << "File I/O Time: \t\t\t" << fileio << 's' << endl;
-    cout << "Compute Time: \t\t\t" << compute << 's' << endl;
-    cout << "Memory Time: \t\t\t" << memory << 's' << endl << endl;
-
-    DOUBLE total_time = (fileio + compute + memory) / 100;
-
-    cout << "% File I/O Time: \t\t" << fileio/total_time << '%' << endl;
-    cout << "% Compute  Time: \t\t" << compute/total_time << '%' << endl;
-    cout << "% Memory   Time: \t\t" << memory/total_time << '%' << endl;
-#endif /* BENCHMARK */
-
-#ifdef _PROFILE
-    ProfilerFlush();
-    ProfilerStop();
-#endif /* _PROFILE */
 
     /* Make sure stdout is empty at the end */
     fflush(stdout);
+
+#if defined (USE_TIMEMORY)
+    tim::timemory_finalize();
+#endif
+
+#ifdef USE_MPI
+#   if defined (USE_TIMEMORY)
+    tim::mpi::finalize();
+#   else
+    status = MPI_Finalize();
+#   endif // USE_TIMEMORY
+#endif // USE_MPI
 
     /* Return the status of execution */
     return status;
@@ -409,11 +505,11 @@ STATUS SLM_Main(INT argc, CHAR* argv[])
  * OUTPUT
  * @status: Status of execution
  */
-static STATUS ParseParams(CHAR* paramfile)
+static status_t ParseParams(char_t* paramfile)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
-    STRING line;
+    string_t line;
 
     ifstream pfile(paramfile);
 
@@ -456,11 +552,11 @@ static STATUS ParseParams(CHAR* paramfile)
         /* Get the max threads to use */
         getline(pfile, line);
 
-#ifdef _OPENMP
+#ifdef USE_OMP
         params.threads = std::atoi(line.c_str());
 #else
         params.threads = 1;
-#endif /* _OPENMP */
+#endif /* USE_OMP */
 
         /* Get the min peptide length */
         getline(pfile, line);
@@ -476,7 +572,7 @@ static STATUS ParseParams(CHAR* paramfile)
 
         /* Get the fragment mass tolerance */
         getline(pfile, line);
-        params.dF = (UINT)(std::atof(line.c_str()) * params.scale);
+        params.dF = (uint_t)(std::atof(line.c_str()) * params.scale);
 
         /* Get the precursor mass tolerance */
         getline(pfile, line);
@@ -520,7 +616,7 @@ static STATUS ParseParams(CHAR* paramfile)
 
         /* Cutoff intensity ratio */
         getline(pfile, line);
-        params.min_int = (INT)(std::atof(line.c_str()) * (DOUBLE)(params.base_int));
+        params.min_int = (int_t)(std::atof(line.c_str()) * (double_t)(params.base_int));
 
         /* Get the scorecard + scratch memory */
         getline(pfile, line);
@@ -546,7 +642,7 @@ static STATUS ParseParams(CHAR* paramfile)
 
         /* Get number of mods */
         getline(pfile, line);
-        params.vModInfo.num_vars = std::atoi((const CHAR *) line.c_str());
+        params.vModInfo.num_vars = std::atoi((const char_t *) line.c_str());
 
         /* If no mods then init to 0 M 0 */
         if (params.vModInfo.num_vars == 0)
@@ -557,11 +653,11 @@ static STATUS ParseParams(CHAR* paramfile)
         {
             /* Get max vmods per peptide sequence */
             getline(pfile, line);
-            params.vModInfo.vmods_per_pep = std::atoi((const CHAR *) line.c_str());
+            params.vModInfo.vmods_per_pep = std::atoi((const char_t *) line.c_str());
             params.modconditions = std::to_string(params.vModInfo.vmods_per_pep);
 
             /* Fill in information for each vmod */
-            for (USHORT md = 0; md < params.vModInfo.num_vars; md++)
+            for (ushort_t md = 0; md < params.vModInfo.num_vars; md++)
             {
                 /* Get and set the modAAs */
                 getline(pfile, line);
@@ -572,11 +668,11 @@ static STATUS ParseParams(CHAR* paramfile)
                 params.modconditions += " " + line;
 
                 std::strncpy((char *) params.vModInfo.vmods[md].residues, (const char *) line.c_str(),
-                        std::min(4, (const int) line.length()));
+                        std::min(4, static_cast<const int>(line.length())));
 
                 /* get and set the modmass */
                 getline(pfile, line);
-                params.vModInfo.vmods[md].modMass = (UINT) (std::atof((const char *) line.c_str()) * params.scale);
+                params.vModInfo.vmods[md].modMass = (uint_t) (std::atof((const char *) line.c_str()) * params.scale);
 
                 /* Get and set the modAAs_per_peptide */
                 getline(pfile, line);
@@ -586,22 +682,22 @@ static STATUS ParseParams(CHAR* paramfile)
             }
         }
 
-        params.perf = new DOUBLE[params.nodes];
+        params.perf = new double_t[params.nodes];
 
         /* Initialize to 1.0 for now */
-        for (UINT nn = 0; nn < params.nodes; nn++)
+        for (uint_t nn = 0; nn < params.nodes; nn++)
         {
             params.perf[nn] = 1.0;
         }
 
-#ifdef DISTMEM
-        status = MPI_Comm_rank(MPI_COMM_WORLD, (INT *)&params.myid);
-        status = MPI_Comm_size(MPI_COMM_WORLD, (INT *)&params.nodes);
+#ifdef USE_MPI
+        status = MPI_Comm_rank(MPI_COMM_WORLD, (int_t *)&params.myid);
+        status = MPI_Comm_size(MPI_COMM_WORLD, (int_t *)&params.nodes);
 #else
         params.myid = 0;
         params.nodes = 1;
 
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
         pfile.close();
     }

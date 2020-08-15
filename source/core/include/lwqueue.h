@@ -34,10 +34,10 @@ class lwqueue
 {
 private:
     T     *arr;
-    INT filled;
-    INT    cap;
-    INT   head;
-    INT   tail;
+    int_t filled;
+    int_t    cap;
+    int_t   head;
+    int_t   tail;
     sem_t lock;
     BOOL isSem;
 
@@ -54,7 +54,7 @@ public:
         isSem = true;
     }
 
-    lwqueue(INT dcap)
+    lwqueue(int_t dcap)
     {
         cap = dcap;
         arr = new T[cap];
@@ -84,7 +84,7 @@ public:
         }
     }
 
-    lwqueue(INT dcap, BOOL sem)
+    lwqueue(int_t dcap, BOOL sem)
     {
         cap = dcap;
         arr = new T[cap];
@@ -102,7 +102,7 @@ public:
         }
     }
 
-    lwqueue(T *ar, INT sz, BOOL sem)
+    lwqueue(T *ar, int_t sz, BOOL sem)
     {
         cap = sz;
         arr = ar;
@@ -137,19 +137,19 @@ public:
         }
     }
 
-    inline INT plusOne(INT idx)
+    inline int_t plusOne(int_t idx)
     {
         return ((idx + 1) % cap);
     }
 
-    inline INT minusOne(INT idx)
+    inline int_t minusOne(int_t idx)
     {
         return ((idx - 1) % cap);
     }
 
-    STATUS push(T elmnt)
+    status_t push(T elmnt)
     {
-        STATUS status = SLM_SUCCESS;
+        status_t status = SLM_SUCCESS;
 
         if (isSem)
         {
@@ -176,9 +176,9 @@ public:
         return status;
     }
 
-    STATUS pop()
+    status_t pop()
     {
-        STATUS status;
+        status_t status;
 
         if (isSem)
         {
@@ -294,9 +294,9 @@ public:
         return res;
     }
 
-    INT size()
+    int_t size()
     {
-        INT res = 0;
+        int_t res = 0;
 
         if (isSem)
         {

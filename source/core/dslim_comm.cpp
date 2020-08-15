@@ -19,7 +19,7 @@
 
 #include "dslim_comm.h"
 
-#ifdef DISTMEM
+#ifdef USE_MPI
 
 /* Global params */
 extern gParams params;
@@ -28,14 +28,14 @@ DSLIM_Comm::DSLIM_Comm()
 {
     nBatches = RXBUFFERSIZE / (QCHUNK * sizeof(partRes));
 
-    fileArray = new INT[nBatches];
-    sizeArray = new INT[nBatches];
+    fileArray = new int_t[nBatches];
+    sizeArray = new int_t[nBatches];
 
     nBatches = 0;
     myRXsize = 0;
 }
 
-DSLIM_Comm::DSLIM_Comm(INT tbatches)
+DSLIM_Comm::DSLIM_Comm(int_t tbatches)
 {
     auto nodes = params.nodes;
     auto remaining = (tbatches % nodes);
@@ -49,8 +49,8 @@ DSLIM_Comm::DSLIM_Comm(INT tbatches)
 
     if (nBatches > 0)
     {
-        fileArray = new INT[nBatches];
-        sizeArray = new INT[nBatches];
+        fileArray = new int_t[nBatches];
+        sizeArray = new int_t[nBatches];
     }
 
     nBatches = 0;
@@ -66,7 +66,7 @@ DSLIM_Comm::~DSLIM_Comm()
     myRXsize = 0;
 }
 
-STATUS DSLIM_Comm::AddBatch(INT batchNum, INT batchSize, INT fileID)
+status_t DSLIM_Comm::AddBatch(int_t batchNum, int_t batchSize, int_t fileID)
 {
     auto nodes = params.nodes;
 
@@ -84,4 +84,4 @@ STATUS DSLIM_Comm::AddBatch(INT batchNum, INT batchSize, INT fileID)
     return SLM_SUCCESS;
 }
 
-#endif /* DISTMEM */
+#endif /* USE_MPI */

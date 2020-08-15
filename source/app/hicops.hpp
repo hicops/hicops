@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Muhammad Haseeb, Fahad Saeed
+ * Copyright (C) 2019  Muhammad Haseeb, Fahad Saeed
  * Florida International University, Miami, FL
  *
  * This program is free software: you can redistribute it and/or modify
@@ -13,23 +13,16 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  *
  */
 
-#ifndef INCLUDE_DSLIM_FILEOUT_H_
-#define INCLUDE_DSLIM_FILEOUT_H_
+#pragma once
 
-#include <sstream>
-#include "common.h"
-#include "slm_dsts.h"
-#include "slmerr.h"
+#include "lbe.h"
 
-/* Function Definitions */
-status_t    DFile_PrintPartials(uint_t specid, Results *resPtr);
-status_t    DFile_PrintScore(Index *index, uint_t specid, float_t pmass,
-                           hCell* psm, double_t e_x, uint_t npsms);
-status_t    DFile_InitFiles();
-status_t    DFile_DeinitFiles();
+#include "hicops_instr.hpp"
 
-#endif /* DSLIM_FILEOUT */
+#ifdef USE_MPI
+#include <mpi.h>
+#endif /* USE_MPI */

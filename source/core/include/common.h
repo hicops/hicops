@@ -35,13 +35,13 @@
 #include "config.h"
 #include "slmerr.h"
 
-#ifdef _OPENMP
+#ifdef USE_OMP
 #include <omp.h>
 #endif
 
-#ifdef DISTMEM
+#ifdef USE_MPI
 #include <mpi.h>
-#endif /* DISTMEM */
+#endif /* USE_MPI */
 
 /* Set/Get the bit for modification site in a peptide */
 #define MODSITE(x)                       (1 << (x))
@@ -54,37 +54,37 @@
 #define True                             true
 #define False                            false
 
-/* typedef the data types */
-typedef int STATUS;
-typedef int INT;
-typedef long long LONGLONG;
-typedef short SHORT;
-typedef long LONG;
-typedef char  CHAR;
-typedef void VOID;
-typedef bool BOOL;
-typedef double DOUBLE;
-typedef std::string STRING;
+/* alias the data types */
+using status_t = int;
+using int_t = int;
+using longlong_t = long long;
+using short_t = short;
+using LONG = long;
+using char_t = char;
+using VOID = void;
+using BOOL = bool;
+using double_t = double;
+using string_t = std::string;
 
 /* Unsigned data types */
-typedef unsigned int UINT;
-typedef unsigned int IDX;
-typedef unsigned int ID;
-typedef unsigned long ULONG;
-typedef unsigned long long ULONGLONG;
-typedef unsigned short USHORT;
-typedef unsigned char UCHAR;
-typedef float FLOAT;
+using uint_t = unsigned int;
+using IDX  = unsigned int;
+using ID =  unsigned int;
+using ulong_t  = unsigned long;
+using ull_t = unsigned long long;
+using ushort_t = unsigned short;
+using uchar_t = unsigned char;
+using float_t  = float;
 
-typedef unsigned int CHG;
-typedef unsigned short* SLM_SC;
+using CHG = unsigned int;
+using SLM_SC = unsigned short*;
 
-typedef char  AA;         // Amino Acid
-typedef double PEAK;      // m/z of a fragement (peak)
-typedef double INTENSITY; // Intensity of a fragment (peak)
-typedef double* SPECTRUM; // Theoretical Spectrum
+using AA = char;          // Amino Acid
+using PEAK = double;      // m/z of a fragement (peak)
+using intensity_t = double; // Intensity of a fragment (peak)
+using SPECTRUM = double*; // Theoretical Spectrum
 
-typedef pthread_t THREAD;
-typedef sem_t     LOCK;
+using  thread_t = pthread_t;
+using  lock_t = sem_t;
 
 #endif /* INCLUDE_COMMON_H_ */

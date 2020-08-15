@@ -41,5 +41,5 @@
  * OUTPUT:
  * @cumulative: Number of mods
  */
-ULONGLONG  MODS_ModCounter();
+ull_t  MODS_ModCounter();
 

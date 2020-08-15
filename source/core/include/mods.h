@@ -40,7 +40,7 @@
  * OUTPUT:
  * @cumulative: Number of mods
  */
-ULONGLONG  MODS_ModCounter(Index *index);
+ull_t  MODS_ModCounter();
 
 /*
  * FUNCTION: MODS_GenerateMods
@@ -56,6 +56,6 @@ ULONGLONG  MODS_ModCounter(Index *index);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS MODS_GenerateMods(Index * index);
+status_t MODS_GenerateMods(Index * index);
 
-STATUS MODS_Initialize();
+status_t MODS_Initialize();

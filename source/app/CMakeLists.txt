@@ -1,19 +1,24 @@
 
+project(hicops LANGUAGES C CXX)
+
+# timemory headers are available
 add_executable(hicops ${_EXCLUDE}
     ${CMAKE_CURRENT_LIST_DIR}/hicops.cpp)
 
-target_include_directories(hicops PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../core/include)
-
-target_link_libraries(hicops PRIVATE hicops-core)
-target_link_libraries(hicops PRIVATE ${MPI_LIBRARIES})
-
-if(USE_MPI)
-    if(MPI_FOUND)
-        target_compile_options(hicops PUBLIC -DDISTMEM)
-    endif()
+if(USE_MPI AND MPI_FOUND)
+    target_compile_options(hicops PUBLIC -DUSE_MPI)
 endif()
 
-set_target_properties(hicops PROPERTIES INSTALL_RPATH_USE_LINK_PATH ON)
+target_include_directories(hicops PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../core/include)
+target_link_libraries(hicops hicops-core ${MPI_LIBRARIES})
+
+set_target_properties(hicops-core
+    PROPERTIES
+        CXX_STANDARD 14
+        CXX_STANDARD_REQUIRED YES
+        CXX_EXTENSIONS NO
+        INSTALL_RPATH_USE_LINK_PATH ON
+)
 
 # installation
 install(TARGETS hicops DESTINATION ${CMAKE_INSTALL_LIBDIR})

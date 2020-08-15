@@ -30,9 +30,9 @@
 #include "slm_dsts.h"
 #include "keyval.h"
 
-#define BITSET(x, bit)                      ((x) |  ((ULONGLONG)((ULONGLONG)1 << (bit)))
-#define BITCLR(x, bit)                      ((x) & ~((ULONGLONG)((ULONGLONG)1 << (bit)))
-#define ISBITSET(x,bit)                     ((x) &  ((ULONGLONG)((ULONGLONG)1 << (bit))))
+#define BITSET(x, bit)                      ((x) |  ((ull_t)((ull_t)1 << (bit)))
+#define BITCLR(x, bit)                      ((x) & ~((ull_t)((ull_t)1 << (bit)))
+#define ISBITSET(x,bit)                     ((x) &  ((ull_t)((ull_t)1 << (bit))))
 
 
 /*
@@ -48,7 +48,7 @@
  * OUTPUT: none
  */
 template <class Num>
-void   UTILS_Sort(Num *data, UINT size, bool descending = false)
+void   UTILS_Sort(Num *data, uint_t size, bool descending = false)
 {
     if (descending == false)
     {
@@ -73,7 +73,7 @@ void   UTILS_Sort(Num *data, UINT size, bool descending = false)
  * OUTPUT: none
  */
 template <class Num>
-void   UTILS_ParallelSort(Num *data, UINT size, bool descending = false)
+void   UTILS_ParallelSort(Num *data, uint_t size, bool descending = false)
 {
     if (descending == false)
     {
@@ -96,7 +96,7 @@ void   UTILS_ParallelSort(Num *data, UINT size, bool descending = false)
  * OUTPUT:
  * @procs: Number of processors
  */
-UINT   UTILS_GetNumProcs();
+uint_t   UTILS_GetNumProcs();
 
 /*
  * FUNCTION: UTILS_Factorial
@@ -109,7 +109,7 @@ UINT   UTILS_GetNumProcs();
  * OUTPUT:
  * @factorial : the factorial of the input number n
  */
-ULONGLONG UTILS_Factorial(ULONGLONG);
+ull_t UTILS_Factorial(ull_t);
 
 /*
  * FUNCTION: UTILS_Shuffle
@@ -124,7 +124,7 @@ ULONGLONG UTILS_Factorial(ULONGLONG);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS UTILS_Shuffle(UINT *, UINT );
+status_t UTILS_Shuffle(uint_t *, uint_t );
 
 /*
  * FUNCTION: UTILS_ShuffleI
@@ -139,7 +139,7 @@ STATUS UTILS_Shuffle(UINT *, UINT );
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS UTILS_ShuffleI(UINT *, UINT, ULONGLONG);
+status_t UTILS_ShuffleI(uint_t *, uint_t, ull_t);
 
 /*
  * FUNCTION: UTILS_GenerateSpectrum
@@ -154,7 +154,7 @@ STATUS UTILS_ShuffleI(UINT *, UINT, ULONGLONG);
  * OUTPUT:
  * @mass: Precursor mass of peptide
  */
-FLOAT  UTILS_GenerateSpectrum(CHAR *, UINT, UINT *);
+float_t  UTILS_GenerateSpectrum(char_t *, uint_t, uint_t *);
 
 /*
  * FUNCTION: UTILS_CalculatePepMass
@@ -168,7 +168,7 @@ FLOAT  UTILS_GenerateSpectrum(CHAR *, UINT, UINT *);
  * OUTPUT:
  * @mass: Precursor mass of peptide
  */
-FLOAT UTILS_CalculatePepMass(AA *, UINT);
+float_t UTILS_CalculatePepMass(AA *, uint_t);
 
 #ifdef VMODS
 
@@ -183,7 +183,7 @@ FLOAT UTILS_CalculatePepMass(AA *, UINT);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS UTILS_InitializeModInfo(STRING);
+status_t UTILS_InitializeModInfo(string_t);
 
 /*
  * FUNCTION: UTILS_InitializeModInfo
@@ -196,7 +196,7 @@ STATUS UTILS_InitializeModInfo(STRING);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS UTILS_InitializeModInfo(SLM_vMods *);
+status_t UTILS_InitializeModInfo(SLM_vMods *);
 
 /*
  * FUNCTION: UTILS_CalculateModMass
@@ -211,7 +211,7 @@ STATUS UTILS_InitializeModInfo(SLM_vMods *);
  * OUTPUT:
  * @mass: Precursor mass of modified peptide
  */
-FLOAT UTILS_CalculateModMass(AA *, UINT, UINT);
+float_t UTILS_CalculateModMass(AA *, uint_t, uint_t);
 
 /*
  * FUNCTION: UTILS_GenerateModSpectrum
@@ -227,7 +227,7 @@ FLOAT UTILS_CalculateModMass(AA *, UINT, UINT);
  * OUTPUT:
  * @mass: Precursor mass of modified peptide
  */
-FLOAT UTILS_GenerateModSpectrum(CHAR *, UINT, UINT *, modAA);
+float_t UTILS_GenerateModSpectrum(char_t *, uint_t, uint_t *, modAA);
 
 #endif /* VMODS */
 

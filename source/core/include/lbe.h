@@ -30,8 +30,6 @@
 #include "dslim.h"
 #include "msquery.h"
 
-#define SLM_Main               main
-
 /*
  * FUNCTION: LBE_Initialize
  *
@@ -45,7 +43,7 @@
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_Initialize(Index *index);
+status_t LBE_Initialize(Index *index);
 
 /*
  * FUNCTION: LBE_Deinitialize
@@ -58,9 +56,9 @@ STATUS LBE_Initialize(Index *index);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_Deinitialize(Index *index);
+status_t LBE_Deinitialize(Index *index);
 
-STATUS LBE_GeneratePeps(Index *index);
+status_t LBE_GeneratePeps(Index *index);
 /*
  * FUNCTION: LBE_Distribute
  *
@@ -74,7 +72,7 @@ STATUS LBE_GeneratePeps(Index *index);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_Distribute(Index *index);
+status_t LBE_Distribute(Index *index);
 
 /*
  * FUNCTION: LBE_RevDist
@@ -103,11 +101,11 @@ STATUS LBE_Distribute(Index *index);
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS LBE_CountPeps(CHAR *filename, Index *index, UINT explen);
+status_t LBE_CountPeps(char_t *filename, Index *index, uint_t explen);
 
-STATUS LBE_CreatePartitions(Index *index);
+status_t LBE_CreatePartitions(Index *index);
 
-BOOL LBE_ApplyPolicy(Index *index,  BOOL pepmod, UINT key);
+BOOL LBE_ApplyPolicy(Index *index,  BOOL pepmod, uint_t key);
 
 /*
  * FUNCTION: LBE_PrintHeader

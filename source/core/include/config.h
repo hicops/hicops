@@ -24,17 +24,6 @@
 
 /* Contains MACROS that configure SLM Index build */
 
-/* Manually switch _OPENMP */
-//#undef _OPENMP
-
-/* Manually switch MPI */
-//#undef DISTMEM
-
-//#define DIAGNOSE
-
-/* Switch the benchmarking */
-//#define BENCHMARK
-
 #define TAILFIT
 
 #define MAX_SEQ_LEN              60
@@ -45,7 +34,7 @@
 /* How many query spectra per batch */
 #define QCHUNK                   10000
 
-/* Precision to inter-convert between FLOAT and INT
+/* Precision to inter-convert between float_t and int_t
  * for Tx/Rx purposes
  */
 #define PRECISION                1000000

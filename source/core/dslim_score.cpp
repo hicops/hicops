@@ -20,19 +20,19 @@
 #include "dslim_score.h"
 #include "dslim_fileout.h"
 
-#ifdef DISTMEM
+#ifdef USE_MPI
 
 using namespace std;
 
 MPI_Datatype resultF;
-STRING fn;
+string_t fn;
 
 extern gParams params;
 extern VOID *DSLIM_Score_Thread_Entry(VOID *);
 
 DSLIM_Score::DSLIM_Score()
 {
-    INT nodes = params.nodes;
+    int_t nodes = params.nodes;
 
     threads = params.threads;
 
@@ -50,12 +50,12 @@ DSLIM_Score::DSLIM_Score()
 
     /* Data size that I expect to
      * receive from other processes */
-    rxSizes = new INT[nodes];
-    txSizes = new INT[nodes];
+    rxSizes = new int_t[nodes];
+    txSizes = new int_t[nodes];
 
     /* Set all to zero */
-    std::memset(rxSizes, 0x0, (sizeof(INT) * (nodes)));
-    std::memset(txSizes, 0x0, (sizeof(INT) * (nodes)));
+    std::memset(rxSizes, 0x0, (sizeof(int_t) * (nodes)));
+    std::memset(txSizes, 0x0, (sizeof(int_t) * (nodes)));
 
     /* key-values */
     keys     = NULL;
@@ -65,7 +65,7 @@ DSLIM_Score::DSLIM_Score()
     InitDataTypes();
 
     /* Communication threads */
-    comm_thd = new THREAD;
+    comm_thd = new thread_t;
 
     /* Create the comm. thread */
     pthread_create(comm_thd, NULL, &DSLIM_Score_Thread_Entry, this);
@@ -75,7 +75,7 @@ DSLIM_Score::DSLIM_Score()
 
 DSLIM_Score::DSLIM_Score(BData *bd)
 {
-    INT nodes = params.nodes;
+    int_t nodes = params.nodes;
 
     threads = params.threads;
 
@@ -93,14 +93,14 @@ DSLIM_Score::DSLIM_Score(BData *bd)
 
     /* Data size that I expect to
      * receive from other processes */
-    rxSizes = new INT[nodes];
-    txSizes = new INT[nodes];
+    rxSizes = new int_t[nodes];
+    txSizes = new int_t[nodes];
 
     if (rxSizes != NULL && txSizes != NULL)
     {
         /* Set all to zero */
-        std::memset(rxSizes, 0x0, (sizeof(INT) * nodes));
-        std::memset(txSizes, 0x0, (sizeof(INT) * nodes));
+        std::memset(rxSizes, 0x0, (sizeof(int_t) * nodes));
+        std::memset(txSizes, 0x0, (sizeof(int_t) * nodes));
     }
     else
     {
@@ -110,7 +110,7 @@ DSLIM_Score::DSLIM_Score(BData *bd)
     myRXsize = 0;
 
     /* Compute myRXsize */
-    for (INT kk = 0; kk < nBatches; kk++)
+    for (int_t kk = 0; kk < nBatches; kk++)
     {
         myRXsize += sizeArray[kk];
     }
@@ -122,7 +122,7 @@ DSLIM_Score::DSLIM_Score(BData *bd)
     if (myRXsize > 0)
     {
         TxValues = new fResult[myRXsize];
-        keys = new INT[myRXsize];
+        keys = new int_t[myRXsize];
     }
     else
     {
@@ -133,7 +133,7 @@ DSLIM_Score::DSLIM_Score(BData *bd)
     InitDataTypes();
 
     /* Communication threads */
-    comm_thd = new THREAD;
+    comm_thd = new thread_t;
 
     /* Create the comm thread */
     pthread_create(comm_thd, NULL, &DSLIM_Score_Thread_Entry, this);
@@ -209,12 +209,12 @@ DSLIM_Score::~DSLIM_Score()
     return;
 }
 
-STATUS DSLIM_Score::CombineResults()
+status_t DSLIM_Score::CombineResults()
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     /* Each node sent its sample */
-    const INT nSamples = params.nodes;;
+    const int_t nSamples = params.nodes;;
     auto startSpec= 0;
     ifstream *fhs = NULL;
     ebuffer  *iBuffs = NULL;
@@ -231,7 +231,7 @@ STATUS DSLIM_Score::CombineResults()
     {
         auto bSize = sizeArray[batchNum];
 
-        for (INT saa = 0; saa < nSamples; saa++)
+        for (int_t saa = 0; saa < nSamples; saa++)
         {
             fn = params.datapath + "/" + std::to_string(vbatch) + "_"
                     + std::to_string(saa) + ".dat";
@@ -240,8 +240,8 @@ STATUS DSLIM_Score::CombineResults()
 
             if (fhs[saa].is_open())
             {
-                fhs[saa].read((CHAR *)iBuffs[saa].packs, bSize * sizeof(partRes));
-                fhs[saa].read(iBuffs[saa].ibuff, bSize * 128 * sizeof(USHORT));
+                fhs[saa].read((char_t *)iBuffs[saa].packs, bSize * sizeof(partRes));
+                fhs[saa].read(iBuffs[saa].ibuff, bSize * 128 * sizeof(ushort_t));
 
                 if (fhs[saa].fail())
                 {
@@ -254,24 +254,24 @@ STATUS DSLIM_Score::CombineResults()
             fn.clear();
         }
 
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for schedule (dynamic, 4) num_threads(params.threads)
-#endif /* _OPENMP */
-        for (INT spec = 0; spec < bSize; spec++)
+#endif /* USE_OMP */
+        for (int_t spec = 0; spec < bSize; spec++)
         {
-            INT thno = omp_get_thread_num();
+            int_t thno = omp_get_thread_num();
 
             /* Results pointer to use */
             expeRT *expPtr = this->ePtr + thno;
 
-            INT cpsms = 0;
+            int_t cpsms = 0;
 
             /* Record locators */
-            INT key = params.nodes;
-            INT maxhypscore = -1;
+            int_t key = params.nodes;
+            int_t maxhypscore = -1;
 
             /* For all samples, update the histogram */
-            for (INT sno = 0; sno < nSamples; sno++)
+            for (int_t sno = 0; sno < nSamples; sno++)
             {
                 /* Pointer to Result sample */
                 partRes *sResult = iBuffs[sno].packs + spec;
@@ -303,9 +303,9 @@ STATUS DSLIM_Score::CombineResults()
             fResult *psm = &TxValues[startSpec + spec];
 
             /* Need further processing only if enough results */
-            if (key < (INT) params.nodes && cpsms >= (INT) params.min_cpsm)
+            if (key < (int_t) params.nodes && cpsms >= (int_t) params.min_cpsm)
             {
-                DOUBLE e_x = params.expect_max;
+                double_t e_x = params.expect_max;
 
 #ifdef TAILFIT
                 /* Model the survival function */
@@ -324,12 +324,12 @@ STATUS DSLIM_Score::CombineResults()
                     psm->npsms = cpsms;
 
                     /* Must be an atomic update */
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp atomic update
                     txSizes[key] += 1;
 #else
                     txSizes[key] += 1;
-#endif /* _OPENMP */
+#endif /* USE_OMP */
 
                     /* Update the key */
                     keys[startSpec + spec] = key;
@@ -356,7 +356,7 @@ STATUS DSLIM_Score::CombineResults()
         startSpec += sizeArray[batchNum];
 
         /* Remove the files when no longer needed */
-        for (INT saa = 0; saa < nSamples; saa++)
+        for (int_t saa = 0; saa < nSamples; saa++)
         {
             fn = params.workspace + "/" + std::to_string(vbatch) + "_" + std::to_string(saa)
                     + ".dat";
@@ -364,7 +364,7 @@ STATUS DSLIM_Score::CombineResults()
             if (fhs[saa].is_open())
             {
                 fhs[saa].close();
-                std::remove((const CHAR *) fn.c_str());
+                std::remove((const char_t *) fn.c_str());
             }
 
             fn.clear();
@@ -384,12 +384,12 @@ STATUS DSLIM_Score::CombineResults()
     if (myRXsize > 0)
     {
         /* Sort the TxValues by keys (mchID) */
-        KeyVal_Parallel<INT, fResult>(keys, TxValues, myRXsize, params.threads);
+        KeyVal_Parallel<int_t, fResult>(keys, TxValues, myRXsize, params.threads);
     }
     else
     {
         /* Set all sizes to zero */
-        for (UINT ky = 0; ky < params.nodes - 1; ky++)
+        for (uint_t ky = 0; ky < params.nodes - 1; ky++)
         {
             txSizes[ky] = 0;
         }
@@ -400,20 +400,20 @@ STATUS DSLIM_Score::CombineResults()
     return status;
 }
 
-STATUS DSLIM_Score::ScatterScores()
+status_t DSLIM_Score::ScatterScores()
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     /* Get the number of nodes - 1 */
-    INT nodes   = params.nodes;
-    INT cumulate = 0;
+    int_t nodes   = params.nodes;
+    int_t cumulate = 0;
 
     /* MPI pointers */
     MPI_Request *txRqsts  = new MPI_Request [nodes];
-    INT         *txStats  = new INT[nodes];
+    int_t         *txStats  = new int_t[nodes];
 
     /* Fill the txStats with zeros - not available */
-    for (INT kk = 0; kk < nodes; kk++)
+    for (int_t kk = 0; kk < nodes; kk++)
     {
         txStats[kk] = 1;
     }
@@ -431,14 +431,14 @@ STATUS DSLIM_Score::ScatterScores()
     if (status == SLM_SUCCESS)
     {
         /* Wait 500ms between each loop */
-         for (INT cumulate = 0; cumulate < nodes; usleep(500000))
+         for (int_t cumulate = 0; cumulate < nodes; usleep(500000))
          {
              cumulate = 0;
 
-             for (INT ll = 0; ll < nodes; ll ++)
+             for (int_t ll = 0; ll < nodes; ll ++)
              {
                  /* Only check if not already received */
-                 if (txStats[ll] == 0 && ll != (INT)params.myid)
+                 if (txStats[ll] == 0 && ll != (int_t)params.myid)
                  {
  #ifdef DIAGNOSE2
                      cout << " MPI_Test@ " << params.myid << "Stat: "
@@ -467,7 +467,7 @@ STATUS DSLIM_Score::ScatterScores()
     if (status == SLM_SUCCESS && myRXsize != 0)
     {
         /* Fill the txStats with zeros - not available */
-        for (INT kk = 0; kk < nodes; kk++)
+        for (int_t kk = 0; kk < nodes; kk++)
         {
             txStats[kk] = 1;
         }
@@ -482,10 +482,10 @@ STATUS DSLIM_Score::ScatterScores()
                 /* Reset cumulate to 0 */
                 cumulate = 0;
 
-                for (INT ll = 0; ll < nodes; ll++)
+                for (int_t ll = 0; ll < nodes; ll++)
                 {
                     /* Only check if not already received */
-                    if (txStats[ll] == 0 && ll != (INT)params.myid)
+                    if (txStats[ll] == 0 && ll != (int_t)params.myid)
                     {
 #ifdef DIAGNOSE2
                         cout << " MPI_Test@ " << params.myid << "Stat: "
@@ -527,11 +527,11 @@ STATUS DSLIM_Score::ScatterScores()
     return status;
 }
 
-STATUS DSLIM_Score::TXSizes(MPI_Request *txRqsts, INT *txStats)
+status_t DSLIM_Score::TXSizes(MPI_Request *txRqsts, int_t *txStats)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
-    for (UINT kk = 0; kk < params.nodes; kk++, usleep(5000))
+    for (uint_t kk = 0; kk < params.nodes; kk++, usleep(5000))
     {
         /* If myself then no RX */
         if (kk == params.myid)
@@ -562,11 +562,11 @@ STATUS DSLIM_Score::TXSizes(MPI_Request *txRqsts, INT *txStats)
     return status;
 }
 
-STATUS DSLIM_Score::RXSizes(MPI_Request *rxRqsts, INT *rxStats)
+status_t DSLIM_Score::RXSizes(MPI_Request *rxRqsts, int_t *rxStats)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
-    for (UINT kk = 0; kk < params.nodes; kk++)
+    for (uint_t kk = 0; kk < params.nodes; kk++)
     {
         /* If myself then no RX */
         if (kk == params.myid)
@@ -597,13 +597,13 @@ STATUS DSLIM_Score::RXSizes(MPI_Request *rxRqsts, INT *rxStats)
     return status;
 }
 
-STATUS DSLIM_Score::TXResults(MPI_Request *txRqsts, INT* txStats)
+status_t DSLIM_Score::TXResults(MPI_Request *txRqsts, int_t* txStats)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
-    INT offset = 0;
+    int_t offset = 0;
 
-    for (UINT kk = 0; kk < params.nodes; kk++, usleep(5000))
+    for (uint_t kk = 0; kk < params.nodes; kk++, usleep(5000))
     {
         /* If myself then no RX */
         if (kk == params.myid || txSizes[kk] == 0)
@@ -634,13 +634,13 @@ STATUS DSLIM_Score::TXResults(MPI_Request *txRqsts, INT* txStats)
     return status;
 }
 
-STATUS DSLIM_Score::RXResults(MPI_Request *rxRqsts, INT *rxStats)
+status_t DSLIM_Score::RXResults(MPI_Request *rxRqsts, int_t *rxStats)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
-    INT offset = 0;
+    int_t offset = 0;
 
-    for (UINT kk = 0; kk < params.nodes; kk++)
+    for (uint_t kk = 0; kk < params.nodes; kk++)
     {
         /* If myself then no RX */
         if (kk == params.myid || rxSizes[kk] == 0)
@@ -672,12 +672,12 @@ STATUS DSLIM_Score::RXResults(MPI_Request *rxRqsts, INT *rxStats)
     return status;
 }
 
-STATUS DSLIM_Score::Wait4RX()
+status_t DSLIM_Score::Wait4RX()
 {
     /* Wait for score thread to complete */
     VOID *ptr;
 
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     if (comm_thd != NULL)
     {
@@ -690,9 +690,9 @@ STATUS DSLIM_Score::Wait4RX()
     return status;
 }
 
-STATUS DSLIM_Score::DisplayResults()
+status_t DSLIM_Score::DisplayResults()
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
 
     /* Initialize the file handles */
     status = DFile_InitFiles();
@@ -703,7 +703,7 @@ STATUS DSLIM_Score::DisplayResults()
 
     if (mysize > 0)
     {
-        for (auto beg = 0; beg < (INT)params.myid; beg++)
+        for (auto beg = 0; beg < (int_t)params.myid; beg++)
         {
             offset += txSizes[beg];
         }
@@ -712,14 +712,14 @@ STATUS DSLIM_Score::DisplayResults()
     fResult *myPtr = TxValues + offset;
 
     /* Display the data */
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(params.threads)
-#endif /* _OPENMP */
+#endif /* USE_OMP */
     for (auto ik = myPtr; ik < myPtr + mysize; ik++)
     {
         hCell *psm = heapArray + ik->specID;
 
-        DFile_PrintScore(this->index, ik->specID, psm->pmass, psm, ((DOUBLE)(ik->eValue))/1e6, ik->npsms);
+        DFile_PrintScore(this->index, ik->specID, psm->pmass, psm, ((double_t)(ik->eValue))/1e6, ik->npsms);
     }
 
     /* Now display the RX data */
@@ -731,14 +731,14 @@ STATUS DSLIM_Score::DisplayResults()
         mysize += *pt;
     }
 
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(params.threads)
-#endif /* _OPENMP */
+#endif /* USE_OMP */
     for (auto ik = myPtr; ik < myPtr + mysize; ik++)
     {
         hCell *psm = heapArray + ik->specID;
 
-        DFile_PrintScore(this->index, ik->specID, psm->pmass, psm, ((DOUBLE)(ik->eValue))/1e6, ik->npsms);
+        DFile_PrintScore(this->index, ik->specID, psm->pmass, psm, ((double_t)(ik->eValue))/1e6, ik->npsms);
     }
 
     /* Close the files and deallocate objects */
@@ -750,9 +750,9 @@ STATUS DSLIM_Score::DisplayResults()
     return status;
 }
 
-STATUS DSLIM_Score::InitDataTypes()
+status_t DSLIM_Score::InitDataTypes()
 {
-    MPI_Type_contiguous((INT)(sizeof(fResult) / sizeof(INT)),
+    MPI_Type_contiguous((int_t)(sizeof(fResult) / sizeof(int_t)),
                         MPI_INT,
                         &resultF);
 
@@ -761,11 +761,11 @@ STATUS DSLIM_Score::InitDataTypes()
     return SLM_SUCCESS;
 }
 
-STATUS DSLIM_Score::FreeDataTypes()
+status_t DSLIM_Score::FreeDataTypes()
 {
     MPI_Type_free(&resultF);
 
     return SLM_SUCCESS;
 }
 
-#endif /* DISTMEM */
+#endif /* USE_MPI */

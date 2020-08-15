@@ -33,9 +33,9 @@ class lwbuff
 {
 private:
 
-    INT cap;
-    INT thr_low;
-    INT thr_high;
+    int_t cap;
+    int_t thr_low;
+    int_t thr_high;
     sem_t lockr;
     sem_t lockw;
 
@@ -60,7 +60,7 @@ public:
         sem_init(&lockw, 0, 1);
     }
 
-    lwbuff(INT dcap, INT lo, INT hi)
+    lwbuff(int_t dcap, int_t lo, int_t hi)
     {
         cap = dcap;
         thr_low = lo;
@@ -97,7 +97,7 @@ public:
     VOID vEmpty()
     {
         /* Make sure both are empty */
-        for (INT ii = 0; ii < readyQ->size(); ii ++)
+        for (int_t ii = 0; ii < readyQ->size(); ii ++)
         {
             readyQ->pop();
             waitQ->pop();
@@ -152,7 +152,7 @@ public:
         return rtn;
     }
 
-    INT len()
+    int_t len()
     {
         return cap;
     }
@@ -177,9 +177,9 @@ public:
         return waitQ->isFull();
     }
 
-    INT readyQStatus()
+    int_t readyQStatus()
     {
-        INT sz = readyQ->size();
+        int_t sz = readyQ->size();
 
         if (sz < thr_low)
         {
@@ -193,27 +193,27 @@ public:
         return 1;
     }
 
-    inline INT addOne(INT idd)
+    inline int_t addOne(int_t idd)
     {
         return ((idd+1) % cap);
     }
 
-    STATUS lockr_()
+    status_t lockr_()
     {
         return sem_wait(&lockr);
     }
 
-    STATUS unlockr_()
+    status_t unlockr_()
     {
         return sem_post(&lockr);
     }
 
-    STATUS lockw_()
+    status_t lockw_()
     {
         return sem_wait(&lockw);
     }
 
-    STATUS unlockw_()
+    status_t unlockw_()
     {
         return sem_post(&lockw);
     }

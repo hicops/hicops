@@ -40,8 +40,8 @@ typedef enum _DistPolicy
 typedef struct _SLM_varAA
 {
     AA     residues[4]   = ""; /* Modified AA residues in this modification - Upto 4 */
-    UINT  modMass         = 0; /* Scaled mass of the modification                    */
-    USHORT aa_per_peptide = 0; /* Allowed modified residues per peptide sequence     */
+    uint_t  modMass         = 0; /* Scaled mass of the modification                    */
+    ushort_t aa_per_peptide = 0; /* Allowed modified residues per peptide sequence     */
 
     _SLM_varAA& operator=(const _SLM_varAA& rhs)
     {
@@ -64,8 +64,8 @@ typedef struct _SLM_varAA
 
 typedef struct _SLM_Mods
 {
-    USHORT       vmods_per_pep = 0; /* Total allowed modified residues per sequence */
-    USHORT            num_vars = 0; /* Number of types of modifications added to index - Max: 7 */
+    ushort_t       vmods_per_pep = 0; /* Total allowed modified residues per sequence */
+    ushort_t            num_vars = 0; /* Number of types of modifications added to index - Max: 7 */
     SLM_varAA vmods[MAX_MOD_TYPES]; /* Information for each modification added to index */
 
     /* Overload = operator */
@@ -77,7 +77,7 @@ typedef struct _SLM_Mods
             this->vmods_per_pep = rhs.vmods_per_pep;
             this->num_vars = rhs.num_vars;
 
-            for (UINT i = 0; i < MAX_MOD_TYPES; i++)
+            for (uint_t i = 0; i < MAX_MOD_TYPES; i++)
             {
                 this->vmods[i] = rhs.vmods[i];
             }
@@ -91,14 +91,14 @@ typedef struct _SLM_Mods
 typedef struct _pepSeq
 {
     AA        *seqs = NULL; /* Stores peptide sequence, could store as strings as well */
-    USHORT   peplen    = 0; /* Stores sequence length */
-    UINT        AAs    = 0; /* Total number of characters */
+    ushort_t   peplen    = 0; /* Stores sequence length */
+    uint_t        AAs    = 0; /* Total number of characters */
 } PepSeqs;
 
 typedef struct _modAA
 {
-    ULONGLONG  sites = 0x0; /* maxlen(pep) = 60AA + 2 bits (termini mods)      */
-    UINT  modNum =     0x0; /* 4 bits per mods num, Max 8 mods allowed per pep */
+    ull_t  sites = 0x0; /* maxlen(pep) = 60AA + 2 bits (termini mods)      */
+    uint_t  modNum =     0x0; /* 4 bits per mods num, Max 8 mods allowed per pep */
 
     /* Overload = operator */
     _modAA& operator=(const _modAA& rhs)
@@ -117,7 +117,7 @@ typedef struct _modAA
 
 typedef struct _pepEntry
 {
-    FLOAT  Mass; /* Mass of Peptide            */
+    float_t  Mass; /* Mass of Peptide            */
     IDX   seqID; /* Normal Peptide Sequence ID */
     modAA sites; /* Modified AA information    */
 
@@ -162,11 +162,11 @@ typedef struct _pepEntry
 
     BOOL operator>>(const _pepEntry& rhs)
     {
-        INT s1 = 0;
-        INT s2 = 0;
+        int_t s1 = 0;
+        int_t s2 = 0;
 
-        INT s3= MAX_SEQ_LEN;
-        INT s4= MAX_SEQ_LEN;
+        int_t s3= MAX_SEQ_LEN;
+        int_t s4= MAX_SEQ_LEN;
 
         /* compute distance from n-term */
         while ((this->sites.sites >> s1 & 0x1) != 0x1 && s1++ < MAX_SEQ_LEN);
@@ -183,11 +183,11 @@ typedef struct _pepEntry
 
     BOOL operator>>=(const _pepEntry& rhs)
     {
-        INT s1 = 0;
-        INT s2 = 0;
+        int_t s1 = 0;
+        int_t s2 = 0;
 
-        INT s3= MAX_SEQ_LEN;
-        INT s4= MAX_SEQ_LEN;
+        int_t s3= MAX_SEQ_LEN;
+        int_t s4= MAX_SEQ_LEN;
 
         /* compute distance from n-term */
         while ((this->sites.sites >> s1 & 0x1) != 0x1 && s1++ < MAX_SEQ_LEN);
@@ -204,11 +204,11 @@ typedef struct _pepEntry
 
     BOOL operator<<(const _pepEntry& rhs)
     {
-        INT s1 = 0;
-        INT s2 = 0;
+        int_t s1 = 0;
+        int_t s2 = 0;
 
-        INT s3= MAX_SEQ_LEN;
-        INT s4= MAX_SEQ_LEN;
+        int_t s3= MAX_SEQ_LEN;
+        int_t s4= MAX_SEQ_LEN;
 
         /* compute distance from n-term */
         while ((this->sites.sites >> s1 & 0x1) != 0x1 && s1++ < MAX_SEQ_LEN);
@@ -224,11 +224,11 @@ typedef struct _pepEntry
 
     BOOL operator<<=(const _pepEntry& rhs)
     {
-        INT s1 = 0;
-        INT s2 = 0;
+        int_t s1 = 0;
+        int_t s2 = 0;
 
-        INT s3= MAX_SEQ_LEN;
-        INT s4= MAX_SEQ_LEN;
+        int_t s3= MAX_SEQ_LEN;
+        int_t s4= MAX_SEQ_LEN;
 
         /* compute distance from n-term */
         while ((this->sites.sites >> s1 & 0x1) != 0x1 && s1++ < MAX_SEQ_LEN);
@@ -261,14 +261,14 @@ typedef struct _pepEntry
  */
 typedef struct _BYC
 {
-    UCHAR   bc  = 0;        /* b ion count */
-    UCHAR   yc  = 0;        /* y ion count */
+    uchar_t   bc  = 0;        /* b ion count */
+    uchar_t   yc  = 0;        /* y ion count */
 } BYC;
 
 typedef struct _iBYC
 {
-    UINT ibc   = 0;
-    UINT iyc   = 0;
+    uint_t ibc   = 0;
+    uint_t iyc   = 0;
 } iBYC;
 
 typedef struct _BYICount
@@ -277,63 +277,63 @@ typedef struct _BYICount
     iBYC   *ibyc = NULL;       /* Sum of b/y ion intensities */
 } BYICount;
 
-#define BYISIZE                 (sizeof(UCHAR) * 2 + sizeof(UINT) * 2)
+#define BYISIZE                 (sizeof(uchar_t) * 2 + sizeof(uint_t) * 2)
 
 typedef struct _SLMchunk
 {
-    UINT    *iA = NULL; /* Ions Array (iA)   */
-    UINT    *bA = NULL; /* Bucket Array (bA) */
+    uint_t    *iA = NULL; /* Ions Array (iA)   */
+    uint_t    *bA = NULL; /* Bucket Array (bA) */
 
 #ifdef FUTURE
-    UCHAR *bits = NULL; /* Scorecard bits    */
+    uchar_t *bits = NULL; /* Scorecard bits    */
 #endif /* FUTURE */
 } SLMchunk;
 
 /* Structure for each pep file */
 typedef struct _Index
 {
-    UINT pepCount         = 0;
-    UINT modCount         = 0;
-    UINT totalCount       = 0;
+    uint_t pepCount         = 0;
+    uint_t modCount         = 0;
+    uint_t totalCount       = 0;
 
-    UINT lclpepCnt        = 0;
-    UINT lclmodCnt        = 0;
-    UINT lcltotCnt        = 0;
-    UINT nChunks          = 0;
-    UINT chunksize        = 0;
-    UINT lastchunksize    = 0;
+    uint_t lclpepCnt        = 0;
+    uint_t lclmodCnt        = 0;
+    uint_t lcltotCnt        = 0;
+    uint_t nChunks          = 0;
+    uint_t chunksize        = 0;
+    uint_t lastchunksize    = 0;
 
     PepSeqs          pepIndex;
     pepEntry      *pepEntries;
     SLMchunk        *ionIndex;
-} Index;
+} index_t;
 
 /* Structure for global Parameters */
 typedef struct _globalParams
 {
-    UINT threads = 1;
-    UINT min_len = 4;
-    UINT max_len = 40;
-    UINT maxz     = 3;
-    UINT topmatches = 10;
-    UINT scale      = 100;
-    UINT min_shp    = 4;
-    UINT nodes      = 1;
-    UINT myid       = 0;
-    UINT spadmem    = 2048;
+    uint_t threads = 1;
+    uint_t min_len = 4;
+    uint_t max_len = 40;
+    uint_t maxz     = 3;
+    uint_t topmatches = 10;
+    uint_t scale      = 100;
+    uint_t min_shp    = 4;
+    uint_t nodes      = 1;
+    uint_t myid       = 0;
+    uint_t spadmem    = 2048;
 
-    UINT min_mass = 500.0;
-    UINT max_mass = 5000.0;
-    UINT dF       = (UINT)(0.02 * scale);
+    uint_t min_mass = 500.0;
+    uint_t max_mass = 5000.0;
+    uint_t dF       = (uint_t)(0.02 * scale);
 
-    DOUBLE dM       = 500.0;
-    DOUBLE res      = 0.01;
+    double_t dM       = 500.0;
+    double_t res      = 0.01;
 
-    DOUBLE *perf    = NULL;
+    double_t *perf    = NULL;
 
-    STRING dbpath;
-    STRING datapath;
-    STRING modconditions;
+    string_t dbpath;
+    string_t datapath;
+    string_t modconditions;
 
     DistPolicy policy = _cyclic;
 
@@ -345,13 +345,13 @@ typedef struct _globalParams
 /* Same as specSeqs below but has intensity values for experimental spectra */
 typedef struct _eSpecSeqs
 {
-    UINT                *moz;       /* Stores the m/z values of the spectra */
-    UINT                *intensity; /* Stores the intensity values of the experimental spectra */
+    uint_t                *moz;       /* Stores the m/z values of the spectra */
+    uint_t                *intensity; /* Stores the intensity values of the experimental spectra */
     //BOOL              *iType;     /* Stores the ion type of the coresponding peak in miz */
-    UINT                *idx;       /* Row ptr. Starting index of each row */
-    FLOAT               *precurse;  /* Stores the precursor mass of each spectrum. */
-    UINT                 numPeaks;  /* Total length of moz array i.e. total number of peaks */
-    UINT                 numSpecs;  /* Number of theoretical spectra */
+    uint_t                *idx;       /* Row ptr. Starting index of each row */
+    float_t               *precurse;  /* Stores the precursor mass of each spectrum. */
+    uint_t                 numPeaks;  /* Total length of moz array i.e. total number of peaks */
+    uint_t                 numSpecs;  /* Number of theoretical spectra */
 } ESpecSeqs;
 
 /************************* SLM Query DSTs ************************/
@@ -362,7 +362,7 @@ typedef struct _Query
 
 /* HM: Enable if intensity information is also required in future */
 #if (defined(REQUIRE_INTENSITY))
-    INTENSITY Intensities[QUERYPK] = {0};
+    intensity_t Intensities[QUERYPK] = {0};
 #endif /* (defined(REQUIRE_INTENSITY)) */
 } Query;
 

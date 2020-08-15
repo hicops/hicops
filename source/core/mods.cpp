@@ -22,34 +22,34 @@
 using namespace std;
 
 /* Global Variables */
-STRING *mods;
+string_t *mods;
 Index *lclindex;
 /* SLM Mods Index   */
 pepEntry    *modEntries;
 
 /* Initialized only once global */
-map<AA, INT> condLookup;
-vector<STRING> tokens;
-UINT limit = 0;
-ULONGLONG Comb[MAX_COMBS][MAX_COMBS];
-vector<INT> condList;
+map<AA, int_t> condLookup;
+vector<string_t> tokens;
+uint_t limit = 0;
+ull_t Comb[MAX_COMBS][MAX_COMBS];
+vector<int_t> condList;
 
 /* External Variables */
 extern gParams params;
-extern UINT *varCount;
+extern uint_t *varCount;
 
 #ifdef VMODS
 
 /* Peptide Sequences */
-extern vector<STRING> Seqs;
+extern vector<string_t> Seqs;
 
 /* Static Functions */
-static ULONGLONG count(STRING s, STRING conditions);
+static ull_t count(string_t s);
 
-static VOID MODS_ModList(STRING peptide, vector<INT> conditions,
-                         INT total, pepEntry container, INT letter,
-                         bool novel, INT modsSeen, UINT refid,
-                         UINT &global, UINT &local);
+static VOID MODS_ModList(string_t peptide, vector<int_t> conditions,
+                         int_t total, pepEntry container, int_t letter,
+                         bool novel, int_t modsSeen, uint_t refid,
+                         uint_t &global, uint_t &local);
 
 static VOID MODS_GenCombinations();
 
@@ -64,13 +64,13 @@ static VOID MODS_GenCombinations();
  *
  * OUTPUT: status of execution
  */
-STATUS MODS_Initialize()
+status_t MODS_Initialize()
 {
 #ifdef VMODS
-    STRING conditions = params.modconditions;
-    STRING allLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    string_t conditions = params.modconditions;
+    string_t allLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     pepEntry container;
-    STRING token;
+    string_t token;
     stringstream ss(conditions);
 
     while (ss >> token)
@@ -84,15 +84,15 @@ STATUS MODS_Initialize()
     (VOID) MODS_GenCombinations();
 
     /* Reset conditions for all letters */
-    for (INT i = 0; i < 26; i++)
+    for (int_t i = 0; i < 26; i++)
     {
         condLookup[allLetters[i]] = -1;
     }
 
     /* Set up conditions lookup table */
-    for (UINT i = 0; i < (tokens.size() - 1) / 2; i++)
+    for (uint_t i = 0; i < (tokens.size() - 1) / 2; i++)
     {
-        for (UINT j = 0; j < tokens[(2 * i) + 1].size(); j++)
+        for (uint_t j = 0; j < tokens[(2 * i) + 1].size(); j++)
         {
             /* Fill up the condLookup */
             condLookup[tokens[(2 * i) + 1][j]] = i;
@@ -108,7 +108,7 @@ STATUS MODS_Initialize()
     return SLM_SUCCESS;
 }
 
-INT cmpvarEntries(const VOID* lhs, const void *rhs)
+int_t cmpvarEntries(const VOID* lhs, const void *rhs)
 {
     pepEntry *a = (pepEntry *) lhs;
     pepEntry *b = (pepEntry *) rhs;
@@ -177,7 +177,7 @@ static VOID MODS_GenCombinations()
  * OUTPUT:
  * @Comb: nCk
  */
-ULONGLONG combine(int n, int k)
+ull_t combine(int n, int k)
 {
     return Comb[n][k];
 }
@@ -195,13 +195,13 @@ ULONGLONG combine(int n, int k)
  * @sum: Number of ways to pick upto b elements
  *       from multiset A.
  */
-LONGLONG partition2(vector<INT> a, INT b)
+longlong_t partition2(vector<int_t> a, int_t b)
 {
-    LONGLONG sum = 0;
-    vector<INT> a2;
+    longlong_t sum = 0;
+    vector<int_t> a2;
 
     /* Set up basic conditions */
-    for (INT t : a)
+    for (int_t t : a)
     {
         sum += t;
     }
@@ -213,7 +213,7 @@ LONGLONG partition2(vector<INT> a, INT b)
 
     if (b <= 0)
     {
-        return (LONGLONG) (b == 0);
+        return (longlong_t) (b == 0);
     }
 
     if (a.size() == 0)
@@ -223,12 +223,12 @@ LONGLONG partition2(vector<INT> a, INT b)
 
     sum = 0;
 
-    for (UINT i = 1; i < a.size(); i++)
+    for (uint_t i = 1; i < a.size(); i++)
     {
         a2.push_back(a[i]);
     }
 
-    for (INT i = 0; i < a[0] + 1; i++)
+    for (int_t i = 0; i < a[0] + 1; i++)
     {
         sum += combine(a[0], i) * partition2(a2, b - i);
     }
@@ -249,7 +249,7 @@ LONGLONG partition2(vector<INT> a, INT b)
  * OUTPUT:
  * @sum:
  */
-LONGLONG partition3(vector<vector<INT> > A, vector<INT> B, INT limit)
+longlong_t partition3(vector<vector<int_t> > A, vector<int_t> B, int_t limit)
 {
     if (A.size() == 1)
     {
@@ -263,17 +263,17 @@ LONGLONG partition3(vector<vector<INT> > A, vector<INT> B, INT limit)
         }
     }
 
-    LONGLONG sum = 0;
-    vector<vector<INT> > A2;
-    vector<INT> B2;
+    longlong_t sum = 0;
+    vector<vector<int_t> > A2;
+    vector<int_t> B2;
 
-    for (UINT i = 1; i < A.size(); i++)
+    for (uint_t i = 1; i < A.size(); i++)
     {
         A2.push_back(A[i]);
         B2.push_back(B[i]);
     }
 
-    for (INT i = 0; i < B[0] + 1; i++)
+    for (int_t i = 0; i < B[0] + 1; i++)
     {
         sum += (partition2(A[0], i) - partition2(A[0], i - 1)) * partition3(A2, B2, limit - i);
     }
@@ -295,21 +295,21 @@ LONGLONG partition3(vector<vector<INT> > A, vector<INT> B, INT limit)
  * OUTPUT:
  * @nmods: Number of mods generated for @seq
  */
-static ULONGLONG count(STRING s, STRING conditions)
+static ull_t count(string_t s)
 {
-    map<CHAR, INT> AAcounts;
-    vector<vector<INT>> A;
-    vector<INT> B;
-    vector<INT> temp;
+    map<char_t, int_t> AAcounts;
+    vector<vector<int_t>> A;
+    vector<int_t> B;
+    vector<int_t> temp;
 
     for (auto c : s)
     {
         AAcounts[c] += 1;
     }
 
-    for (UINT i = 0; i < (tokens.size() - 1) / 2; i++)
+    for (uint_t i = 0; i < (tokens.size() - 1) / 2; i++)
     {
-        for (UINT j = 0; j < tokens[2 * i + 1].length(); j++)
+        for (uint_t j = 0; j < tokens[2 * i + 1].length(); j++)
         {
             temp.push_back(AAcounts[tokens[2 * i + 1][j]]);
         }
@@ -338,9 +338,9 @@ static ULONGLONG count(STRING s, STRING conditions)
  *
  * OUTPUT: none
  */
-static VOID MODS_ModList(STRING peptide, vector<INT> conditions,
-                         INT total, pepEntry container, INT letter,
-                         bool novel, INT modsSeen, UINT refid, UINT &global, UINT &local)
+static VOID MODS_ModList(string_t peptide, vector<int_t> conditions,
+                         int_t total, pepEntry container, int_t letter,
+                         bool novel, int_t modsSeen, uint_t refid, uint_t &global, uint_t &local)
 {
     if (novel && letter != 0)
     {
@@ -361,7 +361,7 @@ static VOID MODS_ModList(STRING peptide, vector<INT> conditions,
 
     }
 
-    if (total == 0 || letter >= (INT) peptide.length())
+    if (total == 0 || letter >= (int_t) peptide.length())
     {
         return;
     }
@@ -369,25 +369,25 @@ static VOID MODS_ModList(STRING peptide, vector<INT> conditions,
     if (condLookup[peptide[letter]] != -1 and conditions[condLookup[peptide[letter]]] > 0)
     {
         pepEntry dupContainer = container;
-        vector<INT> dupConditions;
+        vector<int_t> dupConditions;
 
-        dupContainer.sites.sites |= ((ULONGLONG)1 << (letter));
+        dupContainer.sites.sites |= ((ull_t)1 << (letter));
         dupContainer.sites.modNum += (1 << (4 * modsSeen)) * (1 + condLookup[peptide[letter]]);
         dupContainer.seqID = refid;
 
-        for (INT i : conditions)
+        for (int_t i : conditions)
         {
             dupConditions.push_back(i);
         }
 
         dupConditions[condLookup[peptide[letter]]] -= 1;
-        STRING dupPeptide = peptide;
+        string_t dupPeptide = peptide;
         dupPeptide[letter] += 32;
 
         MODS_ModList(dupPeptide, dupConditions, total - 1, dupContainer, letter + 1, true, modsSeen + 1, refid, global, local);
     }
 
-    if (letter < (INT) peptide.size())
+    if (letter < (int_t) peptide.size())
     {
         MODS_ModList(peptide, conditions, total, container, letter + 1, false, modsSeen, refid, global, local);
     }
@@ -409,12 +409,12 @@ static VOID MODS_ModList(STRING peptide, vector<INT> conditions,
  * OUTPUT:
  * @cumulative: Number of mods
  */
-ULONGLONG MODS_ModCounter(Index *index)
+ull_t MODS_ModCounter()
 {
-    ULONGLONG cumulative = 0;
+    ull_t cumulative = 0;
 
-    UINT threads = params.threads;
-    STRING conditions = params.modconditions;
+    uint_t threads = params.threads;
+    string_t conditions = params.modconditions;
 
 #ifdef VMODS
 
@@ -422,25 +422,25 @@ ULONGLONG MODS_ModCounter(Index *index)
     if (limit > 0)
     {
         /* Parallel modcounter */
-#ifdef _OPENMP
+#ifdef USE_OMP
             /* The parallel for loop */
 #pragma omp parallel for num_threads (threads) schedule(static) reduction(+: cumulative)
-            for (UINT i = 0; i < Seqs.size(); i++)
+            for (uint_t i = 0; i < Seqs.size(); i++)
             {
-                varCount[i] = count(Seqs.at(i), conditions) - 1;
+                varCount[i] = count(Seqs.at(i)) - 1;
                 cumulative += varCount[i];
             }
 
 #else
         LBE_UNUSED_PARAM(threads);
 
-       for (UINT i = 0; i < Seqs.size(); i++)
+       for (uint_t i = 0; i < Seqs.size(); i++)
        {
-            varCount[i] = count(Seqs.at(i), conditions) - 1;
+            varCount[i] = count(Seqs.at(i)) - 1;
             cumulative += varCount[i];
        }
 
-#endif /* _OPENMP */
+#endif /* USE_OMP */
 
 #endif /* VMODS */
 
@@ -449,19 +449,19 @@ ULONGLONG MODS_ModCounter(Index *index)
 #endif /* VMODS */
 
 
-        UINT count = varCount[0];
+        uint_t count = varCount[0];
         varCount[0] = 0;
 
-        for (UINT ii = 1; ii <= Seqs.size(); ii++)
+        for (uint_t ii = 1; ii <= Seqs.size(); ii++)
         {
-            UINT tmpcount = varCount[ii];
+            uint_t tmpcount = varCount[ii];
             varCount[ii] = varCount[ii - 1] + count;
             count = tmpcount;
         }
 
         if (varCount[Seqs.size()] != cumulative)
         {
-            cumulative = (UINT) (-1);
+            cumulative = (uint_t) (-1);
         }
     }
 
@@ -483,46 +483,46 @@ ULONGLONG MODS_ModCounter(Index *index)
  * OUTPUT:
  * @status: Status of execution
  */
-STATUS MODS_GenerateMods(Index *index)
+status_t MODS_GenerateMods(Index *index)
 {
-    STATUS status = SLM_SUCCESS;
+    status_t status = SLM_SUCCESS;
     pepEntry* idx = index->pepEntries + index->lclpepCnt;
-    STRING conditions = params.modconditions;
+    string_t conditions = params.modconditions;
 
     modEntries = idx;
 
 #ifdef VMODS
-    STRING allLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    string_t allLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     pepEntry container;
 
     /* Copy the global condList into the local one */
-    vector<INT> lclcondList = condList;
+    vector<int_t> lclcondList = condList;
 
     lclindex = index;
 
 #ifdef DEBUG
     /* Print the number of modifications */
     cout << numMods << '\t' << modCount << endl;
-    STRING *mods = new STRING[modCount];
-    mods = new STRING[modCount];
+    string_t *mods = new string_t[modCount];
+    mods = new string_t[modCount];
 #endif /* DEBUG */
 
-#ifdef _OPENMP
+#ifdef USE_OMP
 #pragma omp parallel for num_threads(params.threads) schedule (static)
-#endif /* _OPENMP */
-    for (UINT i = 0; i < Seqs.size(); i++)
+#endif /* USE_OMP */
+    for (uint_t i = 0; i < Seqs.size(); i++)
     {
 #ifdef DEBUG
         cout << Seqs.at(i).length() << '\t' << lclcntr << '\t' << Seqs.at(i) << '\t' << modCount << endl;
 #endif /* DEBUG */
 
         /* Make global and local index */
-        UINT globalidx = varCount[i];
-        UINT localidx  = UINT(varCount[i] / params.nodes);
+        uint_t globalidx = varCount[i];
+        uint_t localidx  = uint_t(varCount[i] / params.nodes);
 
-        UINT stt = localidx;
+        uint_t stt = localidx;
         MODS_ModList(Seqs[i], lclcondList, limit, container, 0, false, 0, i, globalidx, localidx);
-        UINT ssz = localidx - stt;
+        uint_t ssz = localidx - stt;
 
         std::qsort((void *)(modEntries + stt), ssz, sizeof(pepEntry), cmpvarEntries);
     }
@@ -536,7 +536,7 @@ STATUS MODS_GenerateMods(Index *index)
 
 #ifdef DEBUG
     /* Print for DEBUG information */
-    for(UINT i = 0; i < modCount; i++)
+    for(uint_t i = 0; i < modCount; i++)
     {
         cout << i << ": " << mods[i] << '\t';
         printf("0x%08x\t", entries[i].sites.modNum);
