@@ -26,6 +26,7 @@
 #include "lwqueue.h"
 #include "lwbuff.h"
 #include "scheduler.h"
+#include "hicops_instr.hpp"
 
 using namespace std;
 
@@ -203,10 +204,8 @@ status_t DSLIM_SearchManager(Index *index)
     status_t status = SLM_SUCCESS;
     int_t batchsize = 0;
 
-    auto start = chrono::system_clock::now();
-    auto end   = chrono::system_clock::now();
-    chrono::duration<double> elapsed_seconds = end - start;
-    chrono::duration<double> qtime = end - start;
+    double qtime = 0;
+
     int_t maxlen = params.max_len;
     int_t minlen = params.min_len;
 
@@ -333,10 +332,18 @@ status_t DSLIM_SearchManager(Index *index)
     /* The main query loop starts here */
     while (status == SLM_SUCCESS)
     {
+#if (USE_TIMEMORY)
+        static wall_tuple_t sched_penalty("DAG_penalty", false);
+        sched_penalty.start();
+#endif
         /* Start computing penalty */
-        auto spen = chrono::system_clock::now();
+        MARK_START(penal);
 
         status = DSLIM_WaitFor_IO(batchsize);
+        
+#if (USE_TIMEMORY)
+        sched_penalty.stop();
+#endif
 
         /* Check if endsignal */
         if (status == ENDSIGNAL)
@@ -345,12 +352,13 @@ status_t DSLIM_SearchManager(Index *index)
         }
 
         /* Compute the penalty */
-        chrono::duration<double> penalty = chrono::system_clock::now() - spen;
+        MARK_END(penal);
+        auto penalty = ELAPSED_SECONDS(penal);
 
 #ifndef DIAGNOSE
         if (params.myid == 0)
         {
-            std::cout << "PENALTY: " << penalty.count() << endl;
+            std::cout << "PENALTY: " << penalty << 's'<< std::endl;
         }
 #endif /* DIAGNOSE */
 
@@ -360,7 +368,7 @@ status_t DSLIM_SearchManager(Index *index)
         qPtrs->unlockr_();
 
         /* Run the Scheduler to manage thread between compute and I/O */
-        SchedHandle->runManager(penalty.count(), dec);
+        SchedHandle->runManager(penalty, dec);
 
 #ifndef DIAGNOSE
         if (params.myid == 0)
@@ -369,7 +377,7 @@ status_t DSLIM_SearchManager(Index *index)
         }
 #endif /* DIAGNOSE */
 
-        start = chrono::system_clock::now();
+        MARK_START(sch_time);
 
         if (status == SLM_SUCCESS)
         {
@@ -392,21 +400,18 @@ status_t DSLIM_SearchManager(Index *index)
 
         status = qPtrs->unlockw_();
 
-        end = chrono::system_clock::now();
+        MARK_END(sch_time);
 
         /* Compute Duration */
-        qtime += end - start;
+        qtime +=  ELAPSED_SECONDS(sch_time);
 
 #ifndef DIAGNOSE
         if (params.myid == 0)
         {
-            /* Compute Duration */
-            std::cout << "\nQuery Time: " << qtime.count() << "s" << endl;
-            std::cout << "Queried with status:\t\t" << status << endl << endl;
+            std::cout << "\nQuery Time: " << qtime << "s" << endl;
+            std::cout << "DONE: Querying\tstatus: " << status << endl << endl;
         }
 #endif /* DIAGNOSE */
-
-        end = chrono::system_clock::now();
     }
 
     /* Deinitialize the IO module */
@@ -503,11 +508,18 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
     status_t status = SLM_SUCCESS;
     uint_t maxz = params.maxz;
     uint_t dF = params.dF;
-    int_t threads = (int_t)params.threads - (int_t)SchedHandle->getNumActivThds();
+    int_t threads = (int_t) params.threads - (int_t) SchedHandle->getNumActivThds();
     uint_t scale = params.scale;
     double_t maxmass = params.max_mass;
     ebuffer *liBuff = NULL;
     partRes *txArray = NULL;
+
+#if defined (USE_TIMEMORY)
+    static search_tuple_t search_inst("theSrch");
+    static hw_counters_t search_cntr ("theSrch");
+    search_inst.start();
+    search_cntr.start();
+#endif // USE_TIMEMORY
 
     if (params.nodes > 1)
     {
@@ -815,6 +827,11 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
         spectrumID += ss->numSpecs;
     }
 
+#if defined (USE_TIMEMORY)
+    search_inst.stop();
+    search_cntr.stop();
+#endif // USE_TIMEMORY
+
 #ifndef DIAGNOSE
     if (params.myid == 0)
     {
@@ -1001,13 +1018,15 @@ static int_t DSLIM_BinFindMax(pepEntry *entries, float_t pmass2, int_t min, int_
 VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 {
     status_t status = SLM_SUCCESS;
-    auto start = chrono::system_clock::now();
-    auto end   = chrono::system_clock::now();
-    chrono::duration<double> elapsed_seconds = end - start;
-    chrono::duration<double> qtime = end - start;
     Queries *ioPtr = NULL;
 
     BOOL eSignal = false;
+
+    // TODO: verify thread local performance
+#if defined (USE_TIMEMORY)
+    thread_local prep_tuple_t prep_inst("preprocess");
+    prep_inst.start();
+#endif // USE_TIMEMORY
 
     /* local object is fine since it will be copied
      * to the queue object at the time of preemption */
@@ -1039,7 +1058,6 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
         if (Query == NULL || Query->isDeInit())
         {
             /* Otherwise, initialize the object from a file */
-            start = chrono::system_clock::now();
 
             /* lock the query file */
             sem_wait(&qfilelock);
@@ -1071,9 +1089,11 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
          * At this point, we have the data ready     *
          *********************************************/
 
-        /* All set - Run the DSLIM Query Algorithm */
+        /* All set */
         if (status == SLM_SUCCESS)
         {
+            MARK_START(prep);
+
             /* Wait for a I/O request */
             status = qPtrs->lockw_();
 
@@ -1134,16 +1154,14 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
             /* Unlock the ready queue */
             qPtrs->unlockr_();
 
-            end = chrono::system_clock::now();
-
-            /* Compute Duration */
-            elapsed_seconds = end - start;
+            MARK_END(prep);
+            auto es = ELAPSED_SECONDS(prep);
 
 #ifndef DIAGNOSE
             if (params.myid == 0)
             {
                 std::cout << "\nExtracted Spectra :\t\t" << ioPtr->numSpecs << endl;
-                std::cout << "Elapsed Time: " << elapsed_seconds.count() << "s" << endl << endl;
+                std::cout << "Elapsed Time: " << es << "s" << endl << endl;
             }
 #endif /* DIAGNOSE */
 
@@ -1178,6 +1196,10 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
         SchedHandle->ioComplete();
     }
 
+#if defined (USE_TIMEMORY)
+    prep_inst.stop();
+#endif // USE_TIMEMORY
+
     /* Request pre-emption */
     SchedHandle->takeControl(argv);
 
@@ -1191,9 +1213,12 @@ VOID *DSLIM_FOut_Thread_Entry(VOID *argv)
     int_t batchSize = 0;
     int_t clbuff = -1;
 
+#if defined (USE_TIMEMORY)
+    thread_local comm_tuple_t comm_inst("result_comm");
+#endif // USE_TIMEMORY
     for (;;)
     {
-        /*status = */sem_wait(&writer);
+        sem_wait(&writer);
 
         clbuff += 1;
         ebuffer *lbuff = iBuff + (clbuff % NIBUFFS);
@@ -1220,6 +1245,10 @@ VOID *DSLIM_FOut_Thread_Entry(VOID *argv)
 
         lbuff->isDone = true;
     }
+
+#if defined (USE_TIMEMORY)
+    comm_inst.stop();
+#endif
 
     return argv;
 }

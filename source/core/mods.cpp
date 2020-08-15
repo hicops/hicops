@@ -44,7 +44,7 @@ extern uint_t *varCount;
 extern vector<string_t> Seqs;
 
 /* Static Functions */
-static ull_t count(string_t s, string_t conditions);
+static ull_t count(string_t s);
 
 static VOID MODS_ModList(string_t peptide, vector<int_t> conditions,
                          int_t total, pepEntry container, int_t letter,
@@ -295,7 +295,7 @@ longlong_t partition3(vector<vector<int_t> > A, vector<int_t> B, int_t limit)
  * OUTPUT:
  * @nmods: Number of mods generated for @seq
  */
-static ull_t count(string_t s, string_t conditions)
+static ull_t count(string_t s)
 {
     map<char_t, int_t> AAcounts;
     vector<vector<int_t>> A;
@@ -409,7 +409,7 @@ static VOID MODS_ModList(string_t peptide, vector<int_t> conditions,
  * OUTPUT:
  * @cumulative: Number of mods
  */
-ull_t MODS_ModCounter(Index *index)
+ull_t MODS_ModCounter()
 {
     ull_t cumulative = 0;
 
@@ -427,7 +427,7 @@ ull_t MODS_ModCounter(Index *index)
 #pragma omp parallel for num_threads (threads) schedule(static) reduction(+: cumulative)
             for (uint_t i = 0; i < Seqs.size(); i++)
             {
-                varCount[i] = count(Seqs.at(i), conditions) - 1;
+                varCount[i] = count(Seqs.at(i)) - 1;
                 cumulative += varCount[i];
             }
 
@@ -436,7 +436,7 @@ ull_t MODS_ModCounter(Index *index)
 
        for (uint_t i = 0; i < Seqs.size(); i++)
        {
-            varCount[i] = count(Seqs.at(i), conditions) - 1;
+            varCount[i] = count(Seqs.at(i)) - 1;
             cumulative += varCount[i];
        }
 

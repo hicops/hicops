@@ -37,7 +37,7 @@ extern gParams params;
 extern vector<string_t>     Seqs;
 
 /* Static Functions */
-static longlong_t count(string_t s, string_t conditions);
+static longlong_t count(string_t s);
 static VOID MODS_GenCombinations();
 
 /*
@@ -198,7 +198,7 @@ longlong_t partition3(vector<vector<int_t> > A, vector<int_t> B, int_t limit)
  * OUTPUT:
  * @nmods: Number of mods generated for @s
  */
-static longlong_t count(string_t s, string_t conditions)
+static longlong_t count(string_t s)
 {
     map<char_t, int_t> AAcounts;
     vector<vector<int_t>> A;
@@ -268,7 +268,7 @@ ull_t MODS_ModCounter()
 #pragma omp parallel for num_threads (threads) schedule(static) reduction(+: cumulative)
             for (uint_t i = 0; i < Seqs.size(); i++)
             {
-                cumulative += count(Seqs.at(i), conditions) - 1;
+                cumulative += count(Seqs.at(i)) - 1;
             }
 
 #else
@@ -276,7 +276,7 @@ ull_t MODS_ModCounter()
 
        for (uint_t i = 0; i < Seqs.size(); i++)
        {
-            cumulative += count(Seqs.at(i), conditions) - 1;
+            cumulative += count(Seqs.at(i)) - 1;
        }
 
 #endif /* USE_OMP */

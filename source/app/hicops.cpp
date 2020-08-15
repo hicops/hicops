@@ -32,7 +32,7 @@ gParams params;
 
 static status_t ParseParams(char_t* paramfile);
 
-/* FUNCTION: SLM_Main (main)
+/* FUNCTION: main
  *
  * DESCRIPTION: Driver Application
  *
@@ -41,7 +41,7 @@ static status_t ParseParams(char_t* paramfile);
  * OUTPUT
  * @status: Status of execution
  */
-status_t SLM_Main(int_t argc, char_t* argv[])
+status_t main(int_t argc, char_t* argv[])
 {
     status_t status = SLM_SUCCESS;
 
@@ -49,17 +49,36 @@ status_t SLM_Main(int_t argc, char_t* argv[])
     const string_t patt = {".ms2"};
     const char_t extension[] = ".peps";
 
+    /* Benchmarking */
+    double_t elapsed_seconds;
+
     /* Print start time */
-    const auto start_tim = std::chrono::system_clock::now();
-    const time_t start_time = std::chrono::system_clock::to_time_t(start_tim);
+    MARK_START(start_tim);
+    const time_t start_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
 #if defined (USE_TIMEMORY)
-    wall_tuple_t total("total_time");
-#else
-    /* Benchmarking */
-    auto start = std::chrono::system_clock::now();
-    auto end   = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapsed_seconds;
+    // reset any previous configuration
+    bundle_t::reset();
+
+    // get extra tools from the environment variable
+    auto env_tool = tim::get_env<std::string>("HICOPS_INST_COMPONENTS", "");
+    auto env_enum = tim::enumerate_components(tim::delimit(env_tool));
+    env_enum.erase(std::remove_if(env_enum.begin(), env_enum.end(),
+                                  [](int c) { return c == WALL_CLOCK || 
+                                                     c == CPU_UTIL   ||  
+                                                     c == THREAD_CPU_UTIL; }),
+                                  env_enum.end());
+
+    // configure PAPI events
+    const std::string def_papi_evts = "PAPI_TOT_INS, PAPI_TOT_CYC, PAPI_L3_TCM, PAPI_L2_TCA, PAPI_L3_TCA";
+    std::string papi_evts = tim::get_env<std::string>("HICOPS_PAPI_EVENTS", def_papi_evts);
+    tim::settings::papi_events() = papi_evts;
+
+    // configure the bundle
+    tim::configure<bundle_t>(env_enum);
+
+    // start a timer
+    time_tuple_t total("total_time");
 #endif
 
     if (argc < 2)
@@ -201,36 +220,36 @@ status_t SLM_Main(int_t argc, char_t* argv[])
         /* Count the number of ">" entries in FASTA */
         if (status == SLM_SUCCESS)
         {
-            MARK(start);
+            MARK_START(lbe_cnt);
 
             status = LBE_CountPeps((char_t *) dbfile.c_str(), (slm_index + peplen-minlen), peplen);
 
-            MARK(end);
+            MARK_END(lbe_cnt);
 
             /* Compute Duration */
-            ELAPSED(elapsed_seconds, start, end);
+            elapsed_seconds = ELAPSED_SECONDS(lbe_cnt);
 
             if (params.myid == 0)
             {
-                std::cout << "DONE: Peptide Counting:\t" << status << std::endl << std::endl;
+                std::cout << "DONE: Peptide Counting:\tstatus: " << status << std::endl << std::endl;
                 PRINT_ELAPSED(elapsed_seconds);
             }
         }
 
         if (status == SLM_SUCCESS)
         {
-            MARK(start);
+            MARK_START(parts);
 
             status  = LBE_CreatePartitions((slm_index + peplen-minlen));
 
-            MARK(end);
+            MARK_END(parts);
 
             /* Compute Duration */
-            ELAPSED(elapsed_seconds, start, end);
+            elapsed_seconds = ELAPSED_SECONDS(parts);
 
             if (params.myid == 0)
             {
-                std::cout << "DONE: Partitioning:\t" << status << std::endl << std::endl;
+                std::cout << "DONE: Partition:\tstatus: " << status << std::endl << std::endl;
                 PRINT_ELAPSED(elapsed_seconds);
             }
         }
@@ -238,19 +257,19 @@ status_t SLM_Main(int_t argc, char_t* argv[])
         /* Initialize internal structures */
         if (status == SLM_SUCCESS)
         {
-            MARK(start);
+            MARK_START(lbe_init);
 
             /* Initialize the LBE */
             status = LBE_Initialize((slm_index + peplen - minlen));
 
-            MARK(end);
+            MARK_END(lbe_init);
 
             /* Compute Duration */
-            ELAPSED(elapsed_seconds, start, end);
+            elapsed_seconds = ELAPSED_SECONDS(lbe_init);
 
             if (params.myid == 0)
             {
-                std::cout << "DONE: Initialize:\t" << status << std::endl << std::endl;
+                std::cout << "DONE: Initialize:\tstatus: " << status << std::endl << std::endl;
                 PRINT_ELAPSED(elapsed_seconds);
             }
         }
@@ -258,19 +277,19 @@ status_t SLM_Main(int_t argc, char_t* argv[])
         /* Distribution Algorithm */
         if (status == SLM_SUCCESS)
         {
-            MARK(start);
+            MARK_START(lbe_dist);
 
             /* Distribute peptides among cores */
             status = LBE_Distribute((slm_index + peplen - minlen));
 
-            MARK(end);
+            MARK_END(lbe_dist);
 
             /* Compute Duration */
-            ELAPSED(elapsed_seconds, start, end);
+            elapsed_seconds = ELAPSED_SECONDS(lbe_dist);
 
             if (params.myid == 0)
             {
-                std::cout << "DONE: Internal Partition:\t" << status << std::endl << std::endl;
+                std::cout << "DONE: Internal Partition:\tstatus: " << status << std::endl << std::endl;
                 PRINT_ELAPSED(elapsed_seconds);
             }
         }
@@ -278,19 +297,19 @@ status_t SLM_Main(int_t argc, char_t* argv[])
         /* DSLIM-Transform */
         if (status == SLM_SUCCESS)
         {
-            MARK(start);
+            MARK_START(dslim);
 
             /* Construct DSLIM by SLM Transformation */
             status = DSLIM_Construct((slm_index + peplen - minlen));
 
-            MARK(end);
+            MARK_END(dslim);
 
             /* Compute Duration */
-            ELAPSED(elapsed_seconds, start, end);
+            elapsed_seconds = ELAPSED_SECONDS(dslim);
 
             if (params.myid == 0)
             {
-                std::cout << "DONE: Indexing:\t" << status << std::endl << std::endl;
+                std::cout << "DONE: Indexing:\tstatus: " << status << std::endl << std::endl;
                 PRINT_ELAPSED(elapsed_seconds);
             }
         }
@@ -320,8 +339,7 @@ status_t SLM_Main(int_t argc, char_t* argv[])
         auto wc = index_inst.get<wall_clock>();
         std::cout << "Indexing Time: " << wc->get() << "s" << std::endl;
 #else
-        ELAPSED(elapsed_seconds, start_tim, chrono::system_clock::now());
-        std::cout << "Indexing Time: " << ELAPSED_SECONDS(elapsed_seconds) << "s" << std::endl;
+        std::cout << "Indexing Time: " << ELAPSED_SECONDS(start_tim) << "s" << std::endl;
 #endif // USE_TIMEMORY
     }
 
@@ -338,13 +356,14 @@ status_t SLM_Main(int_t argc, char_t* argv[])
     // Perform the distributed database search 
     if (status == SLM_SUCCESS)
     {
-        MARK(start);
+        MARK_START(dslim_search);
         status = DSLIM_SearchManager(slm_index);
-        //elapsed_seconds = chrono::system_clock::now() - start;
+        MARK_END(dslim_search);
+        elapsed_seconds = ELAPSED_SECONDS(dslim_search);
 
         if (params.myid == 0)
         {
-            std::cout << "Partial Search with status:\t" << status << std::endl;
+            std::cout << "DONE: Search:\tstatus: " << status << std::endl;
             PRINT_ELAPSED(elapsed_seconds);
         }
     }
@@ -381,13 +400,15 @@ status_t SLM_Main(int_t argc, char_t* argv[])
     /* Compute the distributed scores */
     if (status == SLM_SUCCESS)
     {
-        MARK(start);
+        MARK_START(dist_score);
         status = DSLIM_DistScoreManager();
-        //elapsed_seconds = chrono::system_clock::now() - start;
+        MARK_END(dist_score);
+
+        elapsed_seconds = ELAPSED_SECONDS(dist_score);
 
         if (params.myid == 0)
         {
-            std::cout << "\nResult Merging with status:\t" << status << std::endl;
+            std::cout << "\nDONE: Merge:\tstatus: " << status << std::endl;
             PRINT_ELAPSED(elapsed_seconds);
         }
     }
@@ -448,8 +469,7 @@ status_t SLM_Main(int_t argc, char_t* argv[])
     auto tt = total.get<wall_clock>();
     auto es = tt->get();
 #else
-        elapsed_seconds = end_tim - start_tim;
-        auto es = ELAPSED_SECONDS(elapsed_seconds);;
+        auto es = ELAPSED_SECONDS(start_tim);
 #endif
         std::cout << "Total Elapsed Time: " << es << "s" << std::endl;
 

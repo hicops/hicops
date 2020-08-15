@@ -456,7 +456,7 @@ status_t LBE_CountPeps(char_t *filename, Index *index, uint_t explen)
      * modification information */
     if (status == SLM_SUCCESS)
     {
-        index->modCount = MODS_ModCounter(index);
+        index->modCount = MODS_ModCounter();
     }
 
 #endif /* VMODS */

@@ -40,7 +40,7 @@
  * OUTPUT:
  * @cumulative: Number of mods
  */
-ull_t  MODS_ModCounter(Index *index);
+ull_t  MODS_ModCounter();
 
 /*
  * FUNCTION: MODS_GenerateMods

@@ -18,7 +18,26 @@ file(GLOB cxx_sources               ${CMAKE_CURRENT_LIST_DIR}/*.cpp)
 set(hicops_glob_headers
     ${c_headers} ${cxx_headers})
 
+if (USE_TIMEMORY)
+    set(timemory_FIND_COMPONENTS_INTERFACE timemory-hicops-core)
+    set(COMPONENTS headers compile-options analysis-tools papi
+        #cpu-roofline
+        OPTIONAL_COMPONENTS cxx)
+
+#    add_library(cpu-fp-single INTERFACE)
+#    add_library(cpu-fp-double INTERFACE)
+
+#    target_compile_definitions(cpu-fp-single INTERFACE ROOFLINE_FP_BYTES=4)
+#    target_compile_definitions(cpu-fp-double INTERFACE ROOFLINE_FP_BYTES=8)
+
+    find_package(timemory REQUIRED COMPONENTS ${COMPONENTS} OPTIONAL_COMPONENTS mpi)
+endif()
+
 add_library (hicops-core SHARED ${c_sources} ${cxx_sources})
+
+if (USE_TIMEMORY)
+    target_link_libraries(hicops-core timemory-hicops-core)
+endif()
 
 if(USE_MPI AND MPI_FOUND)
     target_compile_options(hicops-core PUBLIC -DUSE_MPI)

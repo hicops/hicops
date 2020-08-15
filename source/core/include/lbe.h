@@ -30,8 +30,6 @@
 #include "dslim.h"
 #include "msquery.h"
 
-#define SLM_Main               main
-
 /*
  * FUNCTION: LBE_Initialize
  *
