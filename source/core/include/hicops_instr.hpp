@@ -44,7 +44,7 @@ using time_tuple_t = tim::auto_tuple<wall_clock, cpu_util>;
 using mem_tuple_t  = tim::auto_tuple<peak_rss, virtual_memory, written_bytes, read_bytes>;
 using wall_tuple_t = tim::auto_tuple<wall_clock>;
 
-using prep_tuple_t = tim::auto_tuple<wall_clock, thread_cpu_util, read_bytes>;
+using prep_tuple_t = tim::auto_tuple<wall_clock, read_bytes>;
 using hw_counters_t = tim::component_tuple<papi_events_t>;
 using search_tuple_t = tim::component_tuple<wall_clock, cpu_util, bundle_t>;
 using comm_tuple_t  = tim::auto_tuple<thread_cpu_util, written_bytes>;

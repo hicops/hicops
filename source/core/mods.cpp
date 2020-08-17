@@ -492,7 +492,7 @@ status_t MODS_GenerateMods(Index *index)
     modEntries = idx;
 
 #ifdef VMODS
-    string_t allLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const string_t allLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     pepEntry container;
 
     /* Copy the global condList into the local one */
