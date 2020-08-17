@@ -440,7 +440,16 @@ status_t DSLIM_SearchManager(Index *index)
 
         VOID *ptr = NULL;
 
+#if defined (USE_TIMEMORY)
+        static wall_tuple_t comm_penalty("DAG_penalty");
+        comm_penalty.start();
+#endif // USE_TIMEMORY
+
         pthread_join(*wthread, &ptr);
+
+#if defined (USE_TIMEMORY)
+        comm_penalty.stop();
+#endif // USE_TIMEMORY
 
         delete wthread;
 
@@ -517,12 +526,18 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
 #if defined (USE_TIMEMORY)
     static search_tuple_t search_inst("theSrch");
     static hw_counters_t search_cntr ("theSrch");
+    
     search_inst.start();
     search_cntr.start();
 #endif // USE_TIMEMORY
 
     if (params.nodes > 1)
     {
+#if defined (USE_TIMEMORY)
+        static wall_tuple_t comm_penalty("DAG_penalty");
+        comm_penalty.start();
+#endif // USE_TIMEMORY
+
         ciBuff ++;
         liBuff = iBuff + (ciBuff % NIBUFFS);
 
@@ -532,6 +547,10 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
         txArray = liBuff->packs;
         liBuff->isDone = false;
         liBuff->batchNum = ss->batchNum;
+
+#if defined (USE_TIMEMORY)
+        comm_penalty.stop();
+#endif // USE_TIMEMORY
     }
     else
     {
@@ -618,6 +637,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
                     {
                         /* Do this to save mem boundedness */
                         auto qion = QAPtr[k];
+                        uint_t intn = iPtr[k];
 
                         /* Check for any zeros
                          * Zero = Trivial query */
@@ -645,7 +665,6 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
                                 for (auto ion = stt; ion <= ends; ion++)
                                 {
                                     uint_t raw = iAPtr[ion];
-                                    uint_t intn = iPtr[k];
 
                                     /* Calculate parent peptide ID */
                                     int_t ppid = (raw / speclen);

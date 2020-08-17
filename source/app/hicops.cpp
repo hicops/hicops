@@ -65,12 +65,11 @@ status_t main(int_t argc, char_t* argv[])
     auto env_enum = tim::enumerate_components(tim::delimit(env_tool));
     env_enum.erase(std::remove_if(env_enum.begin(), env_enum.end(),
                                   [](int c) { return c == WALL_CLOCK || 
-                                                     c == CPU_UTIL   ||  
-                                                     c == THREAD_CPU_UTIL; }),
+                                                     c == CPU_UTIL; }),
                                   env_enum.end());
 
     // configure PAPI events
-    const std::string def_papi_evts = "PAPI_TOT_INS, PAPI_TOT_CYC, PAPI_L3_TCM, PAPI_L2_TCA, PAPI_L3_TCA";
+    const std::string def_papi_evts = "PAPI_TOT_INS, PAPI_TOT_CYC, PAPI_L3_TCM, PAPI_L2_TCA, PAPI_L3_TCA, PAPI_MEM_WCY, PAPI_RES_STL, PAPI_STL_CCY, PAPI_BR_CN, PAPI_BR_PRC, PAPI_FUL_ICY";
     std::string papi_evts = tim::get_env<std::string>("HICOPS_PAPI_EVENTS", def_papi_evts);
     tim::settings::papi_events() = papi_evts;
 
