@@ -9,8 +9,19 @@ HiCOPS: Software framework for accelerated peptide identification from LC-MS/MS 
 GCC compiler version 7.2.0 or later supporting C++14. You may use Intel or LLVM compilers but make sure to follow through the installation steps accordingly. We have tested the HiCOPS on Linux OS (Ubuntu v16.04, v18.04 and CentOS-7) using GCC v7.2.0, v8.4.0 and v9.3.0 on Haswell, Broadwell, Kabylake, Skylake and KNL processors.
 
 ## Install the required packages
-Install the following packages preferably using [Spack](https://spack.readthedocs.io). Read more about how to install Spack and how to install packages using Spack [here](https://spack.readthedocs.io/en/latest/getting_started.html). Make sure that you install all following packages using the same `GCC` compiler that you will use to install HiCOPS as well. See [Recommended Compiler](##Recommended-Compiler). The packages currently installed via Spack can be checked by:
+Install the following packages preferably using [Spack](https://spack.readthedocs.io). Read more about how to install Spack and how to install packages using Spack [here](https://spack.readthedocs.io/en/latest/getting_started.html).
 
+```bash
+Required Packages:
+python@3.7.8       py-numpy@1.19.1     py-setuptools-scm@4.1.2   py-kiwisolver@1.1.0     py-python-dateutil@2.8.0    py-matplotlib@3.3.0    py-pytz@2019.3
+pkgconf@1.7.3      py-numexpr@2.7.0    py-setuptools@49.2.0      py-et-xmlfile@1.0.1     py-pillow@7.2.0             py-bottleneck@1.2.1    papi@6.0.0.1
+py-jdcal@1.3       py-pyparsing@2.4.2  py-cython@0.29.21         py-pandas@1.1.0         py-subprocess32@3.5.4       py-cycler@0.10.0       py-openpyxl@3.0.3    
+py-six@1.14.0
+```
+
+`Note`: The package versions listed in the above list are not compulsory. You may install the latest versions of the packages. 
+
+Make sure that you install all following packages using the same compiler that you will use to install HiCOPS as well. See [Recommended Compiler](##Recommended-Compiler). The packages currently installed via Spack can be checked using:
 ```bash
 $ spack find
 ==> 63 installed packages
@@ -24,8 +35,6 @@ cmake@3.18.1         gettext@0.20.2   libjpeg-turbo@2.0.4  ncurses@6.2      py-c
 diffutils@3.7        gotcha@1.0.3     libpciaccess@0.13.5  openblas@0.3.10  py-et-xmlfile@1.0.1  py-pillow@7.2.0      python@3.7.8              zlib@1.2.11
 dyninst@10.2.0       hwloc@2.2.0      libpng@1.6.37        openssl@1.1.1g   py-jdcal@1.3         py-pyparsing@2.4.2   qhull@2020.1
 ```
-
-`Note`: The package versions listed in the above list are not compulsory. You may install the latest versions of the packages.
 
 ### On a regular computer (skip if using XSEDE Comet)
 Install the `mpich` package using `spack install mpich%gcc@version`
@@ -43,6 +52,12 @@ Install timemory using CMake or Spack using the instructions [here](https://time
 
 ```bash
 $ export CMAKE_PREFIX_PATH=$timemory_DIR:$CMAKE_PREFIX_PATH
+```
+
+If using Spack, you can install timemory and its dependencies using:
+
+```bash
+$ spack install timemory%gcc@version +ompt +tools +ompt_library ~dyninst +gotcha +python +papi ~caliper +mpi +mpip_library
 ```
 
 ## Install HiCOPS
