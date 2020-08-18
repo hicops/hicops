@@ -51,7 +51,7 @@ def checkRunningJobs(username):
         return True
 
 # Generates a normal unicore job script
-def genNormalScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, comd):
+def genNormalScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, comd, mail, user):
     script = open(wkspc + '/autogen/' + jobname, 'w+')
     script.write('#!/bin/bash\n')
     script.write('\n')
@@ -60,14 +60,20 @@ def genNormalScript(wkspc, jobname, outname, partition, nds, ntask_per_node, min
     script.write('#SBATCH --partition=' + partition + '\n')
     script.write('#SBATCH --nodes=' + nds + '\n')
     script.write('#SBATCH --ntasks-per-node=' + ntask_per_node + '\n')
+    script.write('#SBATCH --export=ALL\n')
     script.write('#SBATCH -t ' + minust + '\n')
+
+    if (mail):
+        script.write('#SBATCH --mail-type=ALL' + '\n')
+        script.write('#SBATCH --mail-type=' + user + '\n')
+
     script.write('\n')
     script.write(comd + '\n')
 
     return
 
 # Generates a multithreaded OpenMP job script
-def genOpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, args):
+def genOpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, args, mail, user):
     script = open(wkspc + '/autogen/' + jobname, 'w+')
     script.write('#!/bin/bash\n')
     script.write('\n')
@@ -76,7 +82,12 @@ def genOpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, min
     script.write('#SBATCH --partition=' + partition + '\n')
     script.write('#SBATCH --nodes=' + nds + '\n')
     script.write('#SBATCH --ntasks-per-node=' + ntask_per_node + '\n')
+    script.write('#SBATCH --export=ALL\n')
     script.write('#SBATCH -t ' + minust + '\n')
+    if (mail):
+        script.write('#SBATCH --mail-type=ALL' + '\n')
+        script.write('#SBATCH --mail-type=' + user + '\n')
+
     script.write('\n')
     script.write ('export OMP_NUM_THREADS      ' + ompthrds + '\n')
     script.write('\n')
@@ -85,7 +96,7 @@ def genOpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, min
     return
 
 # Generates a Hybrid MPI/OpenMP job script
-def genMPI_OpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, npernode, blevel, bpolicy, args):
+def genMPI_OpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, npernode, blevel, bpolicy, args, mail, user):
     script = open(wkspc + '/autogen/' + jobname, 'w+')
     script.write('#!/bin/bash\n')
     script.write('\n')
@@ -94,7 +105,11 @@ def genMPI_OpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node,
     script.write('#SBATCH --partition=' + partition + '\n')
     script.write('#SBATCH --nodes=' + nds + '\n')
     script.write('#SBATCH --ntasks-per-node=' + ntask_per_node + '\n')
+    script.write('#SBATCH --export=ALL\n')
     script.write('#SBATCH -t ' + minust + '\n')
+    if (mail):
+        script.write('#SBATCH --mail-type=ALL' + '\n')
+        script.write('#SBATCH --mail-type=' + user + '\n')
     script.write('\n')
     script.write ('export OMP_NUM_THREADS      ' + ompthrds + '\n')
     script.write('\n')
@@ -127,7 +142,7 @@ if __name__ == '__main__':
         sample.write('# \n')
         sample.write('# HiCOPS for Comet\n')
         sample.write('# Copyrights(c) 2020 PCDS Laboratory\n')
-        sample.write('# Muhammad Haseeb, and Fahad Saeed')
+        sample.write('# Muhammad Haseeb, and Fahad Saeed\n')
         sample.write('# School of Computing and Information Sciences\n')
         sample.write('# Florida International University (FIU), Miami, FL\n')
         sample.write('# Email: {mhaseeb, fsaeed}@fiu.edu\n')
@@ -640,7 +655,7 @@ if __name__ == '__main__':
 
         # Call the lsinfo to gather CPU information
         if (os.path.isfile(workspace + '/autogen/info.out') == False):
-            genNormalScript(workspace, 'info', 'info', 'compute', '1','1', '00:00:10', 'lscpu | tr -d " \\r" && numactl --hardware | tr -d " \\r"')
+            genNormalScript(workspace, 'info', 'info', 'compute', '1','1', '00:00:10', 'lscpu | tr -d " \\r" && numactl --hardware | tr -d " \\r"', False, 'none')
 
             autotune = call("sbatch " + workspace + "/autogen/info", shell=True)
             print ('\nWaiting for job scheduler\n')
@@ -741,7 +756,7 @@ if __name__ == '__main__':
                 cleancntr = call("make -C counter allclean", shell=True)
                 makecntr = call("make -C counter", shell=True)
             
-            genOpenMPScript(workspace, 'counter', 'counter', 'compute', '1', str(cores), '00:30:00', str(cores), hicopspath + '/counter', pparams)
+            genOpenMPScript(workspace, 'counter', 'counter', 'compute', '1', str(cores), '00:30:00', str(cores), hicopspath + '/counter', pparams, False, 'none')
 
             # Call the counter process            
             autotune3 = call('sbatch ' + workspace + '/autogen/counter', shell=True)
@@ -900,11 +915,10 @@ if __name__ == '__main__':
     modfile.close()
 
     # Generate the job script
-    genMPI_OpenMPScript(workspace, 'hicops', 'hicops', 'compute', str(nodes), str(cores), jobtime, str(threads), hicopspath + '/hicops', str(mpi_per_node), bl, bp, uparams)
+    genMPI_OpenMPScript(workspace, 'hicops', 'hicops', 'compute', str(nodes), str(cores), jobtime, str(threads), hicopspath + '/hicops', str(mpi_per_node), bl, bp, uparams, True, username)
 
     # Generate the post-processing script
-    genNormalScript(workspace, 'postprocess', 'postprocess', 'compute', 1, 1, jobtime, 'psm2excel', workspace + '/output')
-
+    genNormalScript(workspace, 'postprocess', 'postprocess', 'shared', '1', '1', "00:20:00", 'psm2excel ' + workspace + '/output', True, username)
 #
 # ----------------------------------------------------------------------------------------------------
 #

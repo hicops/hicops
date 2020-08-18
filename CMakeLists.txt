@@ -67,8 +67,8 @@ message(STATUS "Adding hicops source...")
 add_subdirectory(source)
 
 #----------------------------------------------------------------------------------------#
-#  dbtool and ms2 scripts
+#  dbtool, wrappers, ms2 scripts
 #----------------------------------------------------------------------------------------#
 
-message(STATUS "Adding python and shell scripts...")
+message(STATUS "Adding tools and wrappers...")
 add_subdirectory(scripts)
