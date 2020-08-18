@@ -196,7 +196,7 @@ Open an issue on HiCOPS [GitHub](https://github.com/pcdslab/hicops/issues) (pref
 
 ## Authors
 1. [Muhammad Haseeb](https://sites.google.com/fiu.edu/muhammadhaseeb)
-2. [Fahad Saeed](https://saeedfahad.com)
+2. [Fahad Saeed](http://www.saeedfahad.com)
 
 ## Contributors
 1. [Muhammad Haseeb](https://github.com/mhaseeb123)
