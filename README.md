@@ -75,7 +75,7 @@ $ cd hicops
 ### Configure
 
 ```bash
-$ mkdir build & cd build
+$ mkdir build && cd build
 $ CC=$(which gcc) CXX=$(which g++) cmake .. [CMAKE_OPTIONS] -G [BUILD_SYSTEM] -D<VARIABLE>=<VALUE>
 ```
 
