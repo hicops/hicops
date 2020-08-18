@@ -6,7 +6,7 @@ HiCOPS: Software framework for accelerated peptide identification from LC-MS/MS 
 # Installation
 
 ## Recommended Compiler
-GCC compiler version 7.2.0 or later supporting C++14. You may use Intel or LLVM compilers but make sure to follow through the installation steps accordingly. We have tested the HiCOPS on Linux OS (Ubuntu v16.04, v18.04 and CentOS-7) using GCC v7.2.0, v8.4.0 and v9.3.0 on Haswell, Broadwell and KNL processors.
+GCC compiler version 7.2.0 or later supporting C++14. You may use Intel or LLVM compilers but make sure to follow through the installation steps accordingly. We have tested the HiCOPS on Linux OS (Ubuntu v16.04, v18.04 and CentOS-7) using GCC v7.2.0, v8.4.0 and v9.3.0 on Haswell, Broadwell, Kabylake, Skylake and KNL processors.
 
 ## Install the required packages
 Install the following packages preferably using [Spack](https://spack.readthedocs.io). Read more about how to install Spack and how to install packages using Spack [here](https://spack.readthedocs.io/en/latest/getting_started.html). Make sure that you install all following packages using the same `GCC` compiler that you will use to install HiCOPS as well. See [Recommended Compiler](##Recommended-Compiler). The packages currently installed via Spack can be checked by:
