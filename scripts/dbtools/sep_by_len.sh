@@ -1,4 +1,4 @@
-#!/bin/bash
+#!@BASH_EXECUTABLE@
 
 # Path to input peptide database
 PEPDB=$1

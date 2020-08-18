@@ -1,3 +1,4 @@
+#!@PYTHON_EXECUTABLE@
 #
 #  This file is a part of HPC PCDSFrame software
 #
@@ -225,7 +226,7 @@ if __name__ == '__main__':
 	print ('\nRunning: Peptide Sequence Clusterer')
 
 	# Create the cluster command
-	clustercommand = 'dbtools/cluster.sh ' + digesteddb + ' ' + str(min_length) + ' ' + str(max_length) + ' no ' + output
+	clustercommand = 'cluster.sh ' + digesteddb + ' ' + str(min_length) + ' ' + str(max_length) + ' no ' + output
 
 	# Run the cluster command and pass arguments
 	cluster = call(clustercommand, shell=True)

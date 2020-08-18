@@ -7,14 +7,14 @@ message(STATUS "Adding dbtools...")
 add_subdirectory(dbtools)
 
 #----------------------------------------------------------------------------------------#
-#   ms2data scripts
+#   python wrapper scripts
 #----------------------------------------------------------------------------------------#
-message(STATUS "Adding ms2data scripts...")
-add_subdirectory(ms2processor)
+message(STATUS "Adding python wrapper scripts...")
+add_subdirectory(pywrappers)
 
 #----------------------------------------------------------------------------------------#
-#   preprocessor scripts
+#   MS2 processing scripts
 #----------------------------------------------------------------------------------------#
-message(STATUS "Adding preprocess tools...")
-add_subdirectory(preprocess)
+message(STATUS "Adding MS2 preprocessing tools...")
+add_subdirectory(ms2prep)
 

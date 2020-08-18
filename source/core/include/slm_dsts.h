@@ -299,7 +299,7 @@ typedef struct _BYC
     {
         bc = 0;
         yc = 0;
-        ibc= 0;
+        ibc = 0;
         iyc = 0;
     }
 } BYC;
@@ -334,9 +334,9 @@ typedef struct _Index
     uint_t chunksize    ;
     uint_t lastchunksize;
 
-    PepSeqs          pepIndex;
-    pepEntry      *pepEntries;
-    SLMchunk        *ionIndex;
+    PepSeqs     pepIndex;
+    pepEntry *pepEntries;
+    SLMchunk   *ionIndex;
 
     _Index()
     {
@@ -382,8 +382,6 @@ typedef struct _globalParams
     double_t res;
     double_t expect_max;
 
-    double_t *perf;
-
     string_t dbpath;
     string_t datapath;
     string_t workspace;
@@ -411,11 +409,10 @@ typedef struct _globalParams
         spadmem = 2048;
         min_mass = 500;
         max_mass = 5000;
-        dF = (uint_t) (0.02 * scale);
+        dF = 0;
         dM = 500.0;
         res = 0.01;
-        perf = NULL;
-        policy = _cyclic;
+        policy = DistPolicy::_cyclic;
 	}
 }gParams;
 
@@ -427,9 +424,9 @@ typedef struct _queries
     uint_t  *intensity; /* Stores the intensity values of the experimental spectra */
     uint_t        *idx; /* Row ptr. Starting index of each row */
     float_t  *precurse; /* Stores the precursor mass of each spectrum. */
-    int_t    numPeaks;
-    int_t    numSpecs; /* Number of theoretical spectra */
-    int_t    batchNum;
+    int_t     numPeaks;
+    int_t     numSpecs; /* Number of theoretical spectra */
+    int_t     batchNum;
 
     void reset()
     {
@@ -446,7 +443,7 @@ typedef struct _queries
         this->intensity = NULL;
         numPeaks        = 0;
         numSpecs        = 0;
-        batchNum = 0;
+        batchNum        = 0;
     }
 
     VOID init()
