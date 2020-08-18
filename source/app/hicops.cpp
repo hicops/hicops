@@ -573,6 +573,8 @@ static status_t ParseParams(char_t* paramfile)
         getline(pfile, line);
         params.dF = (uint_t)(std::atof(line.c_str()) * params.scale);
 
+        params.dF = std::max(0, static_cast<int>(params.dF - 1));
+
         /* Get the precursor mass tolerance */
         getline(pfile, line);
         params.dM = std::atof(line.c_str());
@@ -667,7 +669,7 @@ static status_t ParseParams(char_t* paramfile)
                 params.modconditions += " " + line;
 
                 std::strncpy((char *) params.vModInfo.vmods[md].residues, (const char *) line.c_str(),
-                        std::min(4, static_cast<const int>(line.length())));
+                        std::min(4, static_cast<int>(line.length())));
 
                 /* get and set the modmass */
                 getline(pfile, line);
@@ -679,14 +681,6 @@ static status_t ParseParams(char_t* paramfile)
 
                 params.vModInfo.vmods[md].aa_per_peptide = std::atoi((const char *) line.c_str());
             }
-        }
-
-        params.perf = new double_t[params.nodes];
-
-        /* Initialize to 1.0 for now */
-        for (uint_t nn = 0; nn < params.nodes; nn++)
-        {
-            params.perf[nn] = 1.0;
         }
 
 #ifdef USE_MPI

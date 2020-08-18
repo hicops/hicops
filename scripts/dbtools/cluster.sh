@@ -1,3 +1,4 @@
+#!@BASH_EXECUTABLE@
 # 
 # Peptide Sequence Clusterer
 # Copyrights(C) 2019 PCDS Laboratory
@@ -6,8 +7,6 @@
 # Florida International University (FIU), Miami, FL
 # Email: {mhaseeb, fsaeed}@fiu.edu
 #
-
-#!/bin/bash
 
 # Path to input peptide database
 PEPDB=$1

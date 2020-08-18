@@ -22,6 +22,7 @@ endif()
 if(NOT CMAKE_VERSION VERSION_LESS 3.14)
     cmake_policy(SET CMP0082 NEW)
 endif()
+
 # set these as the defaults
 set(CMAKE_ENABLE_EXPORTS ON CACHE BOOL "Executable exports symbols for loadable modules")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON CACHE BOOL "Append directories in the linker search path")
@@ -54,6 +55,8 @@ if (USE_TIMEMORY)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_TIMEMORY")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_TIMEMORY")
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -DUSE_TIMEMORY")
+    file(MAKE_DIRECTORY ${HOME}/tmp/mplconfigdir)
+    set (ENV{MPLCONFIGDIR} ${HOME}/tmp/mplconfigdir)
 endif()
 
 #----------------------------------------------------------------------------------------#

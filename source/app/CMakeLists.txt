@@ -21,4 +21,4 @@ set_target_properties(hicops-core
 )
 
 # installation
-install(TARGETS hicops DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(TARGETS hicops DESTINATION ${CMAKE_INSTALL_BINDIR})

@@ -1,3 +1,4 @@
+#!@PYTHON_EXECUTABLE@
 from sklearn.datasets import make_blobs
 import pandas as pd
 import hdbscan

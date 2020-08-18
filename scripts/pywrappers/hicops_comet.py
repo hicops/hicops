@@ -1,5 +1,5 @@
-#
-#  This file is a part of HPC PCDSFrame software
+#!@PYTHON_EXECUTABLE@
+#  This file is a part of HiCOPS software
 #
 #  Copyright (C) 2019 Parallel Computing and Data Science (PCDS) Laboratory
 #                       School of Computing and Information Sciences
@@ -108,16 +108,16 @@ if __name__ == '__main__':
     # Check the Python version
     pyversion = float(str(sys.version_info[0]) + '.' + str(sys.version_info[1]))
     if (pyversion < 3.5):
-        print ('\nERROR: This software requries Python3.5 or later version')
-        print ('       Your version is Python' + str(pyversion) + '\n')
+        print ('\nERROR: This software requries Python v3.5 or later')
+        print (' Your Python version is: ' + str(pyversion) + '\n')
         exit(-1)
 
     if len(sys.argv) > 1:
         paramfile = sys.argv[1]
     else:
-        print ("ERROR: Missing arguments to the PCDSFrameHPC")
-        print ("USAGE: python3.5+ pcdsframehpc.py <params>")
-        print ("GENERATE: A sample params.txt using python3.5+ pcdsframehpc.py -g")
+        print ("ERROR: Missing arguments to the HiCOPS_COMET")
+        print ("USAGE: python3.5+ hicops_comet.py <params>")
+        print ("GENERATE: A sample params.txt using python3.5+ hicops_comet.py -g")
         sys.exit(-1)
 
     # Generate the sampleparams.txt file
@@ -125,15 +125,15 @@ if __name__ == '__main__':
         sample = open("./sampleparams.txt","w+")
 
         sample.write('# \n')
-        sample.write('# HPC MS/MS Proteomics Pipeline\n')
-        sample.write('# Copyrights(C) 2019 PCDS Laboratory\n')
+        sample.write('# HiCOPS for Comet\n')
+        sample.write('# Copyrights(c) 2020 PCDS Laboratory\n')
         sample.write('# Muhammad Haseeb, and Fahad Saeed')
         sample.write('# School of Computing and Information Sciences\n')
         sample.write('# Florida International University (FIU), Miami, FL\n')
         sample.write('# Email: {mhaseeb, fsaeed}@fiu.edu\n')
         sample.write('# \n')
         sample.write('# Auto generated sampleparams.txt\n')
-        sample.write('# Sample parameters generated for PCDSFrameHPC (XSEDE COMET) version\n')
+        sample.write('# Sample parameters generated for HiCOPS (XSEDE COMET) version\n')
         sample.write('# For more information: https://portal.xsede.org/sdsc-comet\n')
         sample.write('# \n')
         sample.write('# Generated on: ' + (datetime.datetime.now()).strftime("%Y-%m-%d %H:%M %Z") + '\n')
@@ -147,7 +147,7 @@ if __name__ == '__main__':
         sample.write('# Path (absolute or relative) to Workspace directory\n')
         sample.write('workspace=/path/to/workspace\n\n')
 
-        sample.write('# Job Time: hh:mm:ss (Max: 47:59:59)\n')
+        sample.write('# Job Time: hh:mm:ss\n')
         sample.write('jobtime=00:45:00\n\n')
 
         sample.write('# Nodes available\n')
@@ -180,7 +180,7 @@ if __name__ == '__main__':
         sample.write('# Mods to include per peptide sequence\n')
         sample.write('nmods=3\n\n')
 
-        sample.write('# Mods Information: AAs mass mods_per_pep\n')
+        sample.write('# Mods Information: AA(max 4) mod_mass mods_per_pep\n')
         sample.write('mod1=M 15.99 2\n')
         sample.write('mod2=X 0 0\n')
         sample.write('mod3=X 0 0\n')
@@ -198,7 +198,7 @@ if __name__ == '__main__':
         sample.write('mod15=X 0 0\n\n')
 
         sample.write('# Min peptide length\n')
-        sample.write('min_length=6\n\n')
+        sample.write('min_length=7\n\n')
 
         sample.write('# Max peptide length\n')
         sample.write('max_length=40\n\n')
@@ -212,10 +212,10 @@ if __name__ == '__main__':
         sample.write('# Max fragment charge\n')
         sample.write('maxz=3\n\n')
 
-        sample.write('# Min shared peak\n')
+        sample.write('# Min shared peaks\n')
         sample.write('shp=4\n\n')
 
-        sample.write('# Required min PSM hits \n')
+        sample.write('# Required min shared peaks\n')
         sample.write('min_hits=4\n\n')
 
         sample.write('# Base normalized Intensity for MS/MS data \n')
@@ -234,7 +234,7 @@ if __name__ == '__main__':
         sample.write('dM=500\n\n')
 
         sample.write('# Fragment Mass Tolerance (+-Da)\n')
-        sample.write('dF=0.05\n\n')
+        sample.write('dF=0.01\n\n')
 
         sample.write('# Top Matches to report\n')
         sample.write('top_matches=10\n\n')
@@ -248,7 +248,9 @@ if __name__ == '__main__':
         
         sys.exit(0)
 
-# ##################################################################################
+#
+# ----------------------------------------------------------------------------------------------------
+#
 
     # Initialize the parameters
     cores = 24
@@ -272,7 +274,7 @@ if __name__ == '__main__':
     min_length = 6
     max_length = 40
     maxz       = 3
-    dF = 0.02
+    dF = 0.01
     dM = 500
     res = 0.01
     scale = int(1/res)
@@ -293,17 +295,20 @@ if __name__ == '__main__':
     mb_per_mpi  = 0
     nparts      = 0
     jobtime='00:45:00'
-    pcdsframepath = os.getcwd()
+    hicopspath = os.path.dirname(os.path.realpath(__file__)) + '/..'
     newparams = False
     username = 'mhaseeb'
     uparams = ''
     pparams = ''
-# ##################################################################################
 
-    print ('\n************************************')
-    print   ('*  HPC MS/MS Proteomics Pipeline   *')
-    print   ('*  Copyrights PCDS Lab, SCIS, FIU  *')
-    print   ('************************************\n')
+#
+# ----------------------------------------------------------------------------------------------------
+#
+
+    print ('\n***************************')
+    print   ('*  HiCOPS for XSEDE Comet *')
+    print   ('*   PCDS Lab, SCIS, FIU   *')
+    print   ('***************************\n')
 
     # Parse the params file
     with open(paramfile) as params:
@@ -471,10 +476,10 @@ if __name__ == '__main__':
 
             # Fragment mass tolerance
             elif (param == 'dF'):
-                if (dF < 0.001):
-                    dF = 0.001 
-                if (dF > 5.0):
-                    dF = 5.0
+                if (dF < 0.0):
+                    dF = 0.0
+                if (dF > 0.02):
+                    dF = 0.02
                 dF = float(val)
                 print ('dF           =', dF)
 
@@ -510,7 +515,7 @@ if __name__ == '__main__':
                     max_prec_mass = 0 
                 if (max_prec_mass > 10000):
                     max_prec_mass = 10000
-                print ('max_prec_mass =', max_prec_mass)                
+                print ('max_prec_mass =', max_prec_mass)
 
             # Minimum Shared Peaks
             elif (param == 'shp_cnt'):
@@ -539,8 +544,8 @@ if __name__ == '__main__':
             # Intensity Cutoff Ratio
             elif (param == 'cutoff_ratio'):
                 cutoff_ratio = float(val)
-                if (cutoff_ratio >= 0.20):
-                    cutoff_ratio = 0.20
+                if (cutoff_ratio >= 0.10):
+                    cutoff_ratio = 0.10
                 if (cutoff_ratio <= 0):
                     cutoff_ratio = 0.01
                 print ('Intensity Cutoff Ratio =', cutoff_ratio)
@@ -550,7 +555,7 @@ if __name__ == '__main__':
                 spadmem = int(val)
                 if (spadmem < 2048):
                     spadmem = 2048
-                print ('Scorecard Memory =', spadmem)
+                print ('Scratch Memory (MB) =', spadmem)
 
             # Workspace Path
             elif (param == 'workspace'):
@@ -589,12 +594,14 @@ if __name__ == '__main__':
     # Close the params file
     params.close()
 
-# ##################################################################################
+#
+# ----------------------------------------------------------------------------------------------------
+#
 
     # Create a workspace directory
     print ('\nInitializing Workspace at: ', workspace)
 
-    if (os.path.exists(workspace) == False):    
+    if (os.path.exists(workspace) == False):
         os.mkdir(workspace)
 
     # Create the output directory for results
@@ -623,8 +630,10 @@ if __name__ == '__main__':
             print ('ABORT: Database part(s) are missing\n')
             exit(-3)
 
-# ##################################################################################
-    
+#
+# ----------------------------------------------------------------------------------------------------
+#
+
     # AUTOTUNER
     if (autotune == 1):
         print ("\n\n****** Autotuning parameters *******\n")
@@ -728,11 +737,11 @@ if __name__ == '__main__':
                 os.remove(workspace + '/autogen/counter.out')
 
             # Make counter.exe if missing
-            if (os.path.isfile(pcdsframepath + '/counter/counter.exe') == False):
+            if (os.path.isfile(hicopspath + '/counter') == False):
                 cleancntr = call("make -C counter allclean", shell=True)
                 makecntr = call("make -C counter", shell=True)
             
-            genOpenMPScript(workspace, 'counter', 'counter', 'compute', '1', str(cores), '00:30:00', str(cores), pcdsframepath + '/counter/counter.exe', pparams)
+            genOpenMPScript(workspace, 'counter', 'counter', 'compute', '1', str(cores), '00:30:00', str(cores), hicopspath + '/counter', pparams)
 
             # Call the counter process            
             autotune3 = call('sbatch ' + workspace + '/autogen/counter', shell=True)
@@ -771,7 +780,7 @@ if __name__ == '__main__':
             print ('\nFATAL: counter.exe failed. Please check the ./cnterr.txt\n')
 
             if (os.path.isfile(workspace + '/autogen/counter.out') == True):
-                copyfile(workspace + '/autogen/counter.out', pcdsframepath + '/cnterr.txt')
+                copyfile(workspace + '/autogen/counter.out', hicopspath + '/cnterr.txt')
                 os.remove(workspace + '/autogen/counter.out')
 
             # Exit abnormally
@@ -779,7 +788,9 @@ if __name__ == '__main__':
 
         print ('\n')
 
-# ######################## APPLY OPTIMIZATIONS ##########################################################
+#
+# ------------------------------ Apply Optimizations -------------------------------------------
+#
 
         # Apply the optimizations 
             
@@ -838,7 +849,7 @@ if __name__ == '__main__':
             print ('         Either increase the number of nodes or expect performance degradation due to NUMA access and page faults\n')
 
 
-        print('Tuning OpenMP and MPI settings...\n')
+        print('Optimizing HiCOPS settings...\n')
         print('Setting threads/MPI =', threads)
         print('Setting MPI/machine =', mpi_per_node)
         print('Setting MPI Policy  =', bp)
@@ -847,7 +858,9 @@ if __name__ == '__main__':
 
         print('\nSUCCESS\n')
 
-# ##################################################################################
+#
+# ----------------------------------------------------------------------------------------------------
+#
 
     # Prepare the uparams.txt file for PCDSFrame
     uparams = workspace + '/autogen/uparams.txt'
@@ -887,14 +900,16 @@ if __name__ == '__main__':
     modfile.close()
 
     # Generate the job script
-    genMPI_OpenMPScript(workspace, 'hicops', 'hicops', 'compute', str(nodes), str(cores), jobtime, str(threads), pcdsframepath + '/source/hicops.exe', str(mpi_per_node), bl, bp, uparams)
+    genMPI_OpenMPScript(workspace, 'hicops', 'hicops', 'compute', str(nodes), str(cores), jobtime, str(threads), hicopspath + '/hicops', str(mpi_per_node), bl, bp, uparams)
 
-    # Clean and make a fresh copy of CFIR index if needed
-    if (os.path.isfile(pcdsframepath + '/source/hicops.exe') == False):
-        cleancfir = call("make -C source clean", shell=True)
-        makecfir = call("make -C source", shell=True)
+    # Generate the post-processing script
+    genNormalScript(workspace, 'postprocess', 'postprocess', 'compute', 1, 1, jobtime, 'psm2excel', workspace + '/output')
 
-    # Run the HPC PCDSFrame
+#
+# ----------------------------------------------------------------------------------------------------
+#
+
+    # Run HiCOPS
     cfir = call('sbatch ' + workspace + '/autogen/hicops', shell=True)
 
     print ('\nThe HiCOPS job is running now\n')
@@ -902,7 +917,6 @@ if __name__ == '__main__':
     print ('The output will be written at: '+ workspace + '/output\n\n')
 
     print ('\nSUCCESS\n')
-    print ('Thank you for using HiCOPS software\n')
-    print ('Please report bugs (if any) at {mhaseeb, fsaeed}@fiu.edu\n')
+    print ('Issue Reporting: https://github.com/pcdslab/hicops/issues\n')
 
-    print ('########################################################\n')
+    print (' # ---------------------------------------------------------------------------------------------------- #\n\n')

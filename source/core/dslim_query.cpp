@@ -525,10 +525,13 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
 
 #if defined (USE_TIMEMORY)
     static search_tuple_t search_inst("theSrch");
-    static hw_counters_t search_cntr ("theSrch");
-    
     search_inst.start();
+
+    // PAPI is only available on Windows
+#   if defined (_UNIX)
+    static hw_counters_t search_cntr ("theSrch");
     search_cntr.start();
+#   endif // _UNIX
 #endif // USE_TIMEMORY
 
     if (params.nodes > 1)
@@ -848,7 +851,11 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
 
 #if defined (USE_TIMEMORY)
     search_inst.stop();
+
+    // PAPI is only available on Windows
+#   if defined (_UNIX)
     search_cntr.stop();
+#   endif // _UNIX
 #endif // USE_TIMEMORY
 
 #ifndef DIAGNOSE
