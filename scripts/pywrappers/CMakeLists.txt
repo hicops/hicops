@@ -1,3 +1,4 @@
+project(pywrappers LANGUAGES C CXX)
 
 #
 # ---------------------------------------------------------------------------------------
@@ -10,16 +11,16 @@ endif()
 message(STATUS "Installing in.. " ${CMAKE_BINARY_DIR})
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/hicops_comet.py
-    ${CMAKE_BINARY_DIR}/wrappers/hicops_comet @ONLY)
+    ${CMAKE_BINARY_DIR}/scripts/wrappers/hicops_comet @ONLY)
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/psm2excel.py
-    ${CMAKE_BINARY_DIR}/wrappers/psm2excel @ONLY)
+    ${CMAKE_BINARY_DIR}/scripts/wrappers/psm2excel @ONLY)
 
 
 install(
     FILES
-        ${CMAKE_BINARY_DIR}/wrappers/hicops_comet
-        ${CMAKE_BINARY_DIR}/wrappers/psm2excel
+        ${CMAKE_BINARY_DIR}/scripts/wrappers/hicops_comet
+        ${CMAKE_BINARY_DIR}/scripts/wrappers/psm2excel
 
     DESTINATION bin/wrappers
     PERMISSIONS

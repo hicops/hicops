@@ -14,27 +14,27 @@ if(NOT BASH_EXECUTABLE)
 endif()
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/dbprocessorLinux.py
-    ${CMAKE_BINARY_DIR}/dbtools/dbprocessorLinux @ONLY)
+    ${CMAKE_BINARY_DIR}/scripts/dbtools/dbprocessorLinux @ONLY)
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/dbprocessorWindows.py
-    ${CMAKE_BINARY_DIR}/dbtools/dbprocessorWindows @ONLY)
+    ${CMAKE_BINARY_DIR}/scripts/dbtools/dbprocessorWindows @ONLY)
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/cluster.sh
-    ${CMAKE_BINARY_DIR}/dbtools/cluster @ONLY)
+    ${CMAKE_BINARY_DIR}/scripts/dbtools/cluster @ONLY)
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/kthocc.sh
-    ${CMAKE_BINARY_DIR}/dbtools/kthocc @ONLY)
+    ${CMAKE_BINARY_DIR}/scripts/dbtools/kthocc @ONLY)
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/sep_by_len.sh
-    ${CMAKE_BINARY_DIR}/dbtools/sep_by_len @ONLY)
+    ${CMAKE_BINARY_DIR}/scripts/dbtools/sep_by_len @ONLY)
 
 install(
     FILES
-        ${CMAKE_BINARY_DIR}/dbtools/dbProcessorLinux
-        ${CMAKE_BINARY_DIR}/dbtools/dbProcessorWindows
-        ${CMAKE_BINARY_DIR}/dbtools/sep_by_len
-        ${CMAKE_BINARY_DIR}/dbtools/cluster
-        ${CMAKE_BINARY_DIR}/dbtools/kthocc
+        ${CMAKE_BINARY_DIR}/scripts/dbtools/dbProcessorLinux
+        ${CMAKE_BINARY_DIR}/scripts/dbtools/dbProcessorWindows
+        ${CMAKE_BINARY_DIR}/scripts/dbtools/sep_by_len
+        ${CMAKE_BINARY_DIR}/scripts/dbtools/cluster
+        ${CMAKE_BINARY_DIR}/scripts/dbtools/kthocc
 
     DESTINATION dbtools
     PERMISSIONS
