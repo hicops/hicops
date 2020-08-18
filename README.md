@@ -8,8 +8,8 @@ HiCOPS: Software framework for accelerated peptide identification from LC-MS/MS 
 ## Recommended Compiler
 GCC compiler version 7.2.0 or later supporting C++14. You may use Intel or LLVM compilers but make sure to follow through the installation steps accordingly. We have tested the HiCOPS on Linux OS (Ubuntu v16.04, v18.04 and CentOS-7) using GCC v7.2.0, v8.4.0 and v9.3.0 on Haswell, Broadwell, Kabylake, Skylake and KNL processors.
 
-## Install the required packages
-Install the following packages preferably using [Spack](https://spack.readthedocs.io). Read more about how to install Spack and how to install packages using Spack [here](https://spack.readthedocs.io/en/latest/getting_started.html).
+## Install and Load the required packages
+Install and load the following packages preferably using [Spack](https://spack.readthedocs.io). Read more about how to install Spack and how to install and load packages using Spack [here](https://spack.readthedocs.io/en/latest/getting_started.html).
 
 ```bash
 Required Packages:
@@ -21,7 +21,8 @@ py-six@1.14.0
 
 `Note`: The package versions listed in the above list are not compulsory. You may install the latest versions of the packages. 
 
-Make sure that you install all following packages using the same compiler that you will use to install HiCOPS as well. See [Recommended Compiler](##Recommended-Compiler). The packages currently installed via Spack can be checked using:
+Make sure that you installed all the above listed packages using the same compiler that you will use to install HiCOPS as well. See [Recommended Compiler](##Recommended-Compiler). The packages currently installed via Spack can be checked using `spack find`. For example:
+
 ```bash
 $ spack find
 ==> 63 installed packages
@@ -54,10 +55,11 @@ Install timemory using CMake or Spack using the instructions [here](https://time
 $ export CMAKE_PREFIX_PATH=$timemory_DIR:$CMAKE_PREFIX_PATH
 ```
 
-If using Spack, you can install timemory and its dependencies using:
+If using Spack, you can install and load timemory and its dependencies using:
 
 ```bash
 $ spack install timemory%gcc@version +ompt +tools +ompt_library ~dyninst +gotcha +python +papi ~caliper +mpi +mpip_library
+$ spack load -r timemory
 ```
 
 ## Install HiCOPS
