@@ -8,8 +8,6 @@ if(NOT PYTHON_EXECUTABLE)
     set(PYTHON_EXECUTABLE "/usr/bin/env python")
 endif()
 
-message(STATUS "Installing in.. " ${CMAKE_BINARY_DIR})
-
 configure_file(${CMAKE_CURRENT_LIST_DIR}/hicops_comet.py
     ${CMAKE_BINARY_DIR}/scripts/wrappers/hicops_comet @ONLY)
 

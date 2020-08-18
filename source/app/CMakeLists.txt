@@ -22,3 +22,26 @@ set_target_properties(hicops-core
 
 # installation
 install(TARGETS hicops DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+#
+# ---------------------------------------------------------------------------------------
+#
+
+if(NOT PYTHON_EXECUTABLE)
+    set(PYTHON_EXECUTABLE "/usr/bin/env python")
+endif()
+
+configure_file(${CMAKE_CURRENT_LIST_DIR}/hicops_config.py
+    ${CMAKE_BINARY_DIR}/scripts/wrappers/hicops_config @ONLY)
+
+
+install(
+    FILES
+        ${CMAKE_BINARY_DIR}/scripts/wrappers/hicops_config
+
+    DESTINATION bin
+    PERMISSIONS
+        OWNER_EXECUTE OWNER_READ OWNER_WRITE
+        GROUP_EXECUTE GROUP_READ
+        WORLD_EXECUTE WORLD_READ
+    OPTIONAL)

@@ -770,7 +770,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
                 else
                 {
                     /* No need to memset as there are apt checks in dslim_score.cpp
-                    memset(liBuff->ibuff + (queries * 128 * sizeof(ushort_t)), 0x0, 128 * sizeof(ushort_t));*/
+                    memset(liBuff->ibuff + (queries * 256 * sizeof(ushort_t)), 0x0, 256 * sizeof(ushort_t));*/
 
                     /* Extract the top result
                      * and put it in the list */
@@ -842,7 +842,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
 
         if (params.nodes > 1)
         {
-            liBuff->currptr = ss->numSpecs * 128 * sizeof(ushort_t);
+            liBuff->currptr = ss->numSpecs * 256 * sizeof(ushort_t);
         }
 
         /* Update the number of queried spectra */
@@ -1260,7 +1260,7 @@ VOID *DSLIM_FOut_Thread_Entry(VOID *argv)
                     std::to_string(lbuff->batchNum) +
                     "_" + std::to_string(params.myid) + ".dat";
 
-        batchSize = lbuff->currptr / (128 * sizeof(ushort_t));
+        batchSize = lbuff->currptr / (256 * sizeof(ushort_t));
 
         fh->open(fn, ios::out | ios::binary);
 
