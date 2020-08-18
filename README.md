@@ -9,7 +9,7 @@ HiCOPS: Software framework for accelerated peptide identification from LC-MS/MS 
 Preferred: GCC compiler version 7.2.0 or later supporting C++14.
 
 ## Install the required packages
-Install the following packages preferably using Spack. Spack itself can be installed using the instructions [here](https://spack.readthedocs.io/en/latest/). Make sure to install all packages using the same GCC compiler that you will use to install HiCOPS as well. [See](##Recommended_Compiler).
+Install the following packages preferably using [Spack](https://spack.readthedocs.io). Read more about how to install Spack and how to install packages using Spack [here](https://spack.readthedocs.io/en/latest/getting_started.html). Make sure that you install all following packages using the same `GCC` compiler that you will use to install HiCOPS as well. See [Recommended Compiler](##Recommended_Compiler). The packages currently installed via Spack can be checked by:
 
 ```bash
 $ spack find
@@ -27,10 +27,10 @@ dyninst@10.2.0       hwloc@2.2.0      libpng@1.6.37        openssl@1.1.1g   py-j
 
 `Note`: The package versions listed in the above list are not compulsory. You may install the latest versions of the packages.
 
-## On a regular computer (skip if using XSEDE Comet)
+### On a regular computer (skip if using XSEDE Comet)
 Install the `mpich` package using `spack install mpich%gcc@version`
 
-## On XSEDE Comet
+### On XSEDE Comet
 Load the MPI and GNU modules
 ```bash
 $ module purge
@@ -110,7 +110,7 @@ $ export LD_LIBRARY_PATH=$HICOPS_INSTALL/lib:$LD_LIBRARY_PATH
 ```
 
 ## On a regular computer (skip if using XSEDE Comet)
-Generate HiCOPS sample runtime parameters file using the `hicops_config` located at `$HICOPS_INSTALL/bin`.
+1. Generate HiCOPS sample runtime parameters file using the `hicops_config` located at `$HICOPS_INSTALL/bin`.
 
 ```bash
 $ $HICOPS_INSTALL/bin/hicops_config -g
@@ -119,8 +119,8 @@ Generated: ./sampleparams.txt
 SUCCESS
 ```
 
-Edit the generated sampleparams.txt file and add/modify HiCOPS' runtime parameters.
-Generate the HiCOPS runtime parameters file (called `uparams.txt`) as:
+2. Edit the generated sampleparams.txt file and add/modify HiCOPS' runtime parameters.
+3. Generate the HiCOPS runtime parameters file (called `uparams.txt`) as:
 
 ```bash
 $ $HICOPS_INSTALL/bin/hicops_config ./sampleparams.txt
@@ -133,8 +133,10 @@ Run HiCOPS with `uparams.txt` as arguments and optionally MPI if `USE_MPI=ON` wa
 $ mpirun -np 4 [OPTIONS] $HICOPS_INSTALL/bin/hicops $HICOPS_INSTALL/bin/uparams.txt
 ```
 
+`Note:` Repeat Steps # 2 and 3 if you modify parameters in the `sampleparams.txt`.
+
 ## On XSEDE Comet
-Generate HiCOPS sample runtime parameters file using the `hicops_comet` wrapper script located at `$HICOPS_INSTALL/bin/wrappers`.
+1. Generate HiCOPS sample runtime parameters file using the `hicops_comet` wrapper script located at `$HICOPS_INSTALL/bin/wrappers`.
 
 ```bash
 $ $HICOPS_INSTALL/bin/wrappers/hicops_comet -g
@@ -143,13 +145,15 @@ Generated: ./sampleparams.txt
 SUCCESS
 ```
 
-Edit the generated sampleparams.txt file and add/modify HiCOPS' runtime parameters.
+2. Edit the generated sampleparams.txt file and add/modify HiCOPS' runtime parameters.
 
-Run HiCOPS using the same wrapper script i.e. `hicops_comet`, however, this time providing the updated sampleparams.txt as parameter to the wrapper.
+3. Run HiCOPS using the same wrapper script i.e. `hicops_comet`, however, this time providing the updated sampleparams.txt as parameter to the wrapper.
 
 ```bash
 $ $HICOPS_INSTALL/bin/wrappers/hicops_comet sampleparams.txt
 ```
+
+`Note:` Repeat Steps # 2 and 3 if you modify parameters in the `sampleparams.txt`.
 
 # Post-processing HiCOPS output
 HiCOPS generates PSM data in partial TSV files that can be merged using the `psm2excel` tool located at: `$HICOPS_INSTALL/wrappers`. The tool generates a combined Excel file called `Concat.xlsx` containing the final PSM data (no-FDR).
@@ -165,7 +169,7 @@ $ $HICOPS_INSTALL/wrappers/psm2excel [/path/to/hicops/workspace/output]
 Run the `psm2excel` tool using SLURM and pass the HiCOPS workspace output directory (that was set in the sampleparams.txt file) as parameters.
 
 ```bash
-$ srun --partition=shared  --nodes=1 --ntasks-per-node=1 -t 00:10:00 --export=ALL psm2excel [/path/to/hicops/workspace/output]
+$ srun --partition=shared  --nodes=1 --ntasks-per-node=1 -t 00:10:00 --export=ALL $HICOPS_INSTALL/wrappers/psm2excel [/path/to/hicops/workspace/output]
 ```
 
 # Issue Reporting 
