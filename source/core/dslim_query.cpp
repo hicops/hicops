@@ -344,6 +344,8 @@ status_t DSLIM_SearchManager(Index *index)
 #if (USE_TIMEMORY)
         sched_penalty.stop();
 #endif
+        /* Compute the penalty */
+        MARK_END(penal);
 
         /* Check if endsignal */
         if (status == ENDSIGNAL)
@@ -351,8 +353,6 @@ status_t DSLIM_SearchManager(Index *index)
             break;
         }
 
-        /* Compute the penalty */
-        MARK_END(penal);
         auto penalty = ELAPSED_SECONDS(penal);
 
 #ifndef DIAGNOSE

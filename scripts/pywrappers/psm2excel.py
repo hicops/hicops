@@ -74,6 +74,7 @@ if __name__ == '__main__':
     # Read all TSVs into data matrix
     if (len(tsv_files) > 1):
         for kk in tsv_files:
+            print ('Loading File: ', kk)
             dat = pd.read_csv(kk, sep='\t', index_col=None, header=0)
             matrix.append(dat)
             os.remove(kk)
@@ -83,10 +84,10 @@ if __name__ == '__main__':
 
     # In[12]:
 
+    print ("Constructing DataFrame...")
 
     # Concatenate data into a single data frame
     frame = pd.concat(matrix, axis=0, ignore_index=True)
-
 
     # In[19]:
 
@@ -103,9 +104,10 @@ if __name__ == '__main__':
 
     # In[20]:
 
+    print ('Writing to Excel...')
 
     # Write to Excel format
     frame.to_excel(data_dir + '/Concat.xlsx')
 
     # Print the output address
-    print ('Writing: ' + data_dir + '/Concat.xlsx')
+    print ('DONE: ' + data_dir + '/Concat.xlsx')
