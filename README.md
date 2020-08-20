@@ -16,7 +16,7 @@ Required Packages:
 python@3.7.8       py-numpy@1.19.1     py-setuptools-scm@4.1.2   py-kiwisolver@1.1.0     py-python-dateutil@2.8.0    py-matplotlib@3.3.0    py-pytz@2019.3
 pkgconf@1.7.3      py-numexpr@2.7.0    py-setuptools@49.2.0      py-et-xmlfile@1.0.1     py-pillow@7.2.0             py-bottleneck@1.2.1    papi@6.0.0.1
 py-jdcal@1.3       py-pyparsing@2.4.2  py-cython@0.29.21         py-pandas@1.1.0         py-subprocess32@3.5.4       py-cycler@0.10.0       py-openpyxl@3.0.3    
-py-six@1.14.0
+py-six@1.14.0      cmake@3.18.1        boost@1.73.0
 ```
 
 `Note`: The package versions listed in the above list are not compulsory. You may install the latest versions of the packages. 
