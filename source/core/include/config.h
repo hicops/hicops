@@ -48,9 +48,6 @@
 /* Max number of RX instances before buffer flush */
 #define MAX_RX_INST              500
 
-/* Enable DSLIM Mods construction                 */
-#define VMODS
-
 /* Chunk size in number ions per chunk (def: 2 bn)   */
 #define MAX_IONS                0x80000000
 

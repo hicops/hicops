@@ -57,7 +57,6 @@ static status_t LBE_AllocateMem(Index *index)
         status = ERR_BAD_MEM_ALLOC;
     }
 
-#ifdef VMODS
     /* Allocate the seqMod */
     if (status == SLM_SUCCESS)
     {
@@ -68,7 +67,6 @@ static status_t LBE_AllocateMem(Index *index)
             status = ERR_BAD_MEM_ALLOC;
         }
     }
-#endif /* VMODS */
 
 
     return status;
@@ -161,10 +159,6 @@ status_t LBE_Initialize(Index *index)
 
             /* Increment the counters */
             iCount += 2;
-
-#ifdef DEBUG
-            cout << seq << endl;
-#endif /* DEBUG */
         }
 
         /* Get the peptide count */
@@ -181,14 +175,11 @@ status_t LBE_Initialize(Index *index)
         status = LBE_GeneratePeps(index);
     }
 
-#ifdef VMODS
-
     if (index->lclmodCnt > 0)
     {
         /* Fill in the mods entry */
         status = MODS_GenerateMods(index);
     }
-#endif /* VMODS */
 
     /* Make sure Seqs is clear anyway */
     Seqs.clear();
@@ -396,10 +387,6 @@ status_t LBE_CountPeps(char_t *filename, Index *index, uint_t explen)
     index->pepCount = 0;
     index->modCount = 0;
 
-#ifndef VMODS
-    LBE_UNUSED_PARAM(modconditions);
-#endif /* VMODS */
-
     /* Open file */
     file.open(filename);
 
@@ -445,21 +432,18 @@ status_t LBE_CountPeps(char_t *filename, Index *index, uint_t explen)
         status = ERR_INVLD_PARAM;
     }
 
-    /* Allocate teh varCount array */
+    /* Allocate the varCount array */
     if (status == SLM_SUCCESS)
     {
         varCount = new uint_t[index->pepCount + 1];
     }
 
-#ifdef VMODS
     /* Count the number of variable mods given
      * modification information */
     if (status == SLM_SUCCESS)
     {
         index->modCount = MODS_ModCounter();
     }
-
-#endif /* VMODS */
 
     /* Check if any errors occurred in MODS_ModCounter */
     if (index->modCount == (uint_t)(-1) || index->pepIndex.AAs != index->pepCount * explen)
