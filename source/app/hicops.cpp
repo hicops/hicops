@@ -19,10 +19,6 @@
 
 #include "hicops.hpp"
 
-// For sleep and getpid
-#include <sys/types.h>
-#include <unistd.h>
-
 using namespace std;
 
 /* Global Variables */
@@ -118,12 +114,6 @@ status_t main(int_t argc, char_t* argv[])
 #endif // USE_MPI
 
     // --------------------------------------------------------------------------------------------- //
-
-    std::cout << "My PID: " << getpid() << endl;
-    //sleep(15);
-
-    // --------------------------------------------------------------------------------------------- //
-
     //
     // Initialization
     //
