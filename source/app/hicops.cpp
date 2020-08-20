@@ -19,6 +19,10 @@
 
 #include "hicops.hpp"
 
+// For sleep and getpid
+#include <sys/types.h>
+#include <unistd.h>
+
 using namespace std;
 
 /* Global Variables */
@@ -112,6 +116,11 @@ status_t main(int_t argc, char_t* argv[])
     }
 #   endif // USE_TIMEMORY
 #endif // USE_MPI
+
+    // --------------------------------------------------------------------------------------------- //
+
+    std::cout << "My PID: " << getpid() << endl;
+    //sleep(15);
 
     // --------------------------------------------------------------------------------------------- //
 
@@ -573,7 +582,7 @@ static status_t ParseParams(char_t* paramfile)
         getline(pfile, line);
         params.dF = (uint_t)(std::atof(line.c_str()) * params.scale);
 
-        params.dF = std::max(0, static_cast<int>(params.dF - 1));
+        //params.dF = std::max(0, static_cast<int>(params.dF - 1));
 
         /* Get the precursor mass tolerance */
         getline(pfile, line);
