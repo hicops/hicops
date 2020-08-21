@@ -119,6 +119,11 @@ status_t DSLIM_Construct(Index *index)
             }
 
             /* Check if all correctly done */
+            if (bAPtr[(int_t)(maxmass * scale)] != (csize * speclen))
+            {	
+                status = ERR_INVLD_SIZE;	
+            }
+
             assert (bAPtr[(int_t)(maxmass * scale)] == (csize * speclen));
         }
     }
