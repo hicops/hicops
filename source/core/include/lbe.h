@@ -75,19 +75,6 @@ status_t LBE_GeneratePeps(Index *index);
 status_t LBE_Distribute(Index *index);
 
 /*
- * FUNCTION: LBE_RevDist
- *
- * DESCRIPTION: Returns the actual peptide ID
- *
- * INPUT:
- * @virtID : (Distributed) Virtual Peptide ID.
- *
- * OUTPUT:
- * @realID: Actual SPI peptide ID
- */
-#define LBE_RevDist(virtID)                  (virtID)
-
-/*
  * FUNCTION: LBE_CountPeps
  *
  * DESCRIPTION: Count peptides in FASTA and the

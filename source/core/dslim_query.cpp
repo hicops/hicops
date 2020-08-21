@@ -63,17 +63,6 @@ int_t dssize                 = 0;
 lwbuff<Queries> *qPtrs     = NULL;
 Queries *workPtr           = NULL;
 
-// DEBUG ONLY - Remove me
-std::ostream& operator<<(std::ostream &out, const _heapEntry &c)
-{
-    out << "shd_pk: " << (int)c.sharedions<< ", idxoff: " << (int)c.idxoffset;
-    out << ", total: " << c.totalions << ", psid: " << c.psid;
-    out << ", pmass: " << c.pmass << ", hyp: " << c.hyperscore;
-    return out;
-}
-
-/****************************************************************/
-
 #ifdef USE_MPI
 VOID *DSLIM_FOut_Thread_Entry(VOID *argv);
 #endif
@@ -83,7 +72,18 @@ lwqueue<MSQuery *> *ioQ = NULL;
 lock_t ioQlock;
 std::atomic<bool> scheduler_init(false);
 
-/****************************************************************/
+// DEBUG ONLY - Remove me
+std::ostream& operator<<(std::ostream &out, const _heapEntry &c)
+{
+    out << "shd_pk: " << (int)c.sharedions<< ", idxoff: " << (int)c.idxoffset;
+    out << ", total: " << c.totalions << ", psid: " << c.psid;
+    out << ", pmass: " << c.pmass << ", hyp: " << c.hyperscore;
+    return out;
+}
+
+//
+// ----------------------------------------------------------------------------------
+//
 
 VOID *DSLIM_IO_Threads_Entry(VOID *argv);
 
@@ -343,7 +343,9 @@ status_t DSLIM_SearchManager(Index *index)
         }
     }
 
-    /**************************************************************************/
+    //
+    // ----------------------------------------------------------------------------------
+    //
     /* The main query loop starts here */
     while (status == SLM_SUCCESS)
     {

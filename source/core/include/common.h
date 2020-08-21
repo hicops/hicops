@@ -31,6 +31,8 @@
 #include <iomanip>
 #include <pthread.h>
 #include <semaphore.h>
+#include <assert.h>
+#include <unistd.h>
 
 #include "config.h"
 #include "slmerr.h"

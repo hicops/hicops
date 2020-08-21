@@ -17,11 +17,6 @@
  *
  */
 
-// defining NDEBUG will disable assertions for release code
-#define NDEBUG
-#include <assert.h>
-#include <unistd.h>
-
 #include "mods.h"
 #include "lbe.h"
 
@@ -482,25 +477,30 @@ status_t MODS_GenerateMods(Index *index)
 #endif /* USE_OMP */
     for (uint_t i = 0; i < Seqs.size(); i++)
     {
-#ifdef DEBUG
-        cout << Seqs.at(i).length() << '\t' << lclcntr << '\t' << Seqs.at(i) << '\t' << modCount << endl;
-#endif /* DEBUG */
+        // continue if no mods expected
+        if (!(varCount[i+1] - varCount[i]))
+            continue;
 
         /* Make global and local index */
         uint_t globalidx = varCount[i];
         uint_t localidx  = static_cast<uint_t>(varCount[i] / params.nodes);
         uint_t residue   = static_cast<uint_t>(varCount[i] % params.nodes);
 
+        // cater for residue
         if (params.myid < residue)
             localidx ++;
 
+        // start index
         uint_t stt = localidx;
+
         MODS_ModList(Seqs[i], lclcondList, limit, container, 0, false, 0, i, globalidx, localidx);
+        
+        // local size
         uint_t ssz = localidx - stt;
 
+        // quick sort
         std::qsort((void *)(modEntries + stt), ssz, sizeof(pepEntry), cmpvarEntries);
     }
-
 
     /* Return the status */
     return status;

@@ -299,6 +299,7 @@ float_t UTILS_CalculatePepMass(AA *seq, uint_t len)
     for (uint_t l = 0; l < len; l++)
     {
         mass += AAMass[AAidx(seq[l])];
+        mass += StatMods[AAidx(seq[l])];
     }
 
     return mass;
@@ -345,6 +346,7 @@ float_t UTILS_CalculateModMass(AA *seq, uint_t len, uint_t vModInfo)
     for (uint_t l = 0; l < len; l++)
     {
         mass += AAMass[AAidx(seq[l])];
+        mass += StatMods[AAidx(seq[l])];
     }
 
     /* Add the mass of modifications present in the peptide */
@@ -382,13 +384,13 @@ float_t UTILS_GenerateModSpectrum(char_t *seq, uint_t len, uint_t *Spectrum, mod
     status_t status = SLM_SUCCESS;
     float_t mass = 0;
 
-    double_t minmass = params.min_mass;
-    double_t maxmass = params.max_mass;
-    uint_t maxz = params.maxz;
-    uint_t scale = params.scale;
+    const double_t minmass = params.min_mass;
+    const double_t maxmass = params.max_mass;
+    const uint_t maxz = params.maxz;
+    const uint_t scale = params.scale;
 
 
-    char_t modPos[MAX_SEQ_LEN] = {};
+    char_t modPos[len] = {};
     int_t modNums[MAX_MOD_TYPES] = {};
     int_t modSeen = 0;
 
@@ -405,28 +407,30 @@ float_t UTILS_GenerateModSpectrum(char_t *seq, uint_t len, uint_t *Spectrum, mod
         mass = UTILS_CalculateModMass(seq, len, modInfo.modNum);
     }
 
+    uint_t bitmask = modInfo.modNum;
+
     /* Check if a valid precursor mass */
     if (mass > minmass && mass < maxmass)
     {
         for (uint_t i = 0; i < MAX_MOD_TYPES; i++)
         {
-            modNums[i] = ((modInfo.modNum & (0x0F << (4 * i))) >> (4 * i)) - 1; // -1 to store index instead
+            bitmask = bitmask >> (4 * i);
+            modNums[i] = bitmask & 0x0F;
+            modNums[i] -= 1;
+
             if (modNums[i] != -1)
             {
                 modSeen++;
             }
         }
 
-        for (uint_t i = 0; i < MAX_SEQ_LEN; i++)
+        for (uint_t i = 0; i < len; i++)
         {
             modPos[i] = ISBITSET(modInfo.sites,i) ? 1 : 0;
         }
 
         if (mass > 0)
         {
-            /* Set the array to zeros */
-            //std::memset(Spectrum, 0x0, (sizeof(uint_t) * (iSERIES * MAXz * (len-1))));
-
             /* Generate Normal Spectrum */
             for (uint_t z = 0; z < maxz; z++)
             {

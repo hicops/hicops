@@ -91,7 +91,7 @@ status_t DSLIM_Construct(Index *index)
 
     if (status == SLM_SUCCESS)
     {
-        uint_t speclen = peplen_1 * maxz * iSERIES;
+        const uint_t speclen = peplen_1 * maxz * iSERIES;
 
         /* Construct DSLIM.bA */
 #ifdef USE_OMP
@@ -110,29 +110,21 @@ status_t DSLIM_Construct(Index *index)
 
             /* Initialize first and last bA entries */
             bAPtr[0] = 0;
-            bAPtr[(int_t)(maxmass * scale)] = (csize * speclen);
 
             for (uint_t li = 1; li <= (uint_t)(maxmass * scale); li++)
             {
                 uint_t tmpcount = bAPtr[li];
                 bAPtr[li] = bAPtr[li - 1] + count;
                 count = tmpcount;
-#ifdef VALIDATE_SLM
-                if (bAPtr[li] < bAPtr[li - 1])
-                {
-                    std::cout << chunk_number << " " << li << " " << bAPtr[li - 1] << " " << count << " " << bAPtr[li] << std::endl;
-                    status = ERR_INVLD_SIZE;
-
-                    while(true);
-                }
-#endif /* VALIDATE_SLM */
             }
 
             /* Check if all correctly done */
             if (bAPtr[(int_t)(maxmass * scale)] != (csize * speclen))
-            {
-                status = ERR_INVLD_SIZE;
+            {	
+                status = ERR_INVLD_SIZE;	
             }
+
+            assert (bAPtr[(int_t)(maxmass * scale)] == (csize * speclen));
         }
     }
 
@@ -229,51 +221,35 @@ status_t DSLIM_AllocateMemory(Index *index)
 status_t DSLIM_ConstructChunk(uint_t threads, Index *index, uint_t chunk_number)
 {
     status_t status = SLM_SUCCESS;
-    uint_t peplen_1 = index->pepIndex.peplen - 1;
-    uint_t peplen   = index->pepIndex.peplen;
-    uint_t speclen  = params.maxz * iSERIES * peplen_1;
+    const uint_t peplen_1 = index->pepIndex.peplen - 1;
+    const uint_t peplen   = index->pepIndex.peplen;
+    const uint_t speclen  = params.maxz * iSERIES * peplen_1;
 
-    double_t minmass = params.min_mass;
-    double_t maxmass = params.max_mass;
-    uint_t scale = params.scale;
+    const double_t minmass = params.min_mass;
+    const double_t maxmass = params.max_mass;
+    const uint_t scale = params.scale;
 
     /* Check if this chunk is the last chunk */
     BOOL lastChunk = (chunk_number == (index->nChunks - 1))? true: false;
 
-#ifdef USE_OMP
-    /* SA ptr for each thread */
-    uint_t *SAPtrs[threads];
-
-    /* Temporary Array needed for Theoretical Spectra */
-    uint_t *Spectra = new uint_t[threads * speclen];
-
     uint_t *BAPtrs[threads];
     uint_t *bA = new uint_t[(int_t)(threads * scale * maxmass)];
 
-    /* Initialize SAPtrs for each thread */
-    if (Spectra != NULL && bA != NULL)
+#ifdef USE_OMP
+
+    for (uint_t i = 0; i < threads; i++)
     {
-        for (uint_t i = 0; i < threads; i++)
-        {
-            SAPtrs[i] = Spectra + (i * speclen);
-            BAPtrs[i] = bA + (int_t)(i * scale * maxmass);
-        }
+        BAPtrs[i] = bA + (int_t)(i * scale * maxmass);
+    }
 
         /* Clear the bAPtrs and SAPtrs */
 #pragma omp parallel for num_threads(threads) schedule (static)
-        for (uint_t i = 0; i < threads; i++)
-        {
-            std::memset(BAPtrs[i], 0x0, (scale * maxmass * sizeof(uint_t)));
-            std::memset(SAPtrs[i], 0x0, (speclen * sizeof(uint_t)));
-        }
-    }
-    else
+    for (uint_t i = 0; i < threads; i++)
     {
-        status = ERR_INVLD_MEMORY;
+        std::memset(BAPtrs[i], 0x0, (scale * maxmass * sizeof(uint_t)));
     }
 #else
 
-    uint_t SAPtr[speclen] = {};
     std::memset(index->ionIndex[chunk_number].bA, 0x0, (((params.scale * params.max_mass) + 1) * sizeof(uint_t)));
 
 #endif /* USE_OMP */
@@ -297,18 +273,19 @@ status_t DSLIM_ConstructChunk(uint_t threads, Index *index, uint_t chunk_number)
             /* Filling point */
             uint_t nfilled = (k - start_idx) * speclen;
 
+            /* Temporary Array needed for Theoretical Spectra */
+            uint_t* Spectrum = new uint_t[speclen];
+
 #ifdef USE_OMP
-            uint_t *Spec = SAPtrs[omp_get_thread_num()];
             uint_t *bAPtr  = BAPtrs[omp_get_thread_num()];
 #else
-            uint_t *Spec = SAPtr;
             uint_t *bAPtr = index->ionIndex[chunk_number].bA;
 #endif /* OPENMP */
 
             /* Extract peptide Information */
             float_t pepMass = 0.0;
             char_t *seq = NULL;
-            uint_t pepID = LBE_RevDist(k);
+            uint_t pepID = k;
 
             /* Extract from pepEntries */
             pepEntry *entry = index->pepEntries + pepID;
@@ -319,32 +296,29 @@ status_t DSLIM_ConstructChunk(uint_t threads, Index *index, uint_t chunk_number)
             if (entry->sites.modNum == 0)
             {
                 /* Generate the Theoretical Spectrum */
-                pepMass = UTILS_GenerateSpectrum(seq, peplen, Spec);
+                pepMass = UTILS_GenerateSpectrum(seq, peplen, Spectrum);
             }
             else
             {
                 /* Generate the Mod. Theoretical Spectrum */
-                pepMass = UTILS_GenerateModSpectrum(seq, (uint_t) peplen, Spec, entry->sites);
+                pepMass = UTILS_GenerateModSpectrum(seq, (uint_t) peplen, Spectrum, entry->sites);
             }
 
             /* If a legal peptide */
             if (pepMass >= minmass && pepMass <= maxmass)
             {
-                /* Sort by ion Series and Mass */
-//                UTILS_Sort<uint_t>(Spec, half_len, false);
-//                UTILS_Sort<uint_t>((Spec + half_len), half_len, false);
-
                 /* Fill the ions */
                 for (uint_t ion = 0; ion < speclen; ion++)
                 {
-                    /* Check if legal b-ion */
-                    if (Spec[ion] >= (maxmass * scale))
+                    /* Check if legal ion */
+                    if (Spectrum[ion] >= (maxmass * scale))
                     {
-                        Spec[ion] = (maxmass * scale) - 1;
+                        Spectrum[ion] = (maxmass * scale) - 1;
+                        //assert (Spectrum[ion] < (maxmass * scale));
                     }
 
-                    SpecArr[nfilled + ion] = Spec[ion]; // Fill in the b-ion
-                    bAPtr[SpecArr[nfilled + ion]]++; // Update the BA counter
+                    SpecArr[nfilled + ion] = Spectrum[ion]; // Fill in the ion
+                    bAPtr[Spectrum[ion]]++; // Update the bA counter
                 }
             }
 
@@ -402,17 +376,11 @@ status_t DSLIM_SLMTransform(uint_t threads, Index *index, uint_t chunk_number)
 
     /* Check if this chunk is the last chunk */
     uint_t size = ((chunk_number == index->nChunks - 1) && (index->nChunks > 1))?
-                 index->lastchunksize                                  :
-                 index->chunksize;
+                   index->lastchunksize : index->chunksize;
 
     uint_t speclen = (index->pepIndex.peplen - 1) * params.maxz * iSERIES;
     uint_t *iAPtr = index->ionIndex[chunk_number].iA;
     uint_t iAsize = size * speclen;
-
-#ifdef VALIDATE_SLM
-    uint_t *integ = new uint_t[size * speclen];
-    std::memcpy(integ, SpecArr, sizeof(uint_t) * iAsize);
-#endif /* VALIDATE_SLM */
 
     /* Construct DSLIM.iA */
 #ifdef USE_OMP
@@ -429,28 +397,6 @@ status_t DSLIM_SLMTransform(uint_t threads, Index *index, uint_t chunk_number)
 #else
     KeyVal_Serial<uint_t>(SpecArr, iAPtr, iAsize);
 #endif /* USE_OMP */
-
-    /* Check integrity of SLM-Transform */
-#ifdef VALIDATE_SLM
-    BOOL integrity = true;
-
-#ifdef USE_OMP
-#pragma omp parallel for num_threads(threads) schedule(static)
-#endif /* USE_OMP */
-    for (uint_t k = 1; k < iAsize; k++)
-    {
-        if (integ[iAPtr[k]] < integ[iAPtr[k - 1]])
-        {
-            integrity = false;
-        }
-    }
-
-    if (integrity == false)
-    {
-        while (!integrity);
-        status = ERR_INVLD_SORT;
-    }
-#endif /* VALIDATE_SLM */
 
     return status;
 }

@@ -136,7 +136,7 @@ int minHeap<T>::insert(T element)
 
     array[size++] = element; //initially size=0; It increases after insertion of every element
 
-    for (int i = (size - 1) >> 1; i >= 0; i--) //heapify starts from the least non=leaf node. This is b'coz leaves are always heapified.
+    for (int i = (size - 1) / 2; i >= 0; i--) //heapify starts from the least non=leaf node. This is b'coz leaves are always heapified.
     {
         heapify(i);
     }

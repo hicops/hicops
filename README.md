@@ -215,7 +215,7 @@ $ srun --partition=shared  --nodes=1 --ntasks-per-node=1 -t 00:10:00 --export=AL
 2. [Fahad Saeed](http://www.saeedfahad.com)
 
 ## Code Maintainers
-1. [Muhammad Haseeb](https://github.com/mhaeseb123)
+1. [Muhammad Haseeb](https://github.com/mhaseeb123)
 
 ## Issue Reporting
 Open an issue [here](https://github.com/pcdslab/hicops/issues) (preferred) or email: mhase003@fiu.edu or fsaeed@fiu.edu. Use the template subject line: \[BUG:HiCOPS]: *One line summary of the issue*.  
