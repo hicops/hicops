@@ -1,12 +1,10 @@
 #!@PYTHON_EXECUTABLE@
-# coding: utf-8
-
-# ####   Copyright (c) 2020 Muhammad Haseeb, Fahad Saeed
-# ####    School of Computing and Information Sciences
-# ####      Florida International University   (FIU)
-# ####         Email: {mhaseeb, fsaeed} @fiu.edu
+#   Copyright (c) 2020 Muhammad Haseeb, Fahad Saeed
+#    School of Computing and Information Sciences
+#      Florida International University   (FIU)
+#         Email: {mhaseeb, fsaeed} @fiu.edu
 # 
-# ### License
+#  License
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation, either version 3 of the License, or
@@ -20,35 +18,32 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# ## Import Packages
 
-# In[3]:
-
-
+# Import Packages
 import os
-import re
 import sys
-import math
-import time
 import glob
-import numpy as np
 import pandas as pd
-import operator
-import matplotlib.pyplot as plt
 
 
-# ## Sanity Checking
-
-# In[9]:
-
+# Sanity Checking
 
 # The main function
 if __name__ == '__main__':
+
+    if len(sys.argv) <= 1:
+        print ("ERROR: Please provide the path to partial TSV files")
+        exit(0)
 
     if len(sys.argv) > 1:
         data_dir = sys.argv[1]
     else:
         data_dir = './'
+
+    if len(sys.argv) > 2:
+        output = sys.argv[2]
+    else:
+        output = ''
 
     # Open the TSV files
     data_dir = os.path.expanduser(data_dir)
@@ -63,10 +58,7 @@ if __name__ == '__main__':
     #print (tsv_files)
 
 
-    # ## Extract TSV data
-
-    # In[11]:
-
+    # Extract TSV data
 
     # Matrix where the df will be collected
     matrix = []
@@ -74,22 +66,17 @@ if __name__ == '__main__':
     # Read all TSVs into data matrix
     if (len(tsv_files) > 1):
         for kk in tsv_files:
+            print ('Loading File: ', kk)
             dat = pd.read_csv(kk, sep='\t', index_col=None, header=0)
             matrix.append(dat)
             os.remove(kk)
 
 
-    # ## Construct data frame
-
-    # In[12]:
-
+    # Construct data frame
+    print ("Constructing DataFrame...")
 
     # Concatenate data into a single data frame
     frame = pd.concat(matrix, axis=0, ignore_index=True)
-
-
-    # In[19]:
-
 
     # Print the new data frame shape
     if (frame.shape[1] == 0):
@@ -98,14 +85,16 @@ if __name__ == '__main__':
     # else:
     #    print(frame.shape)
 
+    # Write to Excel file
 
-    # ## Write to Excel file
+    print ('Writing to Excel...')
 
-    # In[20]:
-
+    # Check if output file provided
+    if output == '':
+        output = data_dir + '/Concat.xlsx'
 
     # Write to Excel format
-    frame.to_excel(data_dir + '/Concat.xlsx')
+    frame.to_excel(output)
 
     # Print the output address
-    print ('Writing: ' + data_dir + '/Concat.xlsx')
+    print ('DONE: ', output)

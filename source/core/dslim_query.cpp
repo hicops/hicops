@@ -63,6 +63,15 @@ int_t dssize                 = 0;
 lwbuff<Queries> *qPtrs     = NULL;
 Queries *workPtr           = NULL;
 
+// DEBUG ONLY - Remove me
+std::ostream& operator<<(std::ostream &out, const _heapEntry &c)
+{
+    out << "shd_pk: " << (int)c.sharedions<< ", idxoff: " << (int)c.idxoffset;
+    out << ", total: " << c.totalions << ", psid: " << c.psid;
+    out << ", pmass: " << c.pmass << ", hyp: " << c.hyperscore;
+    return out;
+}
+
 /****************************************************************/
 
 #ifdef USE_MPI
@@ -72,6 +81,8 @@ VOID *DSLIM_FOut_Thread_Entry(VOID *argv);
 /* A queue containing I/O thread state when preempted */
 lwqueue<MSQuery *> *ioQ = NULL;
 lock_t ioQlock;
+std::atomic<bool> scheduler_init(false);
+
 /****************************************************************/
 
 VOID *DSLIM_IO_Threads_Entry(VOID *argv);
@@ -326,6 +337,10 @@ status_t DSLIM_SearchManager(Index *index)
         {
             status = ERR_BAD_MEM_ALLOC;
         }
+        else
+        {
+            scheduler_init = true;
+        }
     }
 
     /**************************************************************************/
@@ -344,6 +359,8 @@ status_t DSLIM_SearchManager(Index *index)
 #if (USE_TIMEMORY)
         sched_penalty.stop();
 #endif
+        /* Compute the penalty */
+        MARK_END(penal);
 
         /* Check if endsignal */
         if (status == ENDSIGNAL)
@@ -351,8 +368,6 @@ status_t DSLIM_SearchManager(Index *index)
             break;
         }
 
-        /* Compute the penalty */
-        MARK_END(penal);
         auto penalty = ELAPSED_SECONDS(penal);
 
 #ifndef DIAGNOSE
@@ -676,17 +691,20 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
                                     int_t residue = (raw % speclen);
 
                                     /* Either 0 or 1 */
-                                    int_t uB = residue / halfspeclen;
+                                    int_t isY = residue / halfspeclen;
+                                    int_t isB = 1 - isY;
+
+                                    while (isY < 0 || isY > 1);
 
                                     /* Get the map element */
                                     BYC *elmnt = bycPtr + ppid;
 
                                     /* Update */
-                                    elmnt->bc += uB;
-                                    elmnt->ibc += intn * uB;
+                                    elmnt->bc += isB;
+                                    elmnt->ibc += intn * isB;
 
-                                    elmnt->yc += (1 - uB);
-                                    elmnt->iyc += intn * (1 - uB);
+                                    elmnt->yc += isY;
+                                    elmnt->iyc += intn * isY;
                                 }
                             }
                         }
@@ -770,7 +788,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
                 else
                 {
                     /* No need to memset as there are apt checks in dslim_score.cpp
-                    memset(liBuff->ibuff + (queries * 256 * sizeof(ushort_t)), 0x0, 256 * sizeof(ushort_t));*/
+                    memset(liBuff->ibuff + (queries * psize * sizeof(ushort_t)), 0x0, psize * sizeof(ushort_t));*/
 
                     /* Extract the top result
                      * and put it in the list */
@@ -842,7 +860,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
 
         if (params.nodes > 1)
         {
-            liBuff->currptr = ss->numSpecs * 256 * sizeof(ushort_t);
+            liBuff->currptr = ss->numSpecs * psize * sizeof(ushort_t);
         }
 
         /* Update the number of queried spectra */
@@ -1060,7 +1078,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 
     int_t rem_spec = 0;
 
-    while (SchedHandle == NULL);
+    while (!scheduler_init) { usleep(1); }
 
     /* Initialize and process Query Spectra */
     for (;status == SLM_SUCCESS;)
@@ -1260,7 +1278,7 @@ VOID *DSLIM_FOut_Thread_Entry(VOID *argv)
                     std::to_string(lbuff->batchNum) +
                     "_" + std::to_string(params.myid) + ".dat";
 
-        batchSize = lbuff->currptr / (256 * sizeof(ushort_t));
+        batchSize = lbuff->currptr / (psize * sizeof(ushort_t));
 
         fh->open(fn, ios::out | ios::binary);
 

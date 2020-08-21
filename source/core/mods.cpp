@@ -16,6 +16,12 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
+
+// defining NDEBUG will disable assertions for release code
+#define NDEBUG
+#include <assert.h>
+#include <unistd.h>
+
 #include "mods.h"
 #include "lbe.h"
 
@@ -38,8 +44,6 @@ vector<int_t> condList;
 extern gParams params;
 extern uint_t *varCount;
 
-#ifdef VMODS
-
 /* Peptide Sequences */
 extern vector<string_t> Seqs;
 
@@ -53,8 +57,6 @@ static VOID MODS_ModList(string_t peptide, vector<int_t> conditions,
 
 static VOID MODS_GenCombinations();
 
-#endif /* VMODS */
-
 /*
  * FUNCTION: MODS_Initialize
  *
@@ -66,7 +68,6 @@ static VOID MODS_GenCombinations();
  */
 status_t MODS_Initialize()
 {
-#ifdef VMODS
     string_t conditions = params.modconditions;
     string_t allLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     pepEntry container;
@@ -101,8 +102,6 @@ status_t MODS_Initialize()
         /* Push the allowed modification numbers into condList */
         condList.push_back(stoi(tokens[(2 * i) + 2]));
     }
-
-#endif /* VMODS */
 
     /* Return SLM_SUCCESS */
     return SLM_SUCCESS;
@@ -281,8 +280,6 @@ longlong_t partition3(vector<vector<int_t> > A, vector<int_t> B, int_t limit)
     return sum;
 }
 
-#ifdef VMODS
-
 /*
  * FUNCTION: count
  *
@@ -394,7 +391,6 @@ static VOID MODS_ModList(string_t peptide, vector<int_t> conditions,
 
     return;
 }
-#endif /* VMODS */
 
 /*
  * FUNCTION: MODS_ModCounter
@@ -412,42 +408,20 @@ static VOID MODS_ModList(string_t peptide, vector<int_t> conditions,
 ull_t MODS_ModCounter()
 {
     ull_t cumulative = 0;
-
-    uint_t threads = params.threads;
     string_t conditions = params.modconditions;
-
-#ifdef VMODS
 
     /* Return if no mods to generate */
     if (limit > 0)
     {
         /* Parallel modcounter */
 #ifdef USE_OMP
-            /* The parallel for loop */
-#pragma omp parallel for num_threads (threads) schedule(static) reduction(+: cumulative)
-            for (uint_t i = 0; i < Seqs.size(); i++)
-            {
-                varCount[i] = count(Seqs.at(i)) - 1;
-                cumulative += varCount[i];
-            }
-
-#else
-        LBE_UNUSED_PARAM(threads);
-
-       for (uint_t i = 0; i < Seqs.size(); i++)
-       {
+#pragma omp parallel for num_threads (params.threads) schedule(static) reduction(+: cumulative)
+#endif // USE_OMP
+        for (uint_t i = 0; i < Seqs.size(); i++)
+        {
             varCount[i] = count(Seqs.at(i)) - 1;
             cumulative += varCount[i];
-       }
-
-#endif /* USE_OMP */
-
-#endif /* VMODS */
-
-#ifndef VMODS
-        LBE_UNUSED_PARAM(conditions);
-#endif /* VMODS */
-
+        }
 
         uint_t count = varCount[0];
         varCount[0] = 0;
@@ -459,10 +433,7 @@ ull_t MODS_ModCounter()
             count = tmpcount;
         }
 
-        if (varCount[Seqs.size()] != cumulative)
-        {
-            cumulative = (uint_t) (-1);
-        }
+        assert (varCount[Seqs.size()] == cumulative);
     }
 
     return cumulative;
@@ -491,7 +462,6 @@ status_t MODS_GenerateMods(Index *index)
 
     modEntries = idx;
 
-#ifdef VMODS
     const string_t allLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     pepEntry container;
 
@@ -518,7 +488,11 @@ status_t MODS_GenerateMods(Index *index)
 
         /* Make global and local index */
         uint_t globalidx = varCount[i];
-        uint_t localidx  = uint_t(varCount[i] / params.nodes);
+        uint_t localidx  = static_cast<uint_t>(varCount[i] / params.nodes);
+        uint_t residue   = static_cast<uint_t>(varCount[i] % params.nodes);
+
+        if (params.myid < residue)
+            localidx ++;
 
         uint_t stt = localidx;
         MODS_ModList(Seqs[i], lclcondList, limit, container, 0, false, 0, i, globalidx, localidx);
@@ -527,27 +501,6 @@ status_t MODS_GenerateMods(Index *index)
         std::qsort((void *)(modEntries + stt), ssz, sizeof(pepEntry), cmpvarEntries);
     }
 
-/*
-    if (partcntr != index->lclmodCnt)
-    {
-        status = ERR_INVLD_SIZE;
-    }
-*/
-
-#ifdef DEBUG
-    /* Print for DEBUG information */
-    for(uint_t i = 0; i < modCount; i++)
-    {
-        cout << i << ": " << mods[i] << '\t';
-        printf("0x%08x\t", entries[i].sites.modNum);
-        cout << bitset<MAX_SEQ_LEN>(entries[i].sites.sites) << endl;
-    }
-
-    delete[] mods;
-
-#endif /* DEBUG */
-
-#endif /* VMODS */
 
     /* Return the status */
     return status;

@@ -1,15 +1,15 @@
 ![HiCOPS C/C++ CI](https://github.com/mhaseeb123/hicops/workflows/HiCOPS%20C/C++%20CI/badge.svg)
 
 # HiCOPS
-HiCOPS: Software framework for accelerated peptide identification from LC-MS/MS data on HPC systems.
+*HiCOPS*: A computational framework for accelerated peptide identification from LC-MS/MS data on HPC systems.
 
-# Installation
+# 1 Installation
 
-## Recommended Compiler
-GCC compiler version 7.2.0 or later supporting C++14. You may use Intel or LLVM compilers but make sure to follow through the installation steps accordingly. We have tested the HiCOPS on Linux OS (Ubuntu v16.04, v18.04 and CentOS-7) using GCC v7.2.0, v8.4.0 and v9.3.0 on Haswell, Broadwell, Kabylake, Skylake and KNL processors.
+## 1.1 Recommended Compiler
+GCC compiler version 7.2.0 or later supporting C++14. You may use Intel or LLVM compilers but make sure to follow through the installation steps accordingly. We have only tested the HiCOPS on Linux OS (Ubuntu v16.04, v18.04 and CentOS-7) using GCC v7.2.0, v8.4.0 and v9.3.0 running on Haswell, Broadwell, Kabylake, Skylake and KNL processors.
 
-## Install and Load the required packages
-Install and load the following packages preferably using [Spack](https://spack.readthedocs.io). Read more about how to install Spack and how to install and load packages using Spack [here](https://spack.readthedocs.io/en/latest/getting_started.html).
+## 1.2 Install and Load the required packages
+Install and load the following packages preferably using [Spack](https://spack.readthedocs.io). Read more about how to install Spack, and how to install and load packages using Spack [here](https://spack.readthedocs.io/en/latest/getting_started.html).
 
 ```bash
 Required Packages:
@@ -19,7 +19,7 @@ py-jdcal@1.3       py-pyparsing@2.4.2  py-cython@0.29.21         py-pandas@1.1.0
 py-six@1.14.0      cmake@3.18.1        boost@1.73.0
 ```
 
-`Note`: The package versions listed in the above list are not compulsory. You may install the latest versions of the packages. 
+**NOTE**: The package versions listed in the above list are not compulsory. You may install the latest versions of the packages. 
 
 Make sure that you installed all the above listed packages using the same compiler that you will use to install HiCOPS as well. See [Recommended Compiler](##Recommended-Compiler). The packages currently installed via Spack can be checked using `spack find`. For example:
 
@@ -37,10 +37,10 @@ diffutils@3.7        gotcha@1.0.3     libpciaccess@0.13.5  openblas@0.3.10  py-e
 dyninst@10.2.0       hwloc@2.2.0      libpng@1.6.37        openssl@1.1.1g   py-jdcal@1.3         py-pyparsing@2.4.2   qhull@2020.1
 ```
 
-### On a regular computer (skip if using XSEDE Comet)
+### 1.2.1 On a regular computer (skip if using XSEDE Comet)
 Install the `mpich` package using `spack install mpich%gcc@version`
 
-### On XSEDE Comet
+### 1.2.2 On XSEDE Comet
 Load the MPI and GNU modules
 ```bash
 $ module purge
@@ -48,33 +48,41 @@ $ module load gnu/7.2.0
 $ module load openmpi_ib
 ```
 
-## Install timemory for HiCOPS instrumentation/profiling (optional)
+## 1.3 Install timemory for HiCOPS instrumentation/profiling - Optional
 Install timemory using CMake or Spack using the instructions [here](https://timemory.readthedocs.io/en/develop/installation.html). After installation, make sure that the path to timemory installation has been appended to the enviornment variable `CMAKE_PREFIX_PATH`.
 
 ```bash
-$ export CMAKE_PREFIX_PATH=$timemory_DIR:$CMAKE_PREFIX_PATH
+$ export CMAKE_PREFIX_PATH=$TIMEMORY_INSTALL:$CMAKE_PREFIX_PATH
 ```
 
+### 1.3.1 Timemory Install Example
 If using Spack, you can install and load timemory and its dependencies using:
 
 ```bash
 $ spack install timemory%gcc@version +ompt +tools +ompt_library ~dyninst +gotcha +python +papi ~caliper +mpi +mpip_library
 $ spack load -r timemory
 ```
+Add the `--only dependencies` flag right after `spack install` in above command if you want to only install the dependencies of Timemory.
 
-## Install HiCOPS
+If using CMake, then assuming all that all required Timemory dependency packages have been installed and loaded:
+
+```bash
+$ git clone https://github.com/NERSC/timemory.git && cd timemory && mkdir build && cd build
+$ cmake .. -DTIMEMORY_USE_MPI=ON -DTIMEMORY_BUILD_MPIP_LIBRARY=ON -DTIMEMORY_USE_OMPT=ON -DTIMEMORY_USE_GOTCHA=ON -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_CXX_STANDARD=14 -DTIMEMORY_USE_PYTHON=ON -DTIMEMORY_BUILD_TOOLS=ON -DUSE_MPI=ON -DUSE_OPENMP=ON -DTIMEMORY_USE_PAPI=ON
+$ make install
+$ export CMAKE_PREFIX_PATH=$PWD/../install:$CMAKE_PREFIX_PATH
+```
+
+**NOTE:** Timemory and its dependencies can take upto 2-3 hours to install depending on the system so please be patient.
+
+## 1.4 Install HiCOPS
 Install HiCOPS using Git & CMake using the following steps:
 
-### Get HiCOPS
+### 1.4.1 Configure
 
 ```bash
 $ git clone https://github.com/pcdslab/hicops
 $ cd hicops
-```
-
-### Configure
-
-```bash
 $ mkdir build && cd build
 $ CC=$(which gcc) CXX=$(which g++) cmake .. [CMAKE_OPTIONS] -G [BUILD_SYSTEM] -D<VARIABLE>=<VALUE>
 ```
@@ -82,12 +90,12 @@ $ CC=$(which gcc) CXX=$(which g++) cmake .. [CMAKE_OPTIONS] -G [BUILD_SYSTEM] -D
 The available variables are as follows:
 
 ```bash
-CMAKE_INSTALL_PREFIX: Set the installation path for HiCOPS, must be a writable directory and should not require sudo
-CMAKE_BUILD_TYPE: Build type. Set to: Release, Debug, MinRelSize, RelWithDebInfo (default)
-CMAKE_CXX_STANDARD: C++ standard. Set to: 11, 14 (default), 17
-USE_OMP: Enable the use of OpenMP multithreading. Set to: ON(default)/OFF
-USE_MPI: Enable MPI= support. Set to: ON(default)/OFF
-USE_TIMEMORY: Enable timemory interface. Set to: ON/OFF(default). Requires timemory installation
+CMAKE_INSTALL_PREFIX    Set the installation path for HiCOPS, must be a writable directory without sudo
+CMAKE_BUILD_TYPE        Build type. Can set to: Release, Debug, MinSizeRel, RelWithDebInfo (default)
+CMAKE_CXX_STANDARD      C++ standard. Can set to: 11, 14 (default), 17
+USE_OMP                 Enable the use of OpenMP multithreading. Set to: ON(default)/OFF
+USE_MPI                 Enable MPI support. Can set to: ON (default), OFF
+USE_TIMEMORY            Enable timemory interface. Can set to: ON, OFF (default) => Requires timemory installation
 ```
 
 You can check the value of each setting in your build using `ccmake`. For example: 
@@ -108,7 +116,7 @@ $ ccmake ..
  timemory_ONETIME_MESSAGE_DELIV   ON
 ```
 
-## Build and Install
+## 1.4.2 Build and Install
 
 Depending on the build system generated, build and install HiCOPS. For example in case of Makefile
 
@@ -116,17 +124,28 @@ Depending on the build system generated, build and install HiCOPS. For example i
 $ make install -j [JOBS]
 ```
 
-# Run HiCOPS
+**NOTE:** Compiling HiCOPS with Timemory enabled may take some time (~ 3-5 minutes)
+
+# 2 Run HiCOPS
 For the rest of the document, we will be assuming that the HiCOPS was installed at : `$HICOPS_INSTALL`
 
-## Update LD_LIBRARY_PATH
+## 2.1 Update LD_LIBRARY_PATH
 Append the `HICOPS_INSTALL/lib` to the environment variable `LD_LIBRARY_PATH`.
 
 ```bash
 $ export LD_LIBRARY_PATH=$HICOPS_INSTALL/lib:$LD_LIBRARY_PATH
 ```
 
-## On a regular computer (skip if using XSEDE Comet)
+## 2.2 Setup Instrumentation (with Timemory) - Optional
+If the `USE_TIMEMORY=ON` option was set in [Configure](###Configure) step, you can add more instrumentation components to the default HiCOPS provided instrumentation by setting the environment variable `HICOPS_INST_COMPONENTS="<component_1>, <component_2>,..."` where each `<component_i>` is a Timemory's component. See more about how to list available timemory components [here](https://timemory.readthedocs.io/en/develop/tools/timemory-avail/README.html?highlight=user_bundle#available-components). 
+
+Similarly, the hardware counters used for the instrumentation of HiCOPS' distributed database search algorithm can be *modified* (not appended) by setting the environment variable `HICOPS_PAPI_EVENTS="<counter_1>,<counter2>,...`. The default value of `HICOPS_PAPI_EVENTS=PAPI_TOT_INS, PAPI_TOT_CYC, PAPI_L3_TCM, PAPI_L2_TCA, PAPI_L3_TCA, PAPI_MEM_WCY, PAPI_RES_STL, PAPI_STL_CCY, PAPI_BR_CN, PAPI_BR_PRC, PAPI_FUL_ICY`. 
+
+To see which hardware counters are available on your system and their description, run the `papi_avail` tool or refer to the documentation [here](https://icl.utk.edu/papi/).
+
+**NOTE:** If a PAPI counter is not available on the system but is included in the `HICOPS_PAPI_EVENTS` anyway, the profiler will not instrument any of the counters in the list even if they are available.
+
+## 2.3 On a regular computer (skip if using XSEDE Comet)
 1. Generate HiCOPS sample runtime parameters file using the `hicops_config` located at `$HICOPS_INSTALL/bin`.
 
 ```bash
@@ -150,9 +169,9 @@ Run HiCOPS with `uparams.txt` as arguments and optionally MPI if `USE_MPI=ON` wa
 $ mpirun -np 4 [OPTIONS] $HICOPS_INSTALL/bin/hicops $HICOPS_INSTALL/bin/uparams.txt
 ```
 
-`Note:` Repeat Steps # 2 and 3 if you modify parameters in the `sampleparams.txt`.
+**NOTE:** Repeat Steps # 2 and 3 if you modify parameters in the `sampleparams.txt`.
 
-## On XSEDE Comet
+## 2.4 On XSEDE Comet
 1. Generate HiCOPS sample runtime parameters file using the `hicops_comet` wrapper script located at `$HICOPS_INSTALL/bin/wrappers`.
 
 ```bash
@@ -170,27 +189,24 @@ SUCCESS
 $ $HICOPS_INSTALL/bin/wrappers/hicops_comet sampleparams.txt
 ```
 
-`Note:` Repeat Steps # 2 and 3 if you modify parameters in the `sampleparams.txt`.
+**NOTE:** Repeat Steps # 2 and 3 if you modify parameters in the `sampleparams.txt`.
 
-# Post-processing HiCOPS output
+# 3 Post-processing HiCOPS output
 HiCOPS generates PSM data in partial TSV files that can be merged using the `psm2excel` tool located at: `$HICOPS_INSTALL/wrappers`. The tool generates a combined Excel file called `Concat.xlsx` containing the final PSM data (no-FDR).
 
-## On a regular computer (skip if using XSEDE Comet)
+## 3.1 On a regular computer (skip if using XSEDE Comet)
 Run the `psm2excel` tool and pass the HiCOPS workspace output directory (that was set in the sampleparams.txt file) as parameter.
 
 ```bash
 $ $HICOPS_INSTALL/wrappers/psm2excel [/path/to/hicops/workspace/output]
 ```
 
-## On XSEDE Comet
+## 3.2 On XSEDE Comet
 Run the `psm2excel` tool using SLURM and pass the HiCOPS workspace output directory (that was set in the sampleparams.txt file) as parameters.
 
 ```bash
 $ srun --partition=shared  --nodes=1 --ntasks-per-node=1 -t 00:10:00 --export=ALL $HICOPS_INSTALL/wrappers/psm2excel [/path/to/hicops/workspace/output]
 ```
-
-# Issue Reporting 
-Open an issue on HiCOPS [GitHub](https://github.com/pcdslab/hicops/issues) (preferred) or email: `{mhase003, fsaeed}@fiu.edu`
 
 # About this repository
 
@@ -198,5 +214,20 @@ Open an issue on HiCOPS [GitHub](https://github.com/pcdslab/hicops/issues) (pref
 1. [Muhammad Haseeb](https://sites.google.com/fiu.edu/muhammadhaseeb)
 2. [Fahad Saeed](http://www.saeedfahad.com)
 
-## Contributors
-1. [Muhammad Haseeb](https://github.com/mhaseeb123)
+## Code Maintainers
+1. [Muhammad Haseeb](https://github.com/mhaeseb123)
+
+## Issue Reporting
+Open an issue [here](https://github.com/pcdslab/hicops/issues) (preferred) or email: mhase003@fiu.edu or fsaeed@fiu.edu. Use the template subject line: \[BUG:HiCOPS]: *One line summary of the issue*.  
+
+Please include any logs, screenshots and/or helpful observations. Also, do not forget to describe the dataset(s), database, steps performed etc. so that the issue can be reproduced.
+
+## Contributing
+
+All contributions are welcome including new features, documentation updates and bug fixes.
+
+1. Fork this repository to your local GitHub, make a new branch from the latest `master` branch.
+2. Make your changes/updates.
+3. Make sure that you pull the latest changes from `hicops:master` into your branch before committing your changes.
+4. Commit your changes and push your branch to `origin`. i.e. `your_hicops_fork`.
+5. Open a pull request (PR) from `your_hicops_fork:new_branch` to `hicops:master`.

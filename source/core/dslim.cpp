@@ -53,10 +53,6 @@ status_t DSLIM_Construct(Index *index)
     double_t maxmass = params.max_mass;
     uint_t scale = params.scale;
 
-#ifndef VMODS
-    LBE_UNUSED_PARAM(modInfo);
-#endif /* VMODS */
-
     if (status == SLM_SUCCESS && SpecArr == NULL)
     {
         /* Spectra Array (SA) */
@@ -294,7 +290,7 @@ status_t DSLIM_ConstructChunk(uint_t threads, Index *index, uint_t chunk_number)
         }
 
 #ifdef USE_OMP
-#pragma omp parallel for num_threads(threads) schedule(dynamic, 1) /* schedule(dynamic, 1) */
+#pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
 #endif /* USE_OMP */
         for (uint_t k = start_idx; k < (start_idx + interval); k++)
         {
