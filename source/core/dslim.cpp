@@ -440,7 +440,7 @@ status_t DSLIM_InitializeScorecard(Index *index, uint_t idxs)
             std::memset(Score[thd].res.survival, 0x0, sizeof (double_t) * (2 + MAX_HYPERSCORE * 10));
 
             /* Initialize the heap with size = pow(2, num) - 1 */
-            Score[thd].res.topK.heap_init((1 << num) - 1);
+            Score[thd].res.topK.init((1 << num) - 1);
         }
     }
     else
@@ -804,7 +804,7 @@ int_t DSLIM_GenerateIndex(Index *index, uint_t key)
 
     else if (policy == _zigzag)
     {
-        cout << "This policy is not implemented yet\n";
+        std::cout << "This policy is not implemented yet\n";
         value = false;
     }
 

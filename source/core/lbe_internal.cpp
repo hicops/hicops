@@ -95,7 +95,7 @@ BOOL LBE_ApplyPolicy(Index *index,  BOOL pepmod, uint_t key)
     }
     else
     {
-        cout << "This policy is not implemented yet\n";
+        std::cout << "This policy is not implemented yet\n";
         value = false;
     }
 
@@ -141,10 +141,6 @@ status_t LBE_Initialize(Index *index)
     if (Seqs.size() != 0 && status == SLM_SUCCESS)
     {
         uint_t seqlen = Seqs.at(0).length();
-
-#ifdef DEBUG
-        cout << seq << endl;
-#endif /* DEBUG */
 
 #ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule (static) reduction(+: iCount)
@@ -428,7 +424,7 @@ status_t LBE_CountPeps(char_t *filename, Index *index, uint_t explen)
     }
     else
     {
-        cout << endl << "FATAL: Could not read FASTA file" << endl;
+        std::cout << std::endl << "FATAL: Could not read FASTA file" << std::endl;
         status = ERR_INVLD_PARAM;
     }
 
@@ -460,10 +456,10 @@ status_t LBE_CountPeps(char_t *filename, Index *index, uint_t explen)
 
         if (params.myid == 0)
         {
-            cout << "Number of Peptides    =\t\t" << index->pepCount << endl;
-            cout << "Number of Variants    =\t\t" << index->modCount << endl;
-            cout << "Total Index Size      =\t\t" << index->totalCount << endl;
-            cout << "Cumulative Index Size =\t\t" << cumusize << endl << endl;
+            std::cout << "Number of Peptides    =\t\t" << index->pepCount << std::endl;
+            std::cout << "Number of Variants    =\t\t" << index->modCount << std::endl;
+            std::cout << "Total Index Size      =\t\t" << index->totalCount << std::endl;
+            std::cout << "Cumulative Index Size =\t\t" << cumusize << std::endl << std::endl;
         }
 
         /* Close the file once done */
@@ -483,14 +479,14 @@ status_t LBE_CountPeps(char_t *filename, Index *index, uint_t explen)
  */
 VOID LBE_PrintHeader()
 {
-    cout << "\n"
+    std::cout << "\n"
             "***************************************\n"
             "* HiCOPS: HPC Database Peptide Search *\n"
             "* School of Computing & Info Sciences *\n"
             "*   Florida International University  *\n"
             "*         Miami, Florida, USA         *\n"
             "***************************************\n"
-          << endl << endl;
+          << std::endl << std::endl;
 
     return;
 }

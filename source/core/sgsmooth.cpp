@@ -92,7 +92,7 @@ float_mat::float_mat(const size_t rows, const size_t cols, const double defval) 
     }
     if ((rows < 1) || (cols < 1))
     {
-        std::cout << "FATAL: Cannot build matrix with " << (int) rows << " and " << (int) cols << " columns" << endl;
+        std::cout << "FATAL: Cannot build matrix with " << (int) rows << " and " << (int) cols << " columns" << std::endl;
     }
 }
 

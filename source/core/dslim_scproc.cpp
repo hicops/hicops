@@ -97,13 +97,13 @@ status_t DSLIM_DistScoreManager()
         {
             if (params.myid == 0)
             {
-                cout << endl << "**** Merging Partial Results ****\n" << endl;
+                std::cout << std::endl << "**** Merging Partial Results ****\n" << std::endl;
             }
             status = ScoreHandle->CombineResults();
 
             if (params.myid == 0)
             {
-                cout << endl << "Scores Merged with status:\t" << status << endl;
+                std::cout << std::endl << "Scores Merged with status:\t" << status << std::endl;
             }
         }
 
@@ -114,7 +114,7 @@ status_t DSLIM_DistScoreManager()
 
             if (params.myid == 0)
             {
-                cout << "Scatter Scores with status:\t" << status << endl;
+                std::cout << "Scatter Scores with status:\t" << status << std::endl;
             }
         }
 
@@ -130,7 +130,7 @@ status_t DSLIM_DistScoreManager()
 
             if (params.myid == 0)
             {
-                cout << "Display Results with status:\t" << status << endl;
+                std::cout << "Display Results with status:\t" << status << std::endl;
             }
         }
 
@@ -197,7 +197,7 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
             /* Only check if not already received */
             if (rxStats[ll] == 0 && ll != (int_t) params.myid)
             {
-                //cout << (void *)((MPI_Request*)(rxRqsts + ll)) << " rxRqsts@:" << params.myid << endl;
+                //std::cout << (void *)((MPI_Request*)(rxRqsts + ll)) << " rxRqsts@:" << params.myid << std::endl;
                 MPI_Test(rxRqsts + ll, &rxStats[ll], MPI_STATUS_IGNORE);
 
                 /* Check if the results
@@ -233,7 +233,7 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
             /* Only check if not already received */
             if (rxStats[ll] == 0 && ll != (int_t) params.myid)
             {
-                //cout << (void *)((MPI_Request*)(rxRqsts + ll)) << " rxRqsts@:" << params.myid << endl;
+                //std::cout << (void *)((MPI_Request*)(rxRqsts + ll)) << " rxRqsts@:" << params.myid << std::endl;
                 MPI_Test(rxRqsts + ll, &rxStats[ll], MPI_STATUS_IGNORE);
 
                 /* Check if the results
@@ -272,21 +272,21 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
 #ifdef DIAGNOSE
 int_t DSLIM_TestBData()
 {
-    cout << "\nTesting BData object: " << endl;
+    std::cout << "\nTesting BData object: " << std::endl;
     if (bdata != NULL)
     {
-        cout << bdata->index[0].pepCount << " @: " << params.myid << endl;
-        cout << (void *) &bdata->scPtr[0] << " @: " << params.myid << endl;
-        cout << (void *) &bdata->heapArray[0] << " @: " << params.myid << endl;
-        cout << (void *) &bdata->fileArray[0] << " @: " << params.myid << endl;
-        cout << (void *)&bdata->sizeArray[0] << " @: " << params.myid << endl;
-        cout << (void *) &bdata->indxArray[0] << " @: " << params.myid << endl;
-        cout << bdata->nBatches << endl;
-        cout << (void *) &bdata->resPtr[0] << " @: " << params.myid << endl;
-        cout << bdata->cPSMsize << endl;
+        std::cout << bdata->index[0].pepCount << " @: " << params.myid << std::endl;
+        std::cout << (void *) &bdata->scPtr[0] << " @: " << params.myid << std::endl;
+        std::cout << (void *) &bdata->heapArray[0] << " @: " << params.myid << std::endl;
+        std::cout << (void *) &bdata->fileArray[0] << " @: " << params.myid << std::endl;
+        std::cout << (void *)&bdata->sizeArray[0] << " @: " << params.myid << std::endl;
+        std::cout << (void *) &bdata->indxArray[0] << " @: " << params.myid << std::endl;
+        std::cout << bdata->nBatches << std::endl;
+        std::cout << (void *) &bdata->resPtr[0] << " @: " << params.myid << std::endl;
+        std::cout << bdata->cPSMsize << std::endl;
     }
 
-    cout << "Testing BData: DONE " << endl;
+    std::cout << "Testing BData: DONE " << std::endl;
 
     return 0;
 }

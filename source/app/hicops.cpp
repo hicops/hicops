@@ -146,21 +146,10 @@ status_t main(int_t argc, char_t* argv[])
             string_t cfile(pdir->d_name);
 
             /* Add the matching files */
-            if (cfile.find(patt/* patt[0] */) != std::string::npos)
+            if (cfile.find(patt) != std::string::npos)
             {
                 queryfiles.push_back(params.datapath + '/' + pdir->d_name);
             }
-
-#ifdef FUTURE
-            if (cfile.find(patt[1]) != std::string::npos)
-            {
-                queryfiles.push_back(params.datapath + '/' + pdir->d_name);
-            }
-            if (cfile.find(patt[2]) != std::string::npos)
-            {
-                queryfiles.push_back(params.datapath + '/' + pdir->d_name);
-            }
-#endif /* FUTURE */
         }
     }
 

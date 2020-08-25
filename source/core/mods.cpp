@@ -347,10 +347,6 @@ static VOID MODS_ModList(string_t peptide, vector<int_t> conditions,
 
         global++;
 
-#ifdef DEBUG
-        mods[lclcntr] = peptide;
-#endif /* DEBUG */
-
     }
 
     if (total == 0 || letter >= (int_t) peptide.length())
@@ -464,13 +460,6 @@ status_t MODS_GenerateMods(Index *index)
     vector<int_t> lclcondList = condList;
 
     lclindex = index;
-
-#ifdef DEBUG
-    /* Print the number of modifications */
-    cout << numMods << '\t' << modCount << endl;
-    string_t *mods = new string_t[modCount];
-    mods = new string_t[modCount];
-#endif /* DEBUG */
 
 #ifdef USE_OMP
 #pragma omp parallel for num_threads(params.threads) schedule (static)

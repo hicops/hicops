@@ -89,7 +89,7 @@ status_t LBE_CountPeps(char_t *filename)
     }
     else
     {
-        cout << endl << "FATAL: Could not read FASTA file" << endl;
+        std::cout << std::endl << "FATAL: Could not read FASTA file" << std::endl;
         status = ERR_INVLD_PARAM;
     }
 

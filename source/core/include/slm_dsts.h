@@ -21,12 +21,12 @@
 #define INCLUDE_SLM_DSTS_H_
 
 #include "common.h"
+#include "config.h"
 #include "minheap.h"
 #include <cstring>
 
 /* Types of modifications allowed by SLM_Mods     */
 #define MAX_MOD_TYPES                        15
-#define MAX_SEQ_LEN                          60
 
 /************************* Common DSTs ************************/
 
@@ -427,9 +427,11 @@ typedef struct _queries
     int_t     numPeaks;
     int_t     numSpecs; /* Number of theoretical spectra */
     int_t     batchNum;
+    int_t      fileNum;
 
     void reset()
     {
+        fileNum  = 0;
         numPeaks = 0;
         numSpecs = 0;
         batchNum = 0;
@@ -437,6 +439,7 @@ typedef struct _queries
 
     _queries()
     {
+        fileNum  = 0;
         this->idx       = NULL;
         this->precurse  = NULL;
         this->moz       = NULL;
@@ -452,13 +455,15 @@ typedef struct _queries
         this->precurse  = new float_t[QCHUNK];
         this->moz       = new uint_t[QCHUNK * QALEN];
         this->intensity = new uint_t[QCHUNK * QALEN];
+        fileNum         = 0;
         numPeaks        = 0;
         numSpecs        = 0;
-        batchNum = 0;
+        batchNum        = 0;
     }
 
     VOID deinit()
     {
+        fileNum  = -1;
         numPeaks = -1;
         numSpecs = -1;
         batchNum = -1;
@@ -526,14 +531,16 @@ typedef struct _queries
 /* Score entry that goes into the heap */
 typedef struct _heapEntry
 {
-    /* Number of shared ions in the spectra */
-    uchar_t   sharedions;
-
     /* The index * + offset */
-    uchar_t    idxoffset;
+    ushort_t    idxoffset;
+
+    /* Number of shared ions in the spectra */
+    ushort_t   sharedions;
 
     /* Total ions in spectrum */
-    ushort_t totalions;
+    ushort_t    totalions;
+
+    ushort_t    fileIndex;
 
     /* Parent spectrum ID in the respective chunk of index */
     int_t        psid;
@@ -546,6 +553,7 @@ typedef struct _heapEntry
     /* Constructor */
     _heapEntry()
     {
+        fileIndex  = 0;
         idxoffset  = 0;
         psid       = 0;
         hyperscore = 0;
@@ -584,6 +592,7 @@ typedef struct _heapEntry
     {
         this->idxoffset = rhs;
         this->psid = rhs;
+        this->fileIndex = rhs;
         this->hyperscore = rhs;
         this->sharedions = rhs;
         this->totalions = rhs;
@@ -694,7 +703,7 @@ typedef struct _Results
 
         std::memset(survival, 0x0, sizeof(double_t) * (2 + MAX_HYPERSCORE * 10));
 
-        topK.heap_reset();
+        topK.reset();
     }
 
     void reset2()
@@ -717,7 +726,7 @@ typedef struct _partResult
     /* Convert: x10 + 0.5 */
     ushort_t min;
     ushort_t max2;
-    int_t max;
+    float_t max;
 
     /* Total number of samples scored */
     int_t N;

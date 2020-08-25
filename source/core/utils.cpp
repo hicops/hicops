@@ -414,9 +414,9 @@ float_t UTILS_GenerateModSpectrum(char_t *seq, uint_t len, uint_t *Spectrum, mod
     {
         for (uint_t i = 0; i < MAX_MOD_TYPES; i++)
         {
-            bitmask = bitmask >> (4 * i);
             modNums[i] = bitmask & 0x0F;
             modNums[i] -= 1;
+            bitmask = bitmask / 16;
 
             if (modNums[i] != -1)
             {

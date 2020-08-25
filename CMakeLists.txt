@@ -72,6 +72,40 @@ if (USE_TIMEMORY)
 endif()
 
 #----------------------------------------------------------------------------------------#
+#   configure config.hpp
+#----------------------------------------------------------------------------------------#
+message(STATUS "Configuring...")
+
+option(TAILFIT "Use Tailfit method instead of Gumbelfit for e(x)" ON)
+option(PROGRESS "Enable Progress Marks" ON)
+
+# Allowed maximum peptide sequence length
+if (NOT MAX_SEQ_LEN)
+    set(MAX_SEQ_LEN   60)
+endif()
+
+# Maximum top k peaks to choose
+if (NOT QALEN)
+    set(QALEN   100)
+endif()
+
+# Maximum spectra batch size
+if (NOT QCHUNK)
+    set(QCHUNK   10000)
+endif()
+
+# Maximum hyperscore allowed
+if (NOT MAX_HYPERSCORE)
+    set(MAX_HYPERSCORE   100)
+endif()
+
+# configure the file
+configure_file(config.hpp.in config.hpp @ONLY)
+
+# install the configured file as well
+install(FILES ${CMAKE_BINARY_DIR}/config.hpp DESTINATION include)
+
+#----------------------------------------------------------------------------------------#
 #   hicops source
 #----------------------------------------------------------------------------------------#
 

@@ -9,7 +9,12 @@ if(USE_MPI AND MPI_FOUND)
     target_compile_options(hicops PUBLIC -DUSE_MPI)
 endif()
 
+# include core/include
 target_include_directories(hicops PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../core/include)
+
+# to include the generated config.hpp
+include_directories(${CMAKE_BINARY_DIR})
+
 target_link_libraries(hicops hicops-core ${MPI_LIBRARIES})
 
 set_target_properties(hicops-core

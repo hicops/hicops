@@ -34,45 +34,36 @@ import glob
 import numpy as np
 import pandas as pd
 import operator
-import matplotlib.pyplot as plt
+import argparse
 
 
 # ## Sanity Checking
 
 # In[3]:
 
-# The main function
 if __name__ == '__main__':
 
-    if len(sys.argv) > 1:
-        # The path to MS2 file
-        ms2file = sys.argv[1]
-    else:
-        print ("ERROR: Missing MS2 file")
-        print ("USAGE: python3.5+ extractms2.py <MS2file>")
-        sys.exit(-3)
-    
+    parser = argparse.ArgumentParser(description='Extract spectra from MS2 files')
+    parser.add_argument('-i', '--infile', dest='ifile', type=str, required=True,
+                        help='The MS2 file to extract spectra from')
+
+    parser.add_argument('-d', '--id', metavar='N', dest='specs', required=True, 
+                        type=int, nargs='+', help='Spectra numbers in the file')
+
+    args = parser.parse_args()
+
+    # List of spectrum ID to extract
+    ms2file = args.ifile.lstrip(' ')
+    spectralist = np.array(args.specs)
+
+    spectralist[spectralist < 1] = 1
+
     # Check if file exists
     if not os.path.isfile(ms2file):
-        print ("MS2File does not exist\n")
+        print ("Error: The file %s does not exist\n", ms2file)
         exit (-1)
     
-    # ## List of Spectra to extract
-    
-    # In[23]:
-    
-    
-    # List of spectrum ID to extract
-    spectralist = [27, 1444]
-    
-    if len(spectralist) < 1:
-        print('ABORT: Spectra List is empty')
-        exit (-2)
-    
     # ## Extract Spectra
-    
-    # In[24]:
-    
     
     # Empty list to store lines
     lines = []

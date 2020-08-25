@@ -247,7 +247,7 @@ status_t DSLIM_Score::CombineResults()
                 if (fhs[saa].fail())
                 {
                     status = ERR_FILE_NOT_FOUND;
-                    cout << "FATAL: File Read Failed" << endl;
+                    std::cout << "FATAL: File Read Failed" << std::endl;
                     exit(status);
                 }
             }
@@ -269,7 +269,7 @@ status_t DSLIM_Score::CombineResults()
 
             /* Record locators */
             int_t key = params.nodes;
-            int_t maxhypscore = -1;
+            float_t maxhypscore = -1;
 
             /* For all samples, update the histogram */
             for (int_t sno = 0; sno < nSamples; sno++)
@@ -307,12 +307,12 @@ status_t DSLIM_Score::CombineResults()
             if (key < (int_t) params.nodes && cpsms >= (int_t) params.min_cpsm)
             {
                 double_t e_x = params.expect_max;
-
+                int_t int_maxhypscore = (maxhypscore * 10 + 0.5);
 #ifdef TAILFIT
                 /* Model the survival function */
-                expPtr->ModelTailFit(e_x, maxhypscore);
+                expPtr->ModelTailFit(e_x, int_maxhypscore);
 #else
-                expPtr->ModelSurvivalFunction(e_x, maxhypscore);
+                expPtr->ModelSurvivalFunction(e_x, int_maxhypscore);
 #endif /* TAILFIT */
 
                 /* If the scores are good enough */
@@ -396,6 +396,28 @@ status_t DSLIM_Score::CombineResults()
         }
     }
 
+    if (status == SLM_SUCCESS && params.myid == 0)
+    {
+        /* Add all the query files to the vector */
+        auto dir = opendir(params.datapath.c_str());
+        dirent* pdir;
+
+        /* Check if opened */
+        if (dir != NULL)
+        {
+            while ((pdir = readdir(dir)) != NULL)
+            {
+                string_t cfile(pdir->d_name);
+
+                /* Remove all .dat files */
+                if (cfile.find(".dat") != std::string::npos)
+                {
+                    string_t file = params.datapath + '/' + pdir->d_name;
+                    std::remove(file.c_str());
+                }
+            }
+        }
+    }
 
     /* return the status of execution */
     return status;
@@ -442,8 +464,8 @@ status_t DSLIM_Score::ScatterScores()
                  if (txStats[ll] == 0 && ll != (int_t)params.myid)
                  {
  #ifdef DIAGNOSE2
-                     cout << " MPI_Test@ " << params.myid << "Stat: "
-                          << txStats2[ll] << " ll: " << ll << endl;
+                     std::cout << " MPI_Test@ " << params.myid << "Stat: "
+                          << txStats2[ll] << " ll: " << ll << std::endl;
  #endif /* DIAGNOSE2 */
                      status = MPI_Test(txRqsts + ll, &txStats[ll], MPI_STATUS_IGNORE);
 
@@ -489,8 +511,8 @@ status_t DSLIM_Score::ScatterScores()
                     if (txStats[ll] == 0 && ll != (int_t)params.myid)
                     {
 #ifdef DIAGNOSE2
-                        cout << " MPI_Test@ " << params.myid << "Stat: "
-                             << txStats2[ll] << " ll: " << ll << endl;
+                        std::cout << " MPI_Test@ " << params.myid << "Stat: "
+                             << txStats2[ll] << " ll: " << ll << std::endl;
 #endif /* DIAGNOSE2 */
                         status = MPI_Test(txRqsts + ll, &txStats[ll], MPI_STATUS_IGNORE);
 
@@ -543,13 +565,13 @@ status_t DSLIM_Score::TXSizes(MPI_Request *txRqsts, int_t *txStats)
         {
 
 #ifdef DIAGNOSE2
-            cout << "TXSIZE: " << params.myid << " -> "
-                 << kk << " Size: "<< txSizes[ll] << endl;
+            std::cout << "TXSIZE: " << params.myid << " -> "
+                 << kk << " Size: "<< txSizes[ll] << std::endl;
 #endif /* DIAGNOSE */
 
             if (txSizes == NULL || txRqsts == NULL)
             {
-                cout << "FATAL: txSizes = NULL @: " << params.myid << endl;
+                std::cout << "FATAL: txSizes = NULL @: " << params.myid << std::endl;
                 exit(-1);
             }
 
@@ -578,13 +600,13 @@ status_t DSLIM_Score::RXSizes(MPI_Request *rxRqsts, int_t *rxStats)
         {
 
 #ifdef DIAGNOSE2
-            cout << "RXSIZE: " << params.myid << " -> "
-                 << kk << " Size: "<< txSizes[ll] << endl;
+            std::cout << "RXSIZE: " << params.myid << " -> "
+                 << kk << " Size: "<< txSizes[ll] << std::endl;
 #endif /* DIAGNOSE */
 
             if (rxSizes == NULL || rxRqsts == NULL)
             {
-                cout << "FATAL: rxSizes = NULL @: " << params.myid << endl;
+                std::cout << "FATAL: rxSizes = NULL @: " << params.myid << std::endl;
                 exit(-1);
             }
 
@@ -614,12 +636,12 @@ status_t DSLIM_Score::TXResults(MPI_Request *txRqsts, int_t* txStats)
         else
         {
 #ifdef DIAGNOSE2
-        cout << "RXSIZE: " << params.myid << " -> " << kk << " Size: "<< txSizes[ll] << endl;
+        std::cout << "RXSIZE: " << params.myid << " -> " << kk << " Size: "<< txSizes[ll] << std::endl;
 #endif /* DIAGNOSE */
 
             if (TxValues == NULL || txRqsts == NULL || offset + txSizes[kk] > myRXsize)
             {
-                cout << "FATAL: TxValues Failed @: " << params.myid << endl;
+                std::cout << "FATAL: TxValues Failed @: " << params.myid << std::endl;
                 exit(-1);
             }
 
@@ -652,12 +674,12 @@ status_t DSLIM_Score::RXResults(MPI_Request *rxRqsts, int_t *rxStats)
         {
 
 #ifdef DIAGNOSE2
-            cout << "RXSIZE: " << params.myid << " -> " << kk << " Size: "<< txSizes[ll] << endl;
+            std::cout << "RXSIZE: " << params.myid << " -> " << kk << " Size: "<< txSizes[ll] << std::endl;
 #endif /* DIAGNOSE */
 
             if (RxValues == NULL || rxRqsts == NULL || offset + rxSizes[kk] > nSpectra)
             {
-                cout << "FATAL: RxValues failed @: " << params.myid << endl;
+                std::cout << "FATAL: RxValues failed @: " << params.myid << std::endl;
                 exit(-1);
             }
 

@@ -322,8 +322,8 @@ status_t expeRT::ModelSurvivalFunction(Results *rPtr)
             sx->Erase();
             X->Erase();
 
-            //cout << "y = " << mu_t << "x + " << beta_t << endl;
-            //cout << "eValue: " << pow(10, hyp * mu_t + beta_t) * vaa << endl;
+            //std::cout << "y = " << mu_t << "x + " << beta_t << std::endl;
+            //std::cout << "eValue: " << pow(10, hyp * mu_t + beta_t) * vaa << std::endl;
 #endif /* 0 */
         }
     }
@@ -541,8 +541,8 @@ status_t expeRT::ModelSurvivalFunction(double_t &eValue, const int_t max1)
         sx->Erase();
         X->Erase();
 
-        //cout << "y = " << mu_t << "x + " << beta_t << endl;
-        //cout << "eValue: " << pow(10, hyp * mu_t + beta_t) * vaa << endl;
+        //std::cout << "y = " << mu_t << "x + " << beta_t << std::endl;
+        //std::cout << "eValue: " << pow(10, hyp * mu_t + beta_t) * vaa << std::endl;
 #endif /* 0 */
     }
 
@@ -694,8 +694,8 @@ status_t expeRT::ModelTailFit(Results *rPtr)
             sx->Erase();
             X->Erase();
 
-            //cout << "y = " << mu_t << "x + " << beta_t << endl;
-            //cout << "eValue: " << pow(10, hyp * mu_t + beta_t) * vaa << endl;
+            //std::cout << "y = " << mu_t << "x + " << beta_t << std::endl;
+            //std::cout << "eValue: " << pow(10, hyp * mu_t + beta_t) * vaa << std::endl;
         }
     }
 
@@ -830,8 +830,8 @@ status_t expeRT::ModelTailFit(double_t &eValue, const int_t max1)
         sx->Erase();
         X->Erase();
 
-        //cout << "y = " << mu_t << "x + " << beta_t << endl;
-        //cout << "eValue: " << pow(10, hyp * mu_t + beta_t) * vaa << endl;
+        //std::cout << "y = " << mu_t << "x + " << beta_t << std::endl;
+        //std::cout << "eValue: " << pow(10, hyp * mu_t + beta_t) * vaa << std::endl;
     }
 
     /* Compute the eValue */
@@ -882,17 +882,13 @@ status_t expeRT::StoreIResults(Results *rPtr, int_t spec, ebuffer *ofs)
         ends = rargmax<double_t *>(yy, 0, SIZE - 1, 0.99);
         stt = argmax<double_t *>(yy, 0, ends, 0.99);
 
-        //rPtr->mu = curptr;
-
         for (auto ii = stt; ii <= ends; ii++)
         {
             ushort_t k = (yy[ii]);
 
             /* Encode into 65500 levels */
             if (rPtr->cpsms > 65500)
-            {
                 k = (ushort_t)(((double_t)(k * 65500))/rPtr->cpsms);
-            }
 
             memcpy(ofs->ibuff + curptr, (const VOID *) &k, sizeof(k));
             curptr += sizeof(k);
@@ -1458,8 +1454,8 @@ status_t expeRT::ModelSurvivalFunction(double_t &eValue, int_t max)
 
         LinearFit<lwvector<double_t>>(*X, *sx, sx->Size(), mu_t, beta_t);
 
-        //cout << "y = " << mu_t << "x + " << beta_t << endl;
-        //cout << "eValue: " << pow(10, hyp * mu_t + beta_t) * vaa << endl;
+        //std::cout << "y = " << mu_t << "x + " << beta_t << std::endl;
+        //std::cout << "eValue: " << pow(10, hyp * mu_t + beta_t) * vaa << std::endl;
 
         X->Erase();
         sx->Erase();
