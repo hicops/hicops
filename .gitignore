@@ -3,18 +3,19 @@
 
 # Compiled Object files
 *.slo
+*.sln
 *.lo
 *.o
 *.obj
+*params*
+*.fasta
+*mods*
+*.tsv
+*.txt
 
 # Directories
-parts
-output
-dbparams.txt
-*.fasta
-mods.txt
-sampleparams.txt
-*.tsv
+parts*
+output*
 build*
 build*/
 install*
@@ -46,11 +47,9 @@ install*/
 *.map
 *.pyc
 
-# Custom MS2PIP stuff
+# Autogen
 workspace*/
-data/
-*_pyx.c
-*_pyx_*.c
+data*
 
 # Remote Sync for Atom
 .remote-sync.json
