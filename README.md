@@ -3,12 +3,12 @@
 # HiCOPS
 *HiCOPS*: A computational framework for accelerated peptide identification from LC-MS/MS data on HPC systems.
 
-# 1 Installation
+# Installation
 
-## 1.1 Recommended Compiler
+## Recommended Compiler
 GCC compiler version 7.2.0 or later supporting C++14. You may use Intel or LLVM compilers but make sure to follow through the installation steps accordingly. We have only tested the HiCOPS on Linux OS (Ubuntu v16.04, v18.04 and CentOS-7) using GCC v7.2.0, v8.4.0 and v9.3.0 running on Haswell, Broadwell, Kabylake, Skylake and KNL processors.
 
-## 1.2 Install and Load the required packages
+## Install and Load the required packages
 Install and load the following packages preferably using [Spack](https://spack.readthedocs.io). Read more about how to install Spack, and how to install and load packages using Spack [here](https://spack.readthedocs.io/en/latest/getting_started.html).
 
 ```bash
@@ -37,10 +37,10 @@ diffutils@3.7        gotcha@1.0.3     libpciaccess@0.13.5  openblas@0.3.10  py-e
 dyninst@10.2.0       hwloc@2.2.0      libpng@1.6.37        openssl@1.1.1g   py-jdcal@1.3         py-pyparsing@2.4.2   qhull@2020.1
 ```
 
-### 1.2.1 On a regular computer (skip if using XSEDE Comet)
+### On a regular computer (skip if using XSEDE Comet)
 Install the `mpich` package using `spack install mpich%gcc@version`
 
-### 1.2.2 On XSEDE Comet
+### On XSEDE Comet
 Load the MPI and GNU modules
 ```bash
 $ module purge
@@ -48,14 +48,14 @@ $ module load gnu/7.2.0
 $ module load openmpi_ib
 ```
 
-## 1.3 Install timemory for HiCOPS instrumentation/profiling - Optional
+## Install timemory for HiCOPS instrumentation/profiling - Optional
 Install timemory using CMake or Spack using the instructions [here](https://timemory.readthedocs.io/en/develop/installation.html). After installation, make sure that the path to timemory installation has been appended to the enviornment variable `CMAKE_PREFIX_PATH`.
 
 ```bash
 $ export CMAKE_PREFIX_PATH=$TIMEMORY_INSTALL:$CMAKE_PREFIX_PATH
 ```
 
-### 1.3.1 Timemory Install Example
+### Timemory Install Example
 If using Spack, you can install and load timemory and its dependencies using:
 
 ```bash
@@ -75,10 +75,10 @@ $ export CMAKE_PREFIX_PATH=$PWD/../install:$CMAKE_PREFIX_PATH
 
 **NOTE:** Timemory and its dependencies can take upto 2-3 hours to install depending on the system so please be patient.
 
-## 1.4 Install HiCOPS
+## Install HiCOPS
 Install HiCOPS using Git & CMake using the following steps:
 
-### 1.4.1 Configure
+### Configure
 
 ```bash
 $ git clone https://github.com/pcdslab/hicops
@@ -127,7 +127,7 @@ $ ccmake ..
  timemory_ONETIME_MESSAGE_DELIV   ON
 ```
 
-## 1.4.2 Build and Install
+## Build and Install
 
 Depending on the build system generated, build and install HiCOPS. For example in case of Makefile
 
@@ -137,17 +137,17 @@ $ make install -j [JOBS]
 
 **NOTE:** Compiling HiCOPS with Timemory enabled may take some time (~ 3-5 minutes)
 
-# 2 Run HiCOPS
+# Run HiCOPS
 For the rest of the document, we will be assuming that the HiCOPS was installed at : `$HICOPS_INSTALL`
 
-## 2.1 Update LD_LIBRARY_PATH
+## Update LD_LIBRARY_PATH
 Append the `HICOPS_INSTALL/lib` to the environment variable `LD_LIBRARY_PATH`.
 
 ```bash
 $ export LD_LIBRARY_PATH=$HICOPS_INSTALL/lib:$LD_LIBRARY_PATH
 ```
 
-## 2.2 Setup Instrumentation (with Timemory) - Optional
+## Setup Instrumentation (with Timemory) - Optional
 If the `USE_TIMEMORY=ON` option was set in [Configure](###Configure) step, you can add more instrumentation components to the default HiCOPS provided instrumentation by setting the environment variable `HICOPS_INST_COMPONENTS="<component_1>, <component_2>,..."` where each `<component_i>` is a Timemory's component. See more about how to list available timemory components [here](https://timemory.readthedocs.io/en/develop/tools/timemory-avail/README.html?highlight=user_bundle#available-components). 
 
 Similarly, the hardware counters used for the instrumentation of HiCOPS' distributed database search algorithm can be *modified* (not appended) by setting the environment variable `HICOPS_PAPI_EVENTS="<counter_1>,<counter2>,...`. The default value of `HICOPS_PAPI_EVENTS=PAPI_TOT_INS, PAPI_TOT_CYC, PAPI_L3_TCM, PAPI_L2_TCA, PAPI_L3_TCA, PAPI_MEM_WCY, PAPI_RES_STL, PAPI_STL_CCY, PAPI_BR_CN, PAPI_BR_PRC, PAPI_FUL_ICY`. 
@@ -156,7 +156,7 @@ To see which hardware counters are available on your system and their descriptio
 
 **NOTE:** If a PAPI counter is not available on the system but is included in the `HICOPS_PAPI_EVENTS` anyway, the profiler will not instrument any of the counters in the list even if they are available.
 
-## 2.3 On a regular computer (skip if using XSEDE Comet)
+## On a regular computer (skip if using XSEDE Comet)
 1. Generate HiCOPS sample runtime parameters file using the `hicops_config` located at `$HICOPS_INSTALL/bin`.
 
 ```bash
@@ -182,7 +182,7 @@ $ mpirun -np 4 [OPTIONS] $HICOPS_INSTALL/bin/hicops $HICOPS_INSTALL/bin/uparams.
 
 **NOTE:** Repeat Steps # 2 and 3 if you modify parameters in the `sampleparams.txt`.
 
-## 2.4 On XSEDE Comet
+## On XSEDE Comet
 1. Generate HiCOPS sample runtime parameters file using the `hicops_comet` wrapper script located at `$HICOPS_INSTALL/bin/wrappers`.
 
 ```bash
@@ -202,17 +202,17 @@ $ $HICOPS_INSTALL/bin/wrappers/hicops_comet sampleparams.txt
 
 **NOTE:** Repeat Steps # 2 and 3 if you modify parameters in the `sampleparams.txt`.
 
-# 3 Post-processing HiCOPS output
+# Post-processing HiCOPS output
 HiCOPS generates PSM data in partial TSV files that can be merged using the `psm2excel` tool located at: `$HICOPS_INSTALL/wrappers`. The tool generates a combined Excel file called `Concat.xlsx` containing the final PSM data (no-FDR).
 
-## 3.1 On a regular computer (skip if using XSEDE Comet)
+## On a regular computer (skip if using XSEDE Comet)
 Run the `psm2excel` tool and pass the HiCOPS workspace output directory (that was set in the sampleparams.txt file) as parameter.
 
 ```bash
 $ $HICOPS_INSTALL/wrappers/psm2excel [/path/to/hicops/workspace/output]
 ```
 
-## 3.2 On XSEDE Comet
+## On XSEDE Comet
 Run the `psm2excel` tool using SLURM and pass the HiCOPS workspace output directory (that was set in the sampleparams.txt file) as parameters.
 
 ```bash
