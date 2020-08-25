@@ -703,7 +703,7 @@ typedef struct _Results
 
         std::memset(survival, 0x0, sizeof(double_t) * (2 + MAX_HYPERSCORE * 10));
 
-        topK.heap_reset();
+        topK.reset();
     }
 
     void reset2()
