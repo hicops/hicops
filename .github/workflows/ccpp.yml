@@ -2,9 +2,9 @@ name: HiCOPS C/C++ CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ develop ]
   pull_request:
-    branches: [ master ]
+    branches: [ develop ]
 
 jobs:
   build:
@@ -16,7 +16,7 @@ jobs:
     - name: configure
       run: |
         cd build
-        cmake -DCMAKE_INSTALL_PREFIX=../install ..
+        cmake -DCMAKE_INSTALL_PREFIX=../install .. -DUSE_OMP=ON
     - name: build
       run: |
         cd build
