@@ -271,6 +271,7 @@ T minHeap<T>::getMax()
 
     T maxe = array[size - 1];
 
+    // the limit here was k > 0 instead of size/2
     for (int_t k = size-2; k >= size/2; k --)
     {
         if (array[k] > maxe)
