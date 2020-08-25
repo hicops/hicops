@@ -212,34 +212,34 @@ public:
 
     VOID print()
     {
-        cout << "PRINT: " << endl;
+        std::cout << "PRINT: " << std::endl;
 
         for (auto i = head; i < tail; i++)
         {
-            cout << arr[i] << ", ";
+            std::cout << arr[i] << ", ";
         }
 
-        cout << endl;
+        std::cout << std::endl;
     }
 
     VOID print(int_t p1, int_t p2)
     {
         if (p2 > p1)
         {
-            cout << "PRINT: head@:" << head << endl;
+            std::cout << "PRINT: head@:" << head << std::endl;
 
             for (int_t ikr = head + p1; ikr < head + p2; ikr++)
             {
-                cout << ikr << ", ";
+                std::cout << ikr << ", ";
             }
-            cout << endl;
+            std::cout << std::endl;
 
             for (int_t ikr = head + p1; ikr < head + p2; ikr++)
             {
-                cout << arr[head + ikr] << ", ";
+                std::cout << arr[head + ikr] << ", ";
             }
 
-            cout << endl;
+            std::cout << std::endl;
         }
     }
 
@@ -263,7 +263,7 @@ public:
     {
         if (rhs.sze != this->sze)
         {
-            cout << "FATAL: sizes don't match" << endl;
+            std::cout << "FATAL: sizes don't match" << std::endl;
         }
         else
         {
@@ -280,7 +280,7 @@ public:
 
         if (rhs.sze != this->sze)
         {
-            cout << "FATAL: sizes don't match" << endl;
+            std::cout << "FATAL: sizes don't match" << std::endl;
         }
         else
         {
@@ -315,7 +315,7 @@ public:
             }
             else
             {
-                cout << "FATAL: log of negative or zero" << endl;
+                std::cout << "FATAL: log of negative or zero" << std::endl;
                 arr[i] = -INFINITY;
             }
         }
@@ -326,7 +326,7 @@ public:
     {
         if (ii == 0)
         {
-            cout << "FATAL: Divide by zero not allowed" << endl;
+            std::cout << "FATAL: Divide by zero not allowed" << std::endl;
             return;
         }
 

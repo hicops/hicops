@@ -35,6 +35,9 @@ endif()
 
 add_library (hicops-core SHARED ${c_sources} ${cxx_sources})
 
+# to include the generated config.hpp
+include_directories(${CMAKE_BINARY_DIR})
+
 if (USE_TIMEMORY)
     target_link_libraries(hicops-core timemory-hicops-core)
 endif()

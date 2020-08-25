@@ -20,44 +20,18 @@
 #ifndef INCLUDE_CONFIG_H_
 #define INCLUDE_CONFIG_H_
 
-/************** Developer Mode options: Danger Area *****************/
+// include the CMake configured macros
+#include <config.hpp>
 
-/* Contains MACROS that configure SLM Index build */
-
-#define TAILFIT
-
-#define MAX_SEQ_LEN              60
-
-/* Number of fragments (peaks) per query spectrum */
-#define QALEN                    100
-
-/* How many query spectra per batch */
-#define QCHUNK                   10000
-
-/* Precision to inter-convert between float_t and int_t
- * for Tx/Rx purposes
- */
-#define PRECISION                1000000
+//
+// Universal Constants: Do not change them
+//
 
 /* Max RX buffer size = 512MB */
 #define  RXBUFFERSIZE              (512 * 1024 * 1024)
 
-/* Maximum hyperscore that is possible */
-#define MAX_HYPERSCORE           100
-
-/* Max number of RX instances before buffer flush */
-#define MAX_RX_INST              500
-
 /* Chunk size in number ions per chunk (def: 2 bn)   */
 #define MAX_IONS                0x80000000
-
-/* Enable debug checkpoints                       */
-#undef DEBUG
-
-/* Define to analyze the distributed partial results
- * instead of dumping them into file
- */
-#undef ANALYSIS
 
 /* FUTURE:  Only b- and y-ions used in current
  *               implementation                   */

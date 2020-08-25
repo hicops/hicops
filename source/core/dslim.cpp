@@ -804,7 +804,7 @@ int_t DSLIM_GenerateIndex(Index *index, uint_t key)
 
     else if (policy == _zigzag)
     {
-        cout << "This policy is not implemented yet\n";
+        std::cout << "This policy is not implemented yet\n";
         value = false;
     }
 

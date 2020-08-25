@@ -23,6 +23,7 @@
 
 /* Global parameters */
 extern gParams params;
+extern std::vector<string_t> queryfiles;
 
 BOOL FilesInit = false;
 
@@ -65,16 +66,10 @@ status_t DFile_InitFiles()
                 string_t filename = common + "_" + std::to_string(f) + ".tsv";
                 tsvs[f].open(filename);
 
-#ifndef ANALYSIS
-                tsvs[f] << "scan_num\t" << "prec_mass\t" << "peptide\t"
+                tsvs[f] << "file\t" << "scan_num\t" << "prec_mass\t" << "peptide\t"
                         << "matched_ions\t" << "total_ions\t"
                         << "calc_pep_mass\t" << "mass_diff\t" << "mod_info\t"
                         << "hyperscore\t" << "expectscore\t" << "num_hits" << std::endl;
-#else
-                tsvs[f] << "scan_num\t" << "cpsm\t" << "weight\t"
-                        << "bias\t" << "min\t"
-                        << "max" << std::endl;
-#endif /* ANALYSIS */
             }
         }
     }
@@ -116,7 +111,7 @@ status_t  DFile_PrintPartials(uint_t specid, Results *resPtr)
 
 }
 
-status_t DFile_PrintScore(Index *index, uint_t specid, float_t pmass, hCell* psm, double_t e_x, uint_t npsms)
+status_t DFile_PrintScore(Index *index, uint_t specid, float_t pmass, hCell *psm, double_t e_x, uint_t npsms)
 {
     uint_t thno = omp_get_thread_num();
 
@@ -138,7 +133,8 @@ status_t DFile_PrintScore(Index *index, uint_t specid, float_t pmass, hCell* psm
     string_t pep = pepseq;
 
     /* Print the PSM info to the file */
-    tsvs[thno]         << std::to_string(specid + 1);
+    tsvs[thno]         << queryfiles[psm->fileIndex];
+    tsvs[thno] << '\t' << std::to_string(specid + 1);
     tsvs[thno] << '\t' << std::to_string(pmass);
     tsvs[thno] << '\t' << pep;
     tsvs[thno] << '\t' << std::to_string(psm->sharedions);

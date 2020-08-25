@@ -91,7 +91,7 @@ public:
 
     int heap_init(int capacity);
     int heap_reset();
-    int insert(T element);   //to insert an element in the array of this heap. It takes O(log n) TC.
+    int insert(T &element);   //to insert an element in the array of this heap. It takes O(log n) TC.
     int get_capacity(); //returns the total number of elements which can be accomodated
     int get_size(); //returns the total number of elements actually accomodated
     T extract_min(); //takes out and returns the root element of the heap. Root is the minimum in a min heap. It takes O(log n) TC.
@@ -127,7 +127,7 @@ int minHeap<T>::heap_reset()
 }
 
 template<class T>
-int minHeap<T>::insert(T element)
+int minHeap<T>::insert(T &element)
 {
     if (size == capacity) //if heap is full
     {
@@ -167,7 +167,7 @@ void minHeap<T>::swap(T& t1, T& t2) //to swap any two data objects
 template<class T>
 void minHeap<T>::swap(int p1, int p2) //to swap any two data objects
 {
-    T temp = array[p1];
+    T&& temp  = array[p1];
     array[p1] = array[p2];
     array[p2] = temp;
 }
@@ -175,8 +175,9 @@ void minHeap<T>::swap(int p1, int p2) //to swap any two data objects
 template<class T>
 int minHeap<T>::heapify(int element_position)
 {
-    int right_child_position = (element_position + 1) << 1;
-    int left_child_position = right_child_position - 1;
+    int rchild_pos = (element_position + 1) * 2;
+    int lchild_pos = rchild_pos - 1;
+
     /*
      Ideally it should be element_position*2 for left child and element_position*2+1 for right child.
      But in that implementation instead of array[0] being the root, array[1] will have to be made the root.
@@ -185,18 +186,18 @@ int minHeap<T>::heapify(int element_position)
     int smallest_element_position = element_position;
 
     /* Do this so that the memory does not need to be accessed again and again */
-    T left_child = array[left_child_position];
-    T right_child = array[right_child_position];
     T smallest_element = array[smallest_element_position];
 
-    if (left_child_position < size && left_child < smallest_element)
+    if (lchild_pos < size && array[lchild_pos] < smallest_element)
     {
-        smallest_element_position = left_child_position;
+        smallest_element_position = lchild_pos;
+        smallest_element          = array[lchild_pos];
     }
 
-    if (right_child_position < size && right_child < smallest_element)
+    if (rchild_pos < size && array[rchild_pos] < smallest_element)
     {
-        smallest_element_position = right_child_position;
+        smallest_element_position = rchild_pos;
+        smallest_element          = array[rchild_pos];
     }
 
     if (smallest_element_position != element_position)

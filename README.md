@@ -13,10 +13,10 @@ Install and load the following packages preferably using [Spack](https://spack.r
 
 ```bash
 Required Packages:
-python@3.7.8       py-numpy@1.19.1     py-setuptools-scm@4.1.2   py-kiwisolver@1.1.0     py-python-dateutil@2.8.0    py-matplotlib@3.3.0    py-pytz@2019.3
+boost@1.73.0       cmake@3.18.1        python@3.7.8              py-numpy@1.19.1         py-setuptools-scm@4.1.2     py-kiwisolver@1.1.0    py-python-dateutil@2.8.0
 pkgconf@1.7.3      py-numexpr@2.7.0    py-setuptools@49.2.0      py-et-xmlfile@1.0.1     py-pillow@7.2.0             py-bottleneck@1.2.1    papi@6.0.0.1
 py-jdcal@1.3       py-pyparsing@2.4.2  py-cython@0.29.21         py-pandas@1.1.0         py-subprocess32@3.5.4       py-cycler@0.10.0       py-openpyxl@3.0.3    
-py-six@1.14.0      cmake@3.18.1        boost@1.73.0
+py-six@1.14.0      py-argparse@1.4.0   py-matplotlib@3.3.0       py-pytz@2019.3
 ```
 
 **NOTE**: The package versions listed in the above list are not compulsory. You may install the latest versions of the packages. 
@@ -84,18 +84,29 @@ Install HiCOPS using Git & CMake using the following steps:
 $ git clone https://github.com/pcdslab/hicops
 $ cd hicops
 $ mkdir build && cd build
-$ CC=$(which gcc) CXX=$(which g++) cmake .. [CMAKE_OPTIONS] -G [BUILD_SYSTEM] -D<VARIABLE>=<VALUE>
+$ CC=$(which gcc) CXX=$(which g++) cmake .. [CMAKE_OPTIONS] -G [BUILD_SYSTEM] [HICOPS_OPTIONS]
 ```
 
-The available variables are as follows:
+Available HiCOPS options:
+
+```bash
+USE_OMP                 Enable the use of OpenMP multithreading. Set to: ON(default)/OFF
+USE_MPI                 Enable MPI support. Set to: ON (default), OFF
+USE_TIMEMORY            Enable timemory interface. Set to: ON, OFF (default) => Requires timemory installation
+TAILFIT                 Use the tailfit method instead of Gumbelfit for e-value computation. Set to: ON (default), OFF
+PROGRESS                Display progress marks. Set to: ON (default), OFF
+MAX_SEQ_LEN             Allowed maximum peptide sequence length. Set to: 7 to 60. Default: 60
+QALEN                   Maximum number of top K peaks to keep when spectrum preprocess. Default: 100
+QCHUNK                  Max size of each batch extracted from the dataset. Default: 10000
+MAX_HYPERSCORE          Maximum allowed hyperscore computed. Default: 100
+```
+
+Available CMake options:
 
 ```bash
 CMAKE_INSTALL_PREFIX    Set the installation path for HiCOPS, must be a writable directory without sudo
-CMAKE_BUILD_TYPE        Build type. Can set to: Release, Debug, MinSizeRel, RelWithDebInfo (default)
-CMAKE_CXX_STANDARD      C++ standard. Can set to: 11, 14 (default), 17
-USE_OMP                 Enable the use of OpenMP multithreading. Set to: ON(default)/OFF
-USE_MPI                 Enable MPI support. Can set to: ON (default), OFF
-USE_TIMEMORY            Enable timemory interface. Can set to: ON, OFF (default) => Requires timemory installation
+CMAKE_BUILD_TYPE        Build type. Set to: Release, Debug, MinSizeRel, RelWithDebInfo (default)
+CMAKE_CXX_STANDARD      C++ standard. Set to: 11, 14 (default), 17
 ```
 
 You can check the value of each setting in your build using `ccmake`. For example: 

@@ -196,6 +196,9 @@ static status_t DSLIM_InitializeMS2Data()
     /* Compute the total number of batches in the dataset */
     nBatches = ptrs[nfiles-1]->curr_chunk + ptrs[nfiles-1]->nqchunks;
 
+    if (params.myid == 0)
+        std::cout << "\nDataset Size = " << dssize << std::endl << std::endl;
+
     return status;
 }
 
@@ -390,7 +393,8 @@ status_t DSLIM_SearchManager(Index *index)
 #ifndef DIAGNOSE
         if (params.myid == 0)
         {
-            std::cout << "Querying: \n" << endl;
+            std::cout << "\nBatch:\t\t" << workPtr->batchNum << std::endl;
+            std::cout << "Spectra:\t" << workPtr->numSpecs << std::endl;
         }
 #endif /* DIAGNOSE */
 
@@ -425,8 +429,8 @@ status_t DSLIM_SearchManager(Index *index)
 #ifndef DIAGNOSE
         if (params.myid == 0)
         {
-            std::cout << "\nQuery Time: " << qtime << "s" << endl;
-            std::cout << "DONE: Querying\tstatus: " << status << endl << endl;
+            std::cout << "\nSearch Time:\t" << ELAPSED_SECONDS(sch_time) << "s" << std::endl;
+            std::cout << "\nCumulative Search Time: " << qtime << "s" << std::endl << std::endl;
         }
 #endif /* DIAGNOSE */
     }
@@ -479,7 +483,7 @@ status_t DSLIM_SearchManager(Index *index)
         }
 
 #ifdef DIAGNOSE
-        std::cout << "ExitSignal: " << params.myid << endl;
+        std::cout << "ExitSignal: " << params.myid << std::endl;
 #endif /* DIAGNOSE */
 
         /* Wait for everyone to synchronize */
@@ -599,7 +603,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
         if (params.myid == 0)
         {
             /* Print the number of query threads */
-            std::cout << "\n#QThds: " << threads << endl;
+            std::cout << "Cores:\t\t" << threads * params.nodes << std::endl;
         }
 #endif /* DIAGNOSE */
 
@@ -623,12 +627,10 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
             expeRT  *expPtr = ePtrs + thno;
             ebuffer *inBuff = inBuff + thno;
 
-#ifndef DIAGNOSE
+#if defined (PROGRESS)
             if (thno == 0 && params.myid == 0)
-            {
                 std::cout << "\rDONE: " << (queries * 100) /ss->numSpecs << "%";
-            }
-#endif /* DIAGNOSE */
+#endif // PROGRESS
 
             for (uint_t ixx = 0; ixx < idxchunk; ixx++)
             {
@@ -744,6 +746,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
                                 cell.sharedions = shpk;
                                 cell.totalions = speclen;
                                 cell.pmass = pmass;
+                                cell.fileIndex = ss->fileNum;
 
                                 /* Insert the cell in the heap dst */
                                 resPtr->topK.insert(cell);
@@ -771,7 +774,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
                 if (resPtr->cpsms >= 1)
                 {
                     /* Extract the top PSM */
-                    hCell psm = resPtr->topK.getMax();
+                    hCell&& psm = resPtr->topK.getMax();
 
                     /* Put it in the list */
                     CandidatePSMS[spectrumID + queries] = psm;
@@ -783,15 +786,12 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
                     /* Fill in the Tx array cells */
                     txArray[queries].min  = resPtr->minhypscore;
                     txArray[queries].max2 = resPtr->nexthypscore;
-                    txArray[queries].max  = resPtr->maxhypscore;
+                    txArray[queries].max  = psm.hyperscore;
                     txArray[queries].N    = resPtr->cpsms;
                     txArray[queries].qID  = spectrumID + queries;
                 }
                 else
                 {
-                    /* No need to memset as there are apt checks in dslim_score.cpp
-                    memset(liBuff->ibuff + (queries * psize * sizeof(ushort_t)), 0x0, psize * sizeof(ushort_t));*/
-
                     /* Extract the top result
                      * and put it in the list */
                     CandidatePSMS[spectrumID + queries] = 0;
@@ -812,7 +812,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
                 if (resPtr->cpsms >= params.min_cpsm)
                 {
                     /* Extract the top PSM */
-                    hCell psm = resPtr->topK.getMax();
+                    hCell&& psm = resPtr->topK.getMax();
 
                     resPtr->maxhypscore = (psm.hyperscore * 10 + 0.5);
 
@@ -877,13 +877,6 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
     search_cntr.stop();
 #   endif // _UNIX
 #endif // USE_TIMEMORY
-
-#ifndef DIAGNOSE
-    if (params.myid == 0)
-    {
-        std::cout << "\nQueried Spectra:\t\t" << workPtr->numSpecs << endl;
-    }
-#endif /* DIAGNOSE */
 
     return status;
 }
@@ -1179,6 +1172,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
             status = Query->ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
 
             ioPtr->batchNum = Query->curr_chunk;
+            ioPtr->fileNum  = Query->getQfileIndex();
             Query->curr_chunk++;
 
             /* Lock the ready queue */
@@ -1204,11 +1198,11 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
             auto es = ELAPSED_SECONDS(prep);
 
 #ifndef DIAGNOSE
-            if (params.myid == 0)
+            /*if (params.myid == 0)
             {
-                std::cout << "\nExtracted Spectra :\t\t" << ioPtr->numSpecs << endl;
-                std::cout << "Elapsed Time: " << es << "s" << endl << endl;
-            }
+                std::cout << "\nExtracted Spectra :\t\t" << ioPtr->numSpecs << std::endl;
+                std::cout << "Elapsed Time: " << es << "s" << std::endl << std::endl;
+            }*/
 #endif /* DIAGNOSE */
 
             /* If no more remaining spectra, then deinit */
@@ -1225,7 +1219,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
         }
         /*else
         {
-            std::cout << "ALERT: IOTHD @" << params.myid << endl;
+            std::cout << "ALERT: IOTHD @" << params.myid << std::endl;
         }*/
     }
 
@@ -1271,7 +1265,7 @@ VOID *DSLIM_FOut_Thread_Entry(VOID *argv)
 
         if (lbuff->isDone == true)
         {
-            //cout << "FOut_Thread_Exiting @: " << params.myid <<endl;
+            //std::cout << "FOut_Thread_Exiting @: " << params.myid <<endl;
             break;
         }
 

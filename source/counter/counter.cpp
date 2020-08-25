@@ -49,8 +49,8 @@ status_t SLM_Main(int_t argc, char_t* argv[])
 
     if (argc < 2)
     {
-        cout << "ERROR: Missing arguments\n";
-        cout << "Format: ./counter.exe <uparams.txt>\n";
+        std::cout << "ERROR: Missing arguments\n";
+        std::cout << "Format: ./counter.exe <uparams.txt>\n";
         status = ERR_INVLD_PARAM;
         exit (status);
     }
@@ -72,8 +72,8 @@ status_t SLM_Main(int_t argc, char_t* argv[])
     }
 
     /* The only output should be the cumulative size of the index */
-    cout << "spectra:" << cumusize << endl;
-	cout << "ions:" << ions << endl;
+    std::cout << "spectra:" << cumusize << std::endl;
+	std::cout << "ions:" << ions << std::endl;
 
     return status;
 }
