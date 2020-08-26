@@ -58,7 +58,7 @@ if __name__ == '__main__':
         sample = open("./sampleparams.txt","w+")
 
         sample.write('# \n')
-        sample.write('# HiCOPS for Comet\n')
+        sample.write('# HiCOPS\n')
         sample.write('# Copyrights(c) 2020 PCDS Laboratory\n')
         sample.write('# Muhammad Haseeb, and Fahad Saeed\n')
         sample.write('# School of Computing and Information Sciences\n')
@@ -66,9 +66,6 @@ if __name__ == '__main__':
         sample.write('# Email: {mhaseeb, fsaeed}@fiu.edu\n')
         sample.write('# \n')
         sample.write('# Auto generated sampleparams.txt\n')
-        sample.write('# Sample parameters generated for HiCOPS (XSEDE COMET) version\n')
-        sample.write('# For more information: https://portal.xsede.org/sdsc-comet\n')
-        sample.write('# \n')
         sample.write('# Generated on: ' + (datetime.datetime.now()).strftime("%Y-%m-%d %H:%M %Z") + '\n')
         sample.write('# \n')
         sample.write('# IMPORTANT: DO NOT put any spaces between variable=value\n')
@@ -492,9 +489,13 @@ if __name__ == '__main__':
     modfile.close()
 
     print ('\nSUCCESS\n')
-    print('Written:', hicopspath + '/uparams.txt')
-    print('You can now run HiCOPS as: mpirun -np [N] [OPTIONS] '+ hicopspath + '/hicops ' + hicopspath + '/uparams.txt\n')
+    print('Written:', hicopspath + '/uparams.txt\n')
+    print('You can now run HiCOPS as: \n')
+    print('$ mpirun -np [N] [OPTIONS] '+ hicopspath + '/hicops ' + hicopspath + '/uparams.txt\n')
 
-    print ('Issue Reporting: https://github.com/pcdslab/hicops/issues\n')
+
+    print (' # ---------------------------------------------------------------------------------------------------- #')
+
+    print ('Report Issues: https://github.com/pcdslab/hicops/issues\n')
 
     print (' # ---------------------------------------------------------------------------------------------------- #\n\n')

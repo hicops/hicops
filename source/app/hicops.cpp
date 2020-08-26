@@ -52,10 +52,6 @@ status_t main(int_t argc, char_t* argv[])
     /* Benchmarking */
     double_t elapsed_seconds;
 
-    /* Print start time */
-    MARK_START(start_tim);
-    const time_t start_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-
 #if defined (USE_TIMEMORY)
     // reset any previous configuration
     bundle_t::reset();
@@ -75,9 +71,6 @@ status_t main(int_t argc, char_t* argv[])
 
     // configure the bundle
     tim::configure<bundle_t>(env_enum);
-
-    // start a timer
-    time_tuple_t total("total_time");
 #endif
 
     if (argc < 2)
@@ -111,6 +104,12 @@ status_t main(int_t argc, char_t* argv[])
                 "**********************************************************\n";
     }
 #   endif // USE_TIMEMORY
+
+    // start MPIP instrumentation
+#if defined (USE_MPIP_LIBRARY)
+    auto id = timemory_start_mpip();
+#endif
+
 #endif // USE_MPI
 
     // --------------------------------------------------------------------------------------------- //
@@ -118,8 +117,15 @@ status_t main(int_t argc, char_t* argv[])
     // Initialization
     //
 
+    /* Print start time */
+    MARK_START(start_tim);
+    const time_t start_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
 #if defined (USE_TIMEMORY)
     tim::timemory_init(argc, argv);
+
+    // start a timer
+    time_tuple_t total("total_time");
 #endif // USE_TIMEMORY
 
     // parse parameters
@@ -337,7 +343,7 @@ status_t main(int_t argc, char_t* argv[])
     //
 #if defined (USE_TIMEMORY)
     time_tuple_t search_inst("search");
-    mem_tuple_t  search_mem_inst("search_mem");
+    mem_tuple_t  search_mem_inst("search");
 #endif // USE_TIMEMORY
 
     // Perform the distributed database search 
@@ -381,7 +387,7 @@ status_t main(int_t argc, char_t* argv[])
     //
 #if defined (USE_TIMEMORY)
     time_tuple_t merge_inst("merge");
-    mem_tuple_t merge_mem_inst("merge_mem");
+    mem_tuple_t merge_mem_inst("merge");
 #endif
 
     /* Compute the distributed scores */
@@ -472,6 +478,11 @@ status_t main(int_t argc, char_t* argv[])
 #endif
 
 #ifdef USE_MPI
+    // stop MPIP instrumentation
+#if defined (USE_MPIP_LIBRARY)
+    timemory_stop_mpip(id);
+#endif
+
 #   if defined (USE_TIMEMORY)
     tim::mpi::finalize();
 #   else

@@ -26,6 +26,8 @@
 #include "lwqueue.h"
 #include "lwbuff.h"
 #include "scheduler.h"
+
+#define TIMEMORY_USE_MANAGER_EXTERN
 #include "hicops_instr.hpp"
 
 using namespace std;
@@ -227,6 +229,10 @@ status_t DSLIM_SearchManager(Index *index)
     thread_t *wthread = new thread_t;
 #endif /* USE_MPI */
 
+    //
+    // Initialization
+    //
+
     /* The mutex for queryfile vector */
     if (status == SLM_SUCCESS)
     {
@@ -347,8 +353,9 @@ status_t DSLIM_SearchManager(Index *index)
     }
 
     //
-    // ----------------------------------------------------------------------------------
+    // Parallel Search
     //
+
     /* The main query loop starts here */
     while (status == SLM_SUCCESS)
     {
@@ -377,9 +384,7 @@ status_t DSLIM_SearchManager(Index *index)
 
 #ifndef DIAGNOSE
         if (params.myid == 0)
-        {
             std::cout << "PENALTY: " << penalty << 's'<< std::endl;
-        }
 #endif /* DIAGNOSE */
 
         /* Check the status of buffer queues */
@@ -435,6 +440,10 @@ status_t DSLIM_SearchManager(Index *index)
 #endif /* DIAGNOSE */
     }
 
+    //
+    // Deinitialize
+    //
+
     /* Deinitialize the IO module */
     status = DSLIM_Deinit_IO();
 
@@ -464,12 +473,20 @@ status_t DSLIM_SearchManager(Index *index)
 #if defined (USE_TIMEMORY)
         static wall_tuple_t comm_penalty("DAG_penalty");
         comm_penalty.start();
+#else
+        MARK_START(dag);
 #endif // USE_TIMEMORY
 
         pthread_join(*wthread, &ptr);
 
 #if defined (USE_TIMEMORY)
         comm_penalty.stop();
+#else
+        MARK_END(dag);
+
+        if (params.myid == 0)
+            std::cout << "DAG Sync Penalty: " << ELAPSED_SECONDS(dag) << 's'<< std::endl;
+
 #endif // USE_TIMEMORY
 
         delete wthread;
@@ -486,10 +503,33 @@ status_t DSLIM_SearchManager(Index *index)
         std::cout << "ExitSignal: " << params.myid << std::endl;
 #endif /* DIAGNOSE */
 
-        /* Wait for everyone to synchronize */
+        //
+        // Synchronization
+        //
+#if defined (USE_TIMEMORY)
+        wall_tuple_t sync_penalty("sync_penalty");
+        sync_penalty.start();
+
+        // wait for synchronization
+        tim::mpi::barrier(MPI_COMM_WORLD);
+
+        sync_penalty.stop();
+#else
+        MARK_BEGIN(sync);
+
         status = MPI_Barrier(MPI_COMM_WORLD);
 
-        /* Carry forward the data to the distributed scoring module */
+        MARK_END(sync);
+
+        if (params.myid == 0)
+            std::cout << "Superstep Sync Penalty: " << ELAPSED_SECONDS(sync) << "s" << std::endl<< std::endl;
+#endif // USE_TIMEMORY
+
+        //
+        // Carry forward dsts for next superstep
+        //
+
+        // Carry forward the data to the distributed scoring module
         status = DSLIM_CarryForward(index, CommHandle, ePtrs, CandidatePSMS, spectrumID);
 
         /* Delete the instance of CommHandle */
@@ -603,7 +643,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
         if (params.myid == 0)
         {
             /* Print the number of query threads */
-            std::cout << "Cores:\t\t" << threads * params.nodes << std::endl;
+            std::cout << "Threads:\t" << threads * params.nodes << std::endl;
         }
 #endif /* DIAGNOSE */
 
@@ -629,7 +669,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
 
 #if defined (PROGRESS)
             if (thno == 0 && params.myid == 0)
-                std::cout << "\rDONE: " << (queries * 100) /ss->numSpecs << "%";
+                std::cout << "\rDONE:\t\t" << (queries * 100) /ss->numSpecs << "%";
 #endif // PROGRESS
 
             for (uint_t ixx = 0; ixx < idxchunk; ixx++)
@@ -1131,8 +1171,6 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
         /* All set */
         if (status == SLM_SUCCESS)
         {
-            MARK_START(prep);
-
             /* Wait for a I/O request */
             status = qPtrs->lockw_();
 
@@ -1193,17 +1231,6 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 
             /* Unlock the ready queue */
             qPtrs->unlockr_();
-
-            MARK_END(prep);
-            auto es = ELAPSED_SECONDS(prep);
-
-#ifndef DIAGNOSE
-            /*if (params.myid == 0)
-            {
-                std::cout << "\nExtracted Spectra :\t\t" << ioPtr->numSpecs << std::endl;
-                std::cout << "Elapsed Time: " << es << "s" << std::endl << std::endl;
-            }*/
-#endif /* DIAGNOSE */
 
             /* If no more remaining spectra, then deinit */
             if (rem_spec < 1)

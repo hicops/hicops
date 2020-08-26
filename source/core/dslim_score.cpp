@@ -230,6 +230,10 @@ status_t DSLIM_Score::CombineResults()
 
     for (auto batchNum = 0; batchNum < this->nBatches; batchNum++, vbatch += nSamples)
     {
+#if defined (PROGRESS)
+        if (params.myid == 0)
+            std::cout << "\rDONE:\t\t" << (batchNum * 100) /this->nBatches << "%";
+#endif // PROGRESS
         auto bSize = sizeArray[batchNum];
 
         for (int_t saa = 0; saa < nSamples; saa++)
@@ -359,7 +363,7 @@ status_t DSLIM_Score::CombineResults()
         /* Remove the files when no longer needed */
         for (int_t saa = 0; saa < nSamples; saa++)
         {
-            fn = params.workspace + "/" + std::to_string(vbatch) + "_" + std::to_string(saa)
+            fn = params.datapath + "/" + std::to_string(vbatch) + "_" + std::to_string(saa)
                     + ".dat";
 
             if (fhs[saa].is_open())
@@ -393,29 +397,6 @@ status_t DSLIM_Score::CombineResults()
         for (uint_t ky = 0; ky < params.nodes - 1; ky++)
         {
             txSizes[ky] = 0;
-        }
-    }
-
-    if (status == SLM_SUCCESS && params.myid == 0)
-    {
-        /* Add all the query files to the vector */
-        auto dir = opendir(params.datapath.c_str());
-        dirent* pdir;
-
-        /* Check if opened */
-        if (dir != NULL)
-        {
-            while ((pdir = readdir(dir)) != NULL)
-            {
-                string_t cfile(pdir->d_name);
-
-                /* Remove all .dat files */
-                if (cfile.find(".dat") != std::string::npos)
-                {
-                    string_t file = params.datapath + '/' + pdir->d_name;
-                    std::remove(file.c_str());
-                }
-            }
         }
     }
 

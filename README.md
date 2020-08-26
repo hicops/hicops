@@ -49,10 +49,11 @@ $ module load openmpi_ib
 ```
 
 ## Install timemory for HiCOPS instrumentation/profiling - Optional
-Install timemory using CMake or Spack using the instructions [here](https://timemory.readthedocs.io/en/develop/installation.html). After installation, make sure that the path to timemory installation has been appended to the enviornment variable `CMAKE_PREFIX_PATH`.
+Install timemory using CMake or Spack using the instructions [here](https://timemory.readthedocs.io/en/develop/installation.html). After installation, make sure that the path to timemory installation has been appended to the enviornment variable `CMAKE_PREFIX_PATH`. Also make sure that the Timemory's python package (pytimemory) is in your `PYTHON_PATH`.
 
 ```bash
 $ export CMAKE_PREFIX_PATH=$TIMEMORY_INSTALL:$CMAKE_PREFIX_PATH
+$ export PYTHON_PATH=$TIMEMORY_PYTHON_PACKAGE_PATH:$PYTHON_PATH
 ```
 
 ### Timemory Install Example
@@ -71,6 +72,7 @@ $ git clone https://github.com/NERSC/timemory.git && cd timemory && mkdir build 
 $ cmake .. -DTIMEMORY_USE_MPI=ON -DTIMEMORY_BUILD_MPIP_LIBRARY=ON -DTIMEMORY_USE_OMPT=ON -DTIMEMORY_USE_GOTCHA=ON -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_CXX_STANDARD=14 -DTIMEMORY_USE_PYTHON=ON -DTIMEMORY_BUILD_TOOLS=ON -DUSE_MPI=ON -DUSE_OPENMP=ON -DTIMEMORY_USE_PAPI=ON
 $ make install
 $ export CMAKE_PREFIX_PATH=$PWD/../install:$CMAKE_PREFIX_PATH
+$ export PYTHON_PATH=$PWD:$PYTHON_PATH
 ```
 
 **NOTE:** Timemory and its dependencies can take upto 2-3 hours to install depending on the system so please be patient.
@@ -90,9 +92,10 @@ $ CC=$(which gcc) CXX=$(which g++) cmake .. [CMAKE_OPTIONS] -G [BUILD_SYSTEM] [H
 Available HiCOPS options:
 
 ```bash
-USE_OMP                 Enable the use of OpenMP multithreading. Set to: ON(default)/OFF
+USE_OMP                 Enable the use of OpenMP multithreading. Set to: ON(default), OFF
 USE_MPI                 Enable MPI support. Set to: ON (default), OFF
-USE_TIMEMORY            Enable timemory interface. Set to: ON, OFF (default) => Requires timemory installation
+USE_TIMEMORY            Enable timemory interface. Set to: ON, OFF (default) => Requires timemory installation.
+USE_MPIP_LIBRARY        Enables the MPIP data_tracker via Timemory. Set to: ON, OFF (default) => Requires timemory installation. 
 TAILFIT                 Use the tailfit method instead of Gumbelfit for e-value computation. Set to: ON (default), OFF
 PROGRESS                Display progress marks. Set to: ON (default), OFF
 MAX_SEQ_LEN             Allowed maximum peptide sequence length. Set to: 7 to 60. Default: 60
@@ -141,7 +144,7 @@ $ make install -j [JOBS]
 For the rest of the document, we will be assuming that the HiCOPS was installed at : `$HICOPS_INSTALL`
 
 ## Update LD_LIBRARY_PATH
-Append the `HICOPS_INSTALL/lib` to the environment variable `LD_LIBRARY_PATH`.
+Make sure that the `HICOPS_INSTALL/lib` has been added to the environment variable `LD_LIBRARY_PATH`.
 
 ```bash
 $ export LD_LIBRARY_PATH=$HICOPS_INSTALL/lib:$LD_LIBRARY_PATH
