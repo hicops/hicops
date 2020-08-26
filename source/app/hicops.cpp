@@ -52,10 +52,6 @@ status_t main(int_t argc, char_t* argv[])
     /* Benchmarking */
     double_t elapsed_seconds;
 
-    /* Print start time */
-    MARK_START(start_tim);
-    const time_t start_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-
 #if defined (USE_TIMEMORY)
     // reset any previous configuration
     bundle_t::reset();
@@ -75,9 +71,6 @@ status_t main(int_t argc, char_t* argv[])
 
     // configure the bundle
     tim::configure<bundle_t>(env_enum);
-
-    // start a timer
-    time_tuple_t total("total_time");
 #endif
 
     if (argc < 2)
@@ -111,6 +104,12 @@ status_t main(int_t argc, char_t* argv[])
                 "**********************************************************\n";
     }
 #   endif // USE_TIMEMORY
+
+    // start MPIP instrumentation
+#if defined (USE_MPIP_LIBRARY)
+    auto id = timemory_start_mpip();
+#endif
+
 #endif // USE_MPI
 
     // --------------------------------------------------------------------------------------------- //
@@ -118,8 +117,15 @@ status_t main(int_t argc, char_t* argv[])
     // Initialization
     //
 
+    /* Print start time */
+    MARK_START(start_tim);
+    const time_t start_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
 #if defined (USE_TIMEMORY)
     tim::timemory_init(argc, argv);
+
+    // start a timer
+    time_tuple_t total("total_time");
 #endif // USE_TIMEMORY
 
     // parse parameters
@@ -387,19 +393,9 @@ status_t main(int_t argc, char_t* argv[])
     /* Compute the distributed scores */
     if (status == SLM_SUCCESS)
     {
-        // start MPIP instrumentation
-#if defined (USE_MPIP_LIBRARY)
-        auto id = timemory_start_mpip();
-#endif
-
         MARK_START(dist_score);
         status = DSLIM_DistScoreManager();
         MARK_END(dist_score);
-
-        // stop MPIP instrumentation
-#if defined (USE_MPIP_LIBRARY)
-        timemory_stop_mpip(id);
-#endif
 
         elapsed_seconds = ELAPSED_SECONDS(dist_score);
 
@@ -482,6 +478,11 @@ status_t main(int_t argc, char_t* argv[])
 #endif
 
 #ifdef USE_MPI
+    // stop MPIP instrumentation
+#if defined (USE_MPIP_LIBRARY)
+    timemory_stop_mpip(id);
+#endif
+
 #   if defined (USE_TIMEMORY)
     tim::mpi::finalize();
 #   else
