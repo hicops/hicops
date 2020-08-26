@@ -26,6 +26,9 @@
 #include "utils.h"
 #include "slm_dsts.h"
 
+#define TIMEMORY_USE_MANAGER_EXTERN
+#include "hicops_instr.hpp"
+
 using namespace std;
 
 /* Global Variables */
@@ -81,7 +84,9 @@ status_t DSLIM_DistScoreManager()
     /* No need to do anything if only 1 node */
     if (params.nodes > 1)
     {
-        /* Initialize the ScoreHandle */
+        //
+        // initialization
+        //
         if (status == SLM_SUCCESS)
         {
             ScoreHandle = new DSLIM_Score(bdata);
@@ -92,14 +97,25 @@ status_t DSLIM_DistScoreManager()
             }
         }
 
-        /* Distributed Scoring Algorithm */
+        //
+        // combine local results
+        //
         if (status == SLM_SUCCESS)
         {
             if (params.myid == 0)
             {
                 std::cout << std::endl << "**** Merging Partial Results ****\n" << std::endl;
             }
+
+#if defined (USE_TIMEMORY)
+            merge_tuple_t merge_instr("combine");
+#endif // USE_TIMEMORY
+
             status = ScoreHandle->CombineResults();
+
+#if defined (USE_TIMEMORY)
+            merge_instr.stop();
+#endif // USE_TIMEMORY
 
             if (params.myid == 0)
             {
@@ -107,7 +123,9 @@ status_t DSLIM_DistScoreManager()
             }
         }
 
-        /* Scatter the key-values to all machines */
+        //
+        // scatter local scores to relevant nodes
+        //
         if (status == SLM_SUCCESS)
         {
             status = ScoreHandle->ScatterScores();
@@ -123,21 +141,51 @@ status_t DSLIM_DistScoreManager()
             status = ScoreHandle->Wait4RX();
         }
 
-        /* Display results to files */
+        //
+        // write results to files
+        //
         if (status == SLM_SUCCESS)
         {
+#if defined (USE_TIMEMORY)
+            comm_tuple_t tsv_instr("result_io");
+#endif // USE_TIMEMORY
+
             status = ScoreHandle->DisplayResults();
+
+#if defined (USE_TIMEMORY)
+            tsv_instr.stop();
+#endif // USE_TIMEMORY
 
             if (params.myid == 0)
             {
-                std::cout << "Display Results with status:\t" << status << std::endl;
+                std::cout << "Writing Results with status:\t" << status << std::endl;
             }
         }
 
+        //
+        // synchronization
+        //
         if (status == SLM_SUCCESS)
         {
-            /* Wait for everyone to synchronize */
-            status = MPI_Barrier(MPI_COMM_WORLD);
+#if defined (USE_TIMEMORY)
+        wall_tuple_t sync_penalty("sync_penalty");
+        sync_penalty.start();
+
+        // wait for synchronization
+        tim::mpi::barrier(MPI_COMM_WORLD);
+
+        sync_penalty.stop();
+#else
+        MARK_START(sync);
+
+        status = MPI_Barrier(MPI_COMM_WORLD);
+
+        MARK_END(sync)
+
+        if (params.myid == 0)
+            std::cout << "Superstep Sync Penalty: " << ELAPSED_SECONDS(sync) << "s" << std::endl<< std::endl;
+
+#endif // USE_TIMEMORY
         }
 
         /* Destroy the ScoreHandle */

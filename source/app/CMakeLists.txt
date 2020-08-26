@@ -15,9 +15,9 @@ target_include_directories(hicops PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../core/incl
 # to include the generated config.hpp
 include_directories(${CMAKE_BINARY_DIR})
 
-target_link_libraries(hicops hicops-core ${MPI_LIBRARIES})
+target_link_libraries(hicops hicops-core ${MPIP_LIBRARY} ${MPI_LIBRARIES})
 
-set_target_properties(hicops-core
+set_target_properties(hicops
     PROPERTIES
         CXX_STANDARD 14
         CXX_STANDARD_REQUIRED YES

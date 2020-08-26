@@ -46,6 +46,13 @@ endif()
 option(USE_OMP "Enable OpenMP in hicops" ON)
 option(USE_MPI "Enable MPI in hicops" ON)
 option(USE_TIMEMORY "Enable Timemory instrumentation" OFF)
+option(USE_MPIP_LIBRARY "Enable MPIP instrumentation via Timemory" OFF)
+
+# safety check for MPIP library
+if (NOT USE_TIMEMORY)
+    message(STATUS "Disabling MPIP instrumentation as Timemory is disabled")
+    set (USE_MPIP_LIBRARY OFF)
+endif()
 
 find_package(OpenMP)
 find_package(MPI)
@@ -67,8 +74,14 @@ if (USE_TIMEMORY)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_TIMEMORY")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_TIMEMORY")
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -DUSE_TIMEMORY")
-    file(MAKE_DIRECTORY ${HOME}/tmp/mplconfigdir)
-    set (ENV{MPLCONFIGDIR} ${HOME}/tmp/mplconfigdir)
+    file(MAKE_DIRECTORY $ENV{HOME}/mplconfigdir)
+    set (ENV{MPLCONFIGDIR} $ENV{HOME}/mplconfigdir)
+endif()
+
+if (USE_MPIP_LIBRARY)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_MPIP_LIBRARY")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_MPIP_LIBRARY")
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -DUSE_MPIP_LIBRARY")
 endif()
 
 #----------------------------------------------------------------------------------------#

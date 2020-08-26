@@ -20,7 +20,6 @@
 #pragma once
 
 #include "lbe.h"
-
 #include "hicops_instr.hpp"
 
 #ifdef USE_MPI

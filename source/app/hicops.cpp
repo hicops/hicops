@@ -337,7 +337,7 @@ status_t main(int_t argc, char_t* argv[])
     //
 #if defined (USE_TIMEMORY)
     time_tuple_t search_inst("search");
-    mem_tuple_t  search_mem_inst("search_mem");
+    mem_tuple_t  search_mem_inst("search");
 #endif // USE_TIMEMORY
 
     // Perform the distributed database search 
@@ -381,15 +381,25 @@ status_t main(int_t argc, char_t* argv[])
     //
 #if defined (USE_TIMEMORY)
     time_tuple_t merge_inst("merge");
-    mem_tuple_t merge_mem_inst("merge_mem");
+    mem_tuple_t merge_mem_inst("merge");
 #endif
 
     /* Compute the distributed scores */
     if (status == SLM_SUCCESS)
     {
+        // start MPIP instrumentation
+#if defined (USE_MPIP_LIBRARY)
+        auto id = timemory_start_mpip();
+#endif
+
         MARK_START(dist_score);
         status = DSLIM_DistScoreManager();
         MARK_END(dist_score);
+
+        // stop MPIP instrumentation
+#if defined (USE_MPIP_LIBRARY)
+        timemory_stop_mpip(id);
+#endif
 
         elapsed_seconds = ELAPSED_SECONDS(dist_score);
 

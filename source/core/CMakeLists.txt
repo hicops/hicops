@@ -18,9 +18,17 @@ file(GLOB cxx_sources               ${CMAKE_CURRENT_LIST_DIR}/*.cpp)
 set(hicops_glob_headers
     ${c_headers} ${cxx_headers})
 
+if (USE_OMP)
+    set (OPT ompt)
+endif()
+
+if (USE_MPI)
+    set (OPT mpi ${OPT})
+endif()
+
 if (USE_TIMEMORY)
     set(timemory_FIND_COMPONENTS_INTERFACE timemory-hicops-core)
-    set(COMPONENTS headers compile-options analysis-tools papi
+    set(COMPONENTS headers compile-options analysis-tools papi ${OPT}
         #cpu-roofline
         OPTIONAL_COMPONENTS cxx)
 
@@ -30,7 +38,21 @@ if (USE_TIMEMORY)
 #    target_compile_definitions(cpu-fp-single INTERFACE ROOFLINE_FP_BYTES=4)
 #    target_compile_definitions(cpu-fp-double INTERFACE ROOFLINE_FP_BYTES=8)
 
-    find_package(timemory REQUIRED COMPONENTS ${COMPONENTS} OPTIONAL_COMPONENTS mpi)
+    find_package(timemory REQUIRED COMPONENTS ${COMPONENTS} OPTIONAL_COMPONENTS ${OPTIONAL_COMPONENTS})
+
+endif()
+
+if (USE_MPIP_LIBRARY)
+    find_library(MPIP_LIBRARY
+                 NAMES timemory-mpip 
+                 HINTS ENV PATH
+                       ENV LD_LIBRARY_PATH
+                       ENV CMAKE_PREFIX_PATH
+                 PATH_SUFFIXES lib
+                 DOC "Timemory MPIP instrumentation library"
+                 REQUIRED)
+
+    message(STATUS "Timemory-MPIP interface enabled")
 endif()
 
 add_library (hicops-core SHARED ${c_sources} ${cxx_sources})
