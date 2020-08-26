@@ -95,6 +95,7 @@ Available HiCOPS options:
 USE_OMP                 Enable the use of OpenMP multithreading. Set to: ON(default)/OFF
 USE_MPI                 Enable MPI support. Set to: ON (default), OFF
 USE_TIMEMORY            Enable timemory interface. Set to: ON, OFF (default) => Requires timemory installation
+USE_MPIP_LIBRARY        Enables the MPIP data instrumentation via Timemory interface => Requires timemory installation
 TAILFIT                 Use the tailfit method instead of Gumbelfit for e-value computation. Set to: ON (default), OFF
 PROGRESS                Display progress marks. Set to: ON (default), OFF
 MAX_SEQ_LEN             Allowed maximum peptide sequence length. Set to: 7 to 60. Default: 60
