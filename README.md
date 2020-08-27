@@ -58,6 +58,7 @@ $ export MPLCONFIGDIR=$HOME/mplconfigdir
 ```
 
 ### Timemory Install Example
+All Timemory installation examples can be found [here](https://github.com/NERSC/timemory/wiki/Installation-Examples). Below we demonstrate a couple of them.
 
 #### Using Spack
 If using Spack, you can install and load timemory and its dependencies using:
