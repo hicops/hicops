@@ -41,6 +41,7 @@ using time_point_t = std::chrono::system_clock::time_point;
 #    include "timemory/config.hpp"
 
 #    include "timemory/config/definition.hpp"
+#    include "timemory/hash/definition.hpp"
 #    include "timemory/operations/definition.hpp"
 #    include "timemory/settings/definition.hpp"
 #    include "timemory/storage/definition.hpp"
