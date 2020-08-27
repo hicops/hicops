@@ -26,8 +26,6 @@
 #include "lwqueue.h"
 #include "lwbuff.h"
 #include "scheduler.h"
-
-#define TIMEMORY_USE_MANAGER_EXTERN
 #include "hicops_instr.hpp"
 
 using namespace std;

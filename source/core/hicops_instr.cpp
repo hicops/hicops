@@ -17,29 +17,22 @@
  *
  */
 
-#pragma once
-
-#include "lbe.h"
 #include "hicops_instr.hpp"
 
 #if defined (USE_TIMEMORY)
+#    define TIMEMORY_USE_MANAGER_EXTERN
 #    include <timemory/timemory.hpp>
-#endif
 
-//--------------------------------------------------------------------------------------
 //
-//      timemory MPIP
+// Instantiate template classes
 //
-//--------------------------------------------------------------------------------------
+template class tim::auto_tuple<wall_clock, cpu_util, thread_cpu_util>;
+template class tim::auto_tuple<written_bytes, read_bytes>;
+template class tim::auto_tuple<wall_clock>;
+template class tim::auto_tuple<wall_clock, thread_cpu_util, read_bytes>;
+template class tim::component_tuple<papi_events_t>;
+template class tim::component_tuple<wall_clock, cpu_util, bundle_t>;
+template class tim::auto_tuple<wall_clock, thread_cpu_util, written_bytes>;
+template class tim::auto_tuple<wall_clock, cpu_util, read_bytes>;
 
-#if defined (USE_MPIP_LIBRARY)
-extern "C"
-{
-    extern uint64_t timemory_start_mpip();
-    extern uint64_t timemory_stop_mpip(uint64_t);
-}
-#endif // USE_MPIP_LIBRARY
-
-#ifdef USE_MPI
-#include <mpi.h>
-#endif /* USE_MPI */
+#endif // USE_TIMEMORY
