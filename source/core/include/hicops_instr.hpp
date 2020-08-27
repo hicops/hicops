@@ -24,21 +24,28 @@
 using time_point_t = std::chrono::system_clock::time_point;
 
 #if defined (USE_TIMEMORY)
-#include <timemory/timemory.hpp>
 
-//--------------------------------------------------------------------------------------
-//
-//      Timemory MPIP
-//
-//--------------------------------------------------------------------------------------
+#    include "timemory/defines.h"
+#    include "timemory/extern.hpp"
 
-#if defined (USE_MPIP_LIBRARY)
-extern "C"
-{
-    extern uint64_t timemory_start_mpip();
-    extern uint64_t timemory_stop_mpip(uint64_t);
-}
-#endif // USE_MPIP_LIBRARY
+#    include "timemory/api.hpp"
+#    include "timemory/components.hpp"  // 5.0
+#    include "timemory/settings.hpp"    // 3.1
+
+#    include "timemory/variadic/component_bundle.hpp"
+#    include "timemory/variadic/auto_bundle.hpp"
+#    include "timemory/variadic/auto_tuple.hpp"
+
+#    include "timemory/types.hpp"                  // 3.5
+#    include "timemory/macros.hpp"        // 3.2
+#    include "timemory/config.hpp"
+
+#    include "timemory/config/definition.hpp"
+#    include "timemory/hash/definition.hpp"
+#    include "timemory/operations/definition.hpp"
+#    include "timemory/settings/definition.hpp"
+#    include "timemory/storage/definition.hpp"
+#    include "timemory/variadic/definition.hpp"
 
 //--------------------------------------------------------------------------------------
 //
@@ -80,21 +87,36 @@ struct hicops_tag
 {};
 
 // custom user bundle
-using bundle_t = user_bundle<10, hicops_tag>;
+using bundle_t          = user_bundle<10, hicops_tag>;
 
+//
+// Create tuple aliases
+//
+using time_tuple_t      = tim::auto_tuple<wall_clock, cpu_util, thread_cpu_util>;
+using mem_tuple_t       = tim::auto_tuple<written_bytes, read_bytes>;
+using wall_tuple_t      = tim::auto_tuple<wall_clock>;
 
-// create tuple aliases
-using time_tuple_t = tim::auto_tuple<wall_clock, cpu_util, thread_cpu_util>;
-using mem_tuple_t  = tim::auto_tuple<written_bytes, read_bytes>;
-using wall_tuple_t = tim::auto_tuple<wall_clock>;
+using prep_tuple_t      = tim::auto_tuple<wall_clock, thread_cpu_util, read_bytes>;
+using hw_counters_t     = tim::component_tuple<papi_events_t>;
+using search_tuple_t    = tim::component_tuple<wall_clock, cpu_util, bundle_t>;
+using comm_tuple_t      = tim::auto_tuple<wall_clock, thread_cpu_util, written_bytes>;
+using merge_tuple_t     = tim::auto_tuple<wall_clock, cpu_util, read_bytes>;
 
-using prep_tuple_t = tim::auto_tuple<wall_clock, thread_cpu_util, read_bytes>;
-using hw_counters_t = tim::component_tuple<papi_events_t>;
-using search_tuple_t = tim::component_tuple<wall_clock, cpu_util, bundle_t>;
-using comm_tuple_t  = tim::auto_tuple<wall_clock, thread_cpu_util, written_bytes>;
-using merge_tuple_t = tim::auto_tuple<wall_clock, cpu_util, read_bytes>;
+// 
+// Mark templates as extern for faster compile times
+//
+extern template class tim::auto_tuple<wall_clock, cpu_util, thread_cpu_util>;
+extern template class tim::auto_tuple<written_bytes, read_bytes>;
+extern template class tim::auto_tuple<wall_clock>;
+extern template class tim::auto_tuple<wall_clock, thread_cpu_util, read_bytes>;
+extern template class tim::component_tuple<papi_events_t>;
+extern template class tim::component_tuple<wall_clock, cpu_util, bundle_t>;
+extern template class tim::auto_tuple<wall_clock, thread_cpu_util, written_bytes>;
+extern template class tim::auto_tuple<wall_clock, cpu_util, read_bytes>;
 
-
+//
+// MARKERS for time measurements
+//
 #define MARK_START(mark)          wall_clock_t mark; \
                                   mark.start()
 #define MARK_END(mark)            mark.stop()
@@ -108,4 +130,8 @@ using merge_tuple_t = tim::auto_tuple<wall_clock, cpu_util, read_bytes>;
 
 #endif // USE_TIMEMORY
 
+
+//
+// MACRO for printing elapsed time
+//
 #define PRINT_ELAPSED(es)         std::cout << "Elapsed Time: " << es << "s" << std::endl << std::endl

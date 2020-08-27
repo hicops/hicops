@@ -25,8 +25,6 @@
 #include "slmerr.h"
 #include "utils.h"
 #include "slm_dsts.h"
-
-#define TIMEMORY_USE_MANAGER_EXTERN
 #include "hicops_instr.hpp"
 
 using namespace std;
