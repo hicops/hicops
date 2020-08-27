@@ -245,8 +245,8 @@ Please include any logs, screenshots and/or helpful observations. Also, do not f
 
 All contributions are welcome including new features, documentation updates and bug fixes.
 
-1. Fork this repository to your local GitHub, make a new branch from the latest `master` branch.
+1. Fork this repository to your local GitHub, checkout a new branch from the `develop` branch.
 2. Make your changes/updates.
-3. Make sure that you pull the latest changes from `hicops:master` into your branch before committing your changes.
+3. Make sure that you pull the latest changes from `hicops:develop` into your branch and merge before committing your changes.
 4. Commit your changes and push your branch to `origin`. i.e. `your_hicops_fork`.
-5. Open a pull request (PR) from `your_hicops_fork:new_branch` to `hicops:master`.
+5. Open a pull request (PR) from `your_hicops_fork:new_branch` to `hicops:develop`.
