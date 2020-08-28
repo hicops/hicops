@@ -37,6 +37,10 @@ from subprocess import call
 from shutil import copyfile
 from functools import reduce
 
+#
+# ------------------------------ Helper Functions -------------------------------------------
+#
+
 # Computes factors of a number in descending order
 def factors(n):    
     return list(set(reduce(list.__add__, ([i, n//i] for i in range(1, int(n**0.5) + 1) if n % i == 0))))
@@ -117,6 +121,10 @@ def genMPI_OpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node,
 
     return
 
+#
+# ------------------------------ Main Function -------------------------------------------
+#
+
 # The main function
 if __name__ == '__main__':
 
@@ -162,7 +170,7 @@ if __name__ == '__main__':
         sample.write('# Path (absolute or relative) to Workspace directory\n')
         sample.write('workspace=/path/to/workspace\n\n')
 
-        sample.write('# Job Time: hh:mm:ss\n')
+        sample.write('# Job Time: hh:mm:ss (max: 48:00:00)\n')
         sample.write('jobtime=00:45:00\n\n')
 
         sample.write('# Nodes available\n')
@@ -264,7 +272,7 @@ if __name__ == '__main__':
         sys.exit(0)
 
 #
-# ----------------------------------------------------------------------------------------------------
+# ------------------------------ Initialization -------------------------------------------
 #
 
     # Initialize the parameters
@@ -312,12 +320,12 @@ if __name__ == '__main__':
     jobtime='00:45:00'
     hicopspath = os.path.dirname(os.path.realpath(__file__)) + '/..'
     newparams = False
-    username = 'mhaseeb'
+    username = '$USER'
     uparams = ''
     pparams = ''
 
 #
-# ----------------------------------------------------------------------------------------------------
+# ------------------------------ Parse Parameters -------------------------------------------
 #
 
     print ('\n***************************')
@@ -610,7 +618,7 @@ if __name__ == '__main__':
     params.close()
 
 #
-# ----------------------------------------------------------------------------------------------------
+# ------------------------------ Workspace Creation -------------------------------------------
 #
 
     # Create a workspace directory
@@ -646,7 +654,7 @@ if __name__ == '__main__':
             exit(-3)
 
 #
-# ----------------------------------------------------------------------------------------------------
+# ------------------------------ Optimization -------------------------------------------
 #
 
     # AUTOTUNER
@@ -874,7 +882,7 @@ if __name__ == '__main__':
         print('\nSUCCESS\n')
 
 #
-# ----------------------------------------------------------------------------------------------------
+# ------------------------------ Write uparams.txt -------------------------------------------
 #
 
     # Prepare the uparams.txt file for PCDSFrame
@@ -920,17 +928,24 @@ if __name__ == '__main__':
     # Generate the post-processing script
     genNormalScript(workspace, 'postprocess', 'postprocess', 'shared', '1', '1', "00:20:00", 'psm2excel ' + workspace + '/output', True, username)
 #
-# ----------------------------------------------------------------------------------------------------
+# ------------------------------ Schedule HiCOPS job -------------------------------------------
 #
 
     # Run HiCOPS
     cfir = call('sbatch ' + workspace + '/autogen/hicops', shell=True)
 
-    print ('\nThe HiCOPS job is running now\n')
-    print ('You can check the job progress using: squeue -u ' + username + '\n')
+    print ('\nHiCOPS is running now\n')
+    print ('You can check the job progress using: \n')
+    print ('$ squeue -u $USER\n')
     print ('The output will be written at: '+ workspace + '/output\n\n')
 
     print ('\nSUCCESS\n')
-    print ('Issue Reporting: https://github.com/pcdslab/hicops/issues\n')
+
+    print ('After job completion, run:\n')
+    print ('$ srun --partition=shared  --nodes=1 --ntasks-per-node=1 -t 00:25:00 --export=ALL ' + hicopspath + '/wrappers/psm2excel ' + workspace + '/output')
+
+    print ('\n')
+
+    print ('Read more at: https://github.com/mhaseeb123/hicops/blob/develop/README.md\n')
 
     print (' # ---------------------------------------------------------------------------------------------------- #\n\n')

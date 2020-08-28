@@ -832,7 +832,7 @@ typedef struct _BYICount
 
 } BYICount;
 
-#define BYISIZE                 (sizeof(ushort_t) * 2 + sizeof(uint_t) * 2)
+#define BYISIZE                 (sizeof(BYC))
 
 typedef struct _fResult
 {
