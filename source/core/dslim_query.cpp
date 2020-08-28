@@ -469,7 +469,7 @@ status_t DSLIM_SearchManager(Index *index)
         VOID *ptr = NULL;
 
 #if defined (USE_TIMEMORY)
-        static wall_tuple_t comm_penalty("DAG_penalty");
+        wall_tuple_t comm_penalty("comm_ovhd");
         comm_penalty.start();
 #else
         MARK_START(dag);
@@ -483,7 +483,7 @@ status_t DSLIM_SearchManager(Index *index)
         MARK_END(dag);
 
         if (params.myid == 0)
-            std::cout << "DAG Sync Penalty: " << ELAPSED_SECONDS(dag) << 's'<< std::endl;
+            std::cout << "Comm Overhead: " << ELAPSED_SECONDS(dag) << 's'<< std::endl;
 
 #endif // USE_TIMEMORY
 
@@ -596,7 +596,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
     if (params.nodes > 1)
     {
 #if defined (USE_TIMEMORY)
-        static wall_tuple_t comm_penalty("DAG_penalty");
+        static wall_tuple_t comm_penalty("comm_ovhd");
         comm_penalty.start();
 #endif // USE_TIMEMORY
 

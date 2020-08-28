@@ -124,6 +124,11 @@ status_t DSLIM_DistScoreManager()
         //
         // scatter local scores to relevant nodes
         //
+
+#if defined (USE_TIMEMORY)
+        wall_tuple_t sync_penalty("comm_ovhd");
+#endif // USE_TIMEMORY
+
         if (status == SLM_SUCCESS)
         {
             status = ScoreHandle->ScatterScores();
@@ -138,6 +143,10 @@ status_t DSLIM_DistScoreManager()
         {
             status = ScoreHandle->Wait4RX();
         }
+
+#if defined (USE_TIMEMORY)
+        sync_penalty.stop();
+#endif // USE_TIMEMORY
 
         //
         // write results to files
@@ -166,23 +175,22 @@ status_t DSLIM_DistScoreManager()
         if (status == SLM_SUCCESS)
         {
 #if defined (USE_TIMEMORY)
-        wall_tuple_t sync_penalty("sync_penalty");
-        sync_penalty.start();
+            wall_tuple_t sync_penalty("sync_penalty");
+            sync_penalty.start();
 
-        // wait for synchronization
-        tim::mpi::barrier(MPI_COMM_WORLD);
+            // wait for synchronization
+            tim::mpi::barrier(MPI_COMM_WORLD);
 
-        sync_penalty.stop();
+            sync_penalty.stop();
 #else
-        MARK_START(sync);
+            MARK_START(sync);
 
-        status = MPI_Barrier(MPI_COMM_WORLD);
+            status = MPI_Barrier(MPI_COMM_WORLD);
 
-        MARK_END(sync)
+            MARK_END(sync)
 
-        if (params.myid == 0)
-            std::cout << "Superstep Sync Penalty: " << ELAPSED_SECONDS(sync) << "s" << std::endl<< std::endl;
-
+            if (params.myid == 0)
+                std::cout << "Superstep Sync Penalty: " << ELAPSED_SECONDS(sync) << "s" << std::endl<< std::endl;
 #endif // USE_TIMEMORY
         }
 
