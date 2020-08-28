@@ -156,13 +156,25 @@ $ export LD_LIBRARY_PATH=$HICOPS_INSTALL/lib:$LD_LIBRARY_PATH
 ```
 
 ## Setup Instrumentation (with Timemory) - Optional
-If the `USE_TIMEMORY=ON` option was set in [Configure](###Configure) step, you can add more instrumentation components to the default HiCOPS provided instrumentation by setting the environment variable `HICOPS_INST_COMPONENTS="<component_1>, <component_2>,..."` where each `<component_i>` is a Timemory's component. See more about how to list available timemory components [here](https://timemory.readthedocs.io/en/develop/tools/timemory-avail/README.html?highlight=user_bundle#available-components). 
+If the `USE_TIMEMORY=ON` option was set in [Configure](###Configure) step, the HiCOPS instrumentation can be configured and updated via the following environment variables:
 
-Similarly, the hardware counters used for the instrumentation of HiCOPS' distributed database search algorithm can be *modified* (not appended) by setting the environment variable `HICOPS_PAPI_EVENTS="<counter_1>,<counter2>,...`. The default value of `HICOPS_PAPI_EVENTS=PAPI_TOT_INS, PAPI_TOT_CYC, PAPI_L3_TCM, PAPI_L2_TCA, PAPI_L3_TCA, PAPI_MEM_WCY, PAPI_RES_STL, PAPI_STL_CCY, PAPI_BR_CN, PAPI_BR_PRC, PAPI_FUL_ICY`. 
+```bash
+HICOPS_MPIP_INSTR           Enable MPI data communication instrumentation. Set to: ON (default), OFF
+HICOPS_INST_COMPONENTS      Append to the list of Timemory components (metrics) used for instrumenting the HiCOPS parallel search algorithm. 
+                            Set to: HICOPS_INST_COMPONENTS="<c1>,<c2>,.." where each <ci> is a Timemory component.
+HICOPS_PAPI_EVENTS          Modify (not append) the vector of PAPI hardware counters used for instrumenting the HiCOPS parallel search algorithm.
+                            Set to: HICOPS_PAPI_EVENTS="<hw1>, <hw2>,.." where each <hwi> is a PAPI hardware counter.
+```
 
-To see which hardware counters are available on your system and their description, run the `papi_avail` tool or refer to the documentation [here](https://icl.utk.edu/papi/).
+See more about how to list available timemory components [here](https://timemory.readthedocs.io/en/develop/tools/timemory-avail/README.html?highlight=user_bundle#available-components). 
 
-**NOTE:** If a PAPI counter is not available on the system but is included in the `HICOPS_PAPI_EVENTS` anyway, the profiler will not instrument any of the counters in the list even if they are available.
+To see which hardware counters are available on your system and their description, run the `papi_avail` tool or refer to the documentation [here](https://icl.utk.edu/papi/). By default, the following hardware counters are inserted into the `HICOPS_PAPI_EVENTS`.
+
+```bash
+HICOPS_PAPI_EVENTS="PAPI_TOT_INS, PAPI_TOT_CYC, PAPI_L3_TCM, PAPI_L2_TCA, PAPI_L3_TCA, PAPI_MEM_WCY, PAPI_RES_STL, PAPI_STL_CCY, PAPI_BR_CN, PAPI_BR_PRC, PAPI_FUL_ICY"
+```
+
+**NOTE:** If a PAPI counter is not available on the system but is added to the `HICOPS_PAPI_EVENTS` anyway, the profiler will not instrument any of the counters in the list regardless of their availability.
 
 ## On a regular computer (skip if using XSEDE Comet)
 1. Generate HiCOPS sample runtime parameters file using the `hicops_config` located at `$HICOPS_INSTALL/bin`.

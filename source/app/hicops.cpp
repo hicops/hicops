@@ -106,9 +106,13 @@ status_t main(int_t argc, char_t* argv[])
 #   endif // USE_TIMEMORY
 
     // start MPIP instrumentation
-#if defined (USE_MPIP_LIBRARY)
-    auto id = timemory_start_mpip();
-#endif
+#   if defined (USE_MPIP_LIBRARY)
+    auto mpip_inst = tim::get_env<bool>("HICOPS_MPIP_INSTR", true);
+
+    // enable/disable at runtime
+    if (mpip_inst)
+        auto id = timemory_start_mpip();
+#   endif  // USE_MPIP_LIBRARY
 
 #endif // USE_MPI
 
@@ -478,10 +482,11 @@ status_t main(int_t argc, char_t* argv[])
 #endif
 
 #ifdef USE_MPI
+#   if defined (USE_MPIP_LIBRARY)
     // stop MPIP instrumentation
-#if defined (USE_MPIP_LIBRARY)
-    timemory_stop_mpip(id);
-#endif
+    if (mpip_inst)
+        timemory_stop_mpip(id);
+#   endif
 
 #   if defined (USE_TIMEMORY)
     tim::mpi::finalize();
