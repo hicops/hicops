@@ -16,6 +16,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+// CMake generated header file. Do not modify
+
+// Enable Timemory based instrumentation
+#cmakedefine USE_TIMEMORY
+
+// Enable MPIP instrumentation via Timemory
+#cmakedefine USE_MPIP_LIBRARY
+
 // Use the Tail-fit method for expect score computations
 // If undefined then gumbel distribution fit method will be used
 #cmakedefine TAILFIT

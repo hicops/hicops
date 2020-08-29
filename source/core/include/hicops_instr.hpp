@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "config.hpp"
 #include <chrono>
 
 using time_point_t = std::chrono::system_clock::time_point;

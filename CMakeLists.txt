@@ -48,12 +48,9 @@ option(USE_MPI "Enable MPI in hicops" ON)
 option(USE_TIMEMORY "Enable Timemory instrumentation" OFF)
 option(USE_MPIP_LIBRARY "Enable MPIP instrumentation via Timemory" OFF)
 
-# safety check for MPIP library
-if (NOT USE_TIMEMORY)
-    message(STATUS "Disabling MPIP instrumentation as Timemory is disabled")
-    set (USE_MPIP_LIBRARY OFF)
-endif()
-
+##########################################################################################
+#       MPI and OpenMP
+##########################################################################################
 find_package(OpenMP)
 find_package(MPI)
 
@@ -62,30 +59,70 @@ if(OpenMP_FOUND AND USE_OMP)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -DUSE_OMP")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -DUSE_OMP")
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS} -DUSE_OMP")
+    set (TMP ompt)
 endif()
 
 if(USE_MPI AND MPI_FOUND)
     list(APPEND _MPI MPI::MPI_CXX)
     include_directories(SYSTEM ${MPI_INCLUDE_PATH})
     target_compile_definitions(MPI::MPI_CXX INTERFACE USE_MPI)
+    set (TMP mpi ${TMP})
 endif()
+
+##########################################################################################
+#       Configure Instrumentation
+##########################################################################################
 
 if (USE_TIMEMORY)
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_TIMEMORY")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_TIMEMORY")
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -DUSE_TIMEMORY")
-    file(MAKE_DIRECTORY $ENV{HOME}/mplconfigdir)
+    set(timemory_FIND_COMPONENTS_INTERFACE timemory-hicops)
+    set(COMPONENTS headers compile-options analysis-tools papi ${TMP}
+        #cpu-roofline
+        OPTIONAL_COMPONENTS cxx)
+
+    # Find Timemory package
+    find_package(timemory COMPONENTS ${COMPONENTS} OPTIONAL_COMPONENTS ${OPTIONAL_COMPONENTS})
+
+    # if timemory package found then find mpip library
+    if (timemory_DIR)
+        file(MAKE_DIRECTORY $ENV{HOME}/mplconfigdir)
+        message(STATUS "Timemory component interface enabled")
+    else()
+        message(WARNING "Timemory not found => Setting: USE_TIMEMORY=OFF")
+        set(USE_TIMEMORY OFF CACHE BOOL "Timemory not found, disabling instrumentation" FORCE)
+    endif()
+else()
+    message(STATUS "Timemory component interface disabled")
 endif()
 
+# safety check for MPIP library
+if (NOT USE_TIMEMORY)
+    message(WARNING "MPIP instrumentation requires USE_TIMEMORY=ON")
+    set (USE_MPIP_LIBRARY OFF CACHE BOOL "Disabling MPIP instrumentation." FORCE)
+endif()
+
+# Find timemory-mpip.so library if required
 if (USE_MPIP_LIBRARY)
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_MPIP_LIBRARY")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_MPIP_LIBRARY")
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -DUSE_MPIP_LIBRARY")
+    find_library(MPIP_LIBRARY
+                 NAMES timemory-mpip 
+                 HINTS ENV PATH
+                       ENV LD_LIBRARY_PATH
+                       ENV CMAKE_PREFIX_PATH
+                 PATH_SUFFIXES lib lib64
+                 DOC "Timemory MPIP instrumentation library"
+                )
+    if (MPIP_LIBRARY)
+        message(STATUS "Timemory-MPIP library interface enabled")
+    else ()
+        message(WARNING "Timemory-MPIP library not found => Setting: USE_MPIP_LIBRARY=OFF")
+        set (USE_MPIP_LIBRARY OFF CACHE BOOL "Timemory-MPIP library not found" FORCE)
+    endif()
+else()
+    message(STATUS "Timemory-MPIP library interface disabled")
 endif()
 
-#----------------------------------------------------------------------------------------#
-#   configure config.hpp
-#----------------------------------------------------------------------------------------#
+##########################################################################################
+#       Configure Header files
+##########################################################################################
 message(STATUS "Configuring...")
 
 option(TAILFIT "Use Tailfit method instead of Gumbelfit for e(x)" ON)
@@ -116,6 +153,10 @@ configure_file(config.hpp.in config.hpp @ONLY)
 
 # install the configured file as well
 install(FILES ${CMAKE_BINARY_DIR}/config.hpp DESTINATION include)
+
+##########################################################################################
+#       Add sub-directories
+##########################################################################################
 
 #----------------------------------------------------------------------------------------#
 #   hicops source

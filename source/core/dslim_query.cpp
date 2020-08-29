@@ -357,7 +357,7 @@ status_t DSLIM_SearchManager(Index *index)
     /* The main query loop starts here */
     while (status == SLM_SUCCESS)
     {
-#if (USE_TIMEMORY)
+#if defined(USE_TIMEMORY)
         static wall_tuple_t sched_penalty("DAG_penalty", false);
         sched_penalty.start();
 #endif
@@ -366,7 +366,7 @@ status_t DSLIM_SearchManager(Index *index)
 
         status = DSLIM_WaitFor_IO(batchsize);
         
-#if (USE_TIMEMORY)
+#if defined(USE_TIMEMORY)
         sched_penalty.stop();
 #endif
         /* Compute the penalty */
@@ -513,7 +513,7 @@ status_t DSLIM_SearchManager(Index *index)
 
         sync_penalty.stop();
 #else
-        MARK_BEGIN(sync);
+        MARK_START(sync);
 
         status = MPI_Barrier(MPI_COMM_WORLD);
 
