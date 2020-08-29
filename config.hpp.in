@@ -18,6 +18,8 @@
 
 // CMake generated header file. Do not modify
 
+#pragma once
+
 // Enable Timemory based instrumentation
 #cmakedefine USE_TIMEMORY
 
