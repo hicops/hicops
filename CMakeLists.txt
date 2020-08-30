@@ -62,7 +62,7 @@ if(OpenMP_FOUND AND USE_OMP)
     set (TMP ompt)
 endif()
 
-if(USE_MPI AND MPI_FOUND)
+if(MPI_FOUND AND USE_MPI)
     list(APPEND _MPI MPI::MPI_CXX)
     include_directories(SYSTEM ${MPI_INCLUDE_PATH})
     target_compile_definitions(MPI::MPI_CXX INTERFACE USE_MPI)

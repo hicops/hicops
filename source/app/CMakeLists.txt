@@ -5,9 +5,6 @@ project(hicops LANGUAGES C CXX)
 add_executable(hicops ${_EXCLUDE}
     ${CMAKE_CURRENT_LIST_DIR}/hicops.cpp)
 
-# depends on the hicops-core library
-add_dependencies(hicops hicops-core)
-
 if(USE_MPI AND MPI_FOUND)
     target_compile_options(hicops PUBLIC -DUSE_MPI)
 endif()
