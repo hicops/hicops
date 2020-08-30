@@ -624,16 +624,13 @@ if __name__ == '__main__':
     # Create a workspace directory
     print ('\nInitializing Workspace at: ', workspace)
 
-    if (os.path.exists(workspace) == False):
-        os.mkdir(workspace)
+    os.makedirs(workspace, exist_ok=True)
 
     # Create the output directory for results
-    if (os.path.exists(workspace + '/output') == False):
-        os.mkdir(workspace + '/output')
+    os.makedirs(workspace + '/output', exist_ok=True)
 
     # Create directory where autogen stuff will be placed
-    if (os.path.exists(workspace + '/autogen') == False):
-        os.mkdir(workspace + '/autogen')
+    os.makedirs(workspace + '/autogen', exist_ok=True)
 
     # Check if the params have been changed from the last run
     if (os.path.isfile(workspace + '/autogen/settings.txt') == False or filecmp.cmp(workspace + '/autogen/settings.txt', paramfile) == False):
