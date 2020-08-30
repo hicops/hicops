@@ -95,8 +95,8 @@ else()
 endif()
 
 # safety check for MPIP library
-if (USE_MPIP_LIBRARY AND NOT USE_TIMEMORY)
-    message(WARNING "MPIP instrumentation requires USE_TIMEMORY=ON")
+if (USE_MPIP_LIBRARY AND NOT (USE_TIMEMORY AND USE_MPI))
+    message(WARNING "MPIP instrumentation requires USE_TIMEMORY=ON and USE_MPI=ON")
     set (USE_MPIP_LIBRARY OFF CACHE BOOL "Disabling MPIP instrumentation." FORCE)
 endif()
 
