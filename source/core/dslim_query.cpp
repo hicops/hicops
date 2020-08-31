@@ -471,21 +471,20 @@ status_t DSLIM_SearchManager(Index *index)
 #if defined (USE_TIMEMORY)
         wall_tuple_t comm_penalty("comm_ovhd");
         comm_penalty.start();
-#else
-        MARK_START(dag);
 #endif // USE_TIMEMORY
+
+        MARK_START(dag);
 
         pthread_join(*wthread, &ptr);
 
+        MARK_END(dag);
+
 #if defined (USE_TIMEMORY)
         comm_penalty.stop();
-#else
-        MARK_END(dag);
+#endif // USE_TIMEMORY
 
         if (params.myid == 0)
             std::cout << "Comm Overhead: " << ELAPSED_SECONDS(dag) << 's'<< std::endl;
-
-#endif // USE_TIMEMORY
 
         delete wthread;
 
