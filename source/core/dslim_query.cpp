@@ -1295,7 +1295,7 @@ VOID *DSLIM_FOut_Thread_Entry(VOID *argv)
         }
 
         ofstream *fh = new ofstream;
-        string_t fn = params.datapath + "/" +
+        string_t fn = params.workspace + "/" +
                     std::to_string(lbuff->batchNum) +
                     "_" + std::to_string(params.myid) + ".dat";
 

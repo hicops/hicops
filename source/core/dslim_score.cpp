@@ -238,7 +238,7 @@ status_t DSLIM_Score::CombineResults()
 
         for (int_t saa = 0; saa < nSamples; saa++)
         {
-            fn = params.datapath + "/" + std::to_string(vbatch) + "_"
+            fn = params.workspace + "/" + std::to_string(vbatch) + "_"
                     + std::to_string(saa) + ".dat";
 
             fhs[saa].open(fn, ios::in | ios::binary);
@@ -363,7 +363,7 @@ status_t DSLIM_Score::CombineResults()
         /* Remove the files when no longer needed */
         for (int_t saa = 0; saa < nSamples; saa++)
         {
-            fn = params.datapath + "/" + std::to_string(vbatch) + "_" + std::to_string(saa)
+            fn = params.workspace + "/" + std::to_string(vbatch) + "_" + std::to_string(saa)
                     + ".dat";
 
             if (fhs[saa].is_open())
