@@ -33,7 +33,7 @@
 #define IS_INIT(x,y)                       (((x)>>BITNUM(y)) & 0x1)
 #define INIT(x,y)                          (x | (1 << BITNUM(y)))
 
-#define NIBUFFS                            4
+#define NIBUFFS                            20
 
 /* FUNCTION: DSLIM_Construct
  *
