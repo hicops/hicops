@@ -7,10 +7,10 @@ message(STATUS "Adding dbtools...")
 add_subdirectory(dbtools)
 
 #----------------------------------------------------------------------------------------#
-#   python wrapper scripts
+#   tools 
 #----------------------------------------------------------------------------------------#
-message(STATUS "Adding python wrapper scripts...")
-add_subdirectory(pywrappers)
+message(STATUS "Adding HiCOPS tools...")
+add_subdirectory(tools)
 
 #----------------------------------------------------------------------------------------#
 #   MS2 processing scripts

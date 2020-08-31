@@ -498,7 +498,7 @@ if __name__ == '__main__':
     print('$ mpirun -np [N] [OPTIONS] '+ hicopspath + '/hicops ' + hicopspath + '/uparams.txt\n')
 
     print('After HiCOPS, run post-processing as: \n')
-    print('$ ' + hicopspath + '/wrappers/psm2excel -i ' + workspace + '/output\n')
+    print('$ ' + hicopspath + '/tools/psm2excel -i ' + workspace + '/output\n')
 
     print ('#----------------------------------------------------------------------------------------------------#')
     print ('     Read More: https://github.com/pcdslab/hicops/blob/develop/README.md')

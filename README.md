@@ -203,10 +203,10 @@ $ mpirun -np 4 [OPTIONS] $HICOPS_INSTALL/bin/hicops $HICOPS_INSTALL/bin/uparams.
 **NOTE:** Repeat Steps # 2 and 3 if you modify parameters in the `sampleparams.txt`.
 
 ## On XSEDE Comet
-1. Generate HiCOPS sample runtime parameters file using the `hicops_comet` wrapper script located at `$HICOPS_INSTALL/bin/wrappers`.
+1. Generate HiCOPS sample runtime parameters file using the `hicops_comet` tool located at `$HICOPS_INSTALL/bin/tools`.
 
 ```bash
-$ $HICOPS_INSTALL/bin/wrappers/hicops_comet -g
+$ $HICOPS_INSTALL/bin/tools/hicops_comet -g
 Generated: ./sampleparams.txt
 
 SUCCESS
@@ -214,29 +214,29 @@ SUCCESS
 
 2. Edit the generated sampleparams.txt file and add/modify HiCOPS' runtime parameters.
 
-3. Run HiCOPS using the same wrapper script i.e. `hicops_comet`, however, this time providing the updated sampleparams.txt as parameter to the wrapper.
+3. Run HiCOPS using the same tool i.e. `hicops_comet`, however, this time providing the updated sampleparams.txt as parameter to the tool.
 
 ```bash
-$ $HICOPS_INSTALL/bin/wrappers/hicops_comet sampleparams.txt
+$ $HICOPS_INSTALL/bin/tools/hicops_comet sampleparams.txt
 ```
 
 **NOTE:** Repeat Steps # 2 and 3 if you modify parameters in the `sampleparams.txt`.
 
 # Post-processing HiCOPS output
-HiCOPS generates PSM data in partial TSV files that can be merged using the `psm2excel` tool located at: `$HICOPS_INSTALL/wrappers`. The tool generates a combined Excel file called `Concat.xlsx` containing the final PSM data (no-FDR).
+HiCOPS generates PSM data in partial TSV files that can be merged using the `psm2excel` tool located at: `$HICOPS_INSTALL/tool`. The tool generates a combined Excel file called `Concat.xlsx` containing the final PSM data (no-FDR).
 
 ## On a regular computer (skip if using XSEDE Comet)
 Run the `psm2excel` tool and pass the HiCOPS workspace output directory (that was set in the sampleparams.txt file) as parameter.
 
 ```bash
-$ $HICOPS_INSTALL/wrappers/psm2excel [/path/to/hicops/workspace/output]
+$ $HICOPS_INSTALL/tools/psm2excel [/path/to/hicops/workspace/output]
 ```
 
 ## On XSEDE Comet
 Run the `psm2excel` tool using SLURM and pass the HiCOPS workspace output directory (that was set in the sampleparams.txt file) as parameters.
 
 ```bash
-$ srun --partition=compute  --nodes=1 --ntasks-per-node=1 -t 00:15:00 --export=ALL $HICOPS_INSTALL/wrappers/psm2excel -i [/path/to/hicops/workspace/output]
+$ srun --partition=compute  --nodes=1 --ntasks-per-node=1 -t 00:15:00 --export=ALL $HICOPS_INSTALL/tools/psm2excel -i [/path/to/hicops/workspace/output]
 ```
 
 # About this repository
