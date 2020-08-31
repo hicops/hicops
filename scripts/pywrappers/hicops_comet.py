@@ -938,7 +938,7 @@ if __name__ == '__main__':
     print ('$ squeue -u $USER\n')
     print ('The output will be written at: '+ workspace + '/output\n\n')
 
-    print ('\nSUCCESS\n')
+    print ('SUCCESS\n')
 
     print ('After job completion, run:\n')
     print ('$ srun --partition=shared  --nodes=1 --ntasks-per-node=1 -t 00:25:00 --export=ALL ' + hicopspath + '/wrappers/psm2excel ' + workspace + '/output')
