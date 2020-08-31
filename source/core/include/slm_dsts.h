@@ -360,6 +360,7 @@ typedef struct _Index
 typedef struct _globalParams
 {
     uint_t threads;
+    uint_t maxprepthds;
     uint_t min_len;
     uint_t max_len;
     uint_t maxz;
@@ -394,6 +395,7 @@ typedef struct _globalParams
     _globalParams()
     {
         threads = 1;
+        maxprepthds = 1;
         min_len = 6;
         max_len = 40;
         maxz = 3;

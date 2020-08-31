@@ -179,7 +179,7 @@ if __name__ == '__main__':
         sample.write('# Cores per machine\n')
         sample.write('cores=24\n\n')
 
-        sample.write('# OpenMP cores per MPI process\n')
+        sample.write('# Cores per MPI process\n')
         sample.write('cores_per_mpi=12\n\n')
 
         sample.write('# MPI binding policy: scatter, compact \n')
@@ -286,6 +286,7 @@ if __name__ == '__main__':
     cores_per_socket = int(cores/sockets)
     cores_per_numa = int (cores/numa)
     threads = cores_per_socket
+    prep_threads = int(threads/4)
     bp = 'scatter'
     bl = 'socket'
     autotune = 1
@@ -308,7 +309,7 @@ if __name__ == '__main__':
     min_hits = 4
     base_int = 100000
     cutoff_ratio = 0.01
-    workspace = './workspace'
+    workspace = '$HOME/hicops_workspace'
     policy = 'cyclic'
     spadmem = 2048
     indexsize = 0
@@ -333,7 +334,7 @@ if __name__ == '__main__':
     print   ('*   PCDS Lab, SCIS, FIU   *')
     print   ('***************************\n')
 
-    print ('Provided Params: \n')
+    print ('Provided Parameters:')
 
     # Parse the params file
     with open(paramfile) as params:
@@ -870,9 +871,13 @@ if __name__ == '__main__':
             print ('WARNING: Memory required per NUMA node = ' + str(mbs_per_numa) + ' >' + str(numamem) + ' = available NUMA mem\n')
             print ('         Either increase the number of nodes or expect performance degradation due to NUMA access and page faults\n')
 
+        # if very small index then the preprocessing threads may be increased to 50%
+        if (mbs_per_numa < 10E6 and dM < 50):
+            prep_threads = int(threads/2)
 
-        print('Optimizing HiCOPS settings...\n')
-        print('Setting threads/MPI =', threads)
+        print('Optimized HiCOPS settings...\n')
+        print('Setting Threads/MPI =', threads)
+        print('Setting Max Prep threads/MPI =', prep_threads)
         print('Setting MPI/machine =', mpi_per_node)
         print('Setting MPI Policy  =', bp)
         print('Setting MPI Binding =', bl)
@@ -893,6 +898,7 @@ if __name__ == '__main__':
     modfile.write(ms2data + '\n')
     modfile.write(workspace + '/output\n')
     modfile.write(str(threads) + '\n')
+    modfile.write(str(prep_threads) + '\n')
     modfile.write(str(min_length) + '\n')
     modfile.write(str(max_length) + '\n')
     modfile.write(str(maxz) + '\n')
@@ -934,17 +940,17 @@ if __name__ == '__main__':
     cfir = call('sbatch ' + workspace + '/autogen/hicops', shell=True)
 
     print ('\nHiCOPS is running now\n')
-    print ('You can check the job progress using: \n')
+    print ('You can check the job progress by: \n')
     print ('$ squeue -u $USER\n')
-    print ('The output will be written at: '+ workspace + '/output\n\n')
+    print ('The output will be written at: '+ workspace + '/output')
 
-    print ('SUCCESS\n')
+    print ('\nSUCCESS\n')
 
     print ('After job completion, run:\n')
-    print ('$ srun --partition=compute --nodes=1 --ntasks-per-node=1 -t 00:25:00 --export=ALL ' + hicopspath + '/wrappers/psm2excel ' + workspace + '/output')
+    print ('$ srun --partition=compute --nodes=1 --ntasks-per-node=1 -t 00:25:00 --export=ALL ' + hicopspath + '/wrappers/psm2excel -i ' + workspace + '/output')
 
     print ('\n')
 
-    print ('Read more at: https://github.com/mhaseeb123/hicops/blob/develop/README.md\n')
-
-    print (' # ---------------------------------------------------------------------------------------------------- #\n\n')
+    print ('#----------------------------------------------------------------------------------------------------#')
+    print ('     Read More: https://github.com/pcdslab/hicops/blob/develop/README.md')
+    print ('#----------------------------------------------------------------------------------------------------#\n\n')

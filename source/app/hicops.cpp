@@ -553,13 +553,22 @@ static status_t ParseParams(char_t* paramfile)
 
         params.workspace = line;
 
-        /* Get the max threads to use */
+        // Get the max threads to use 
         getline(pfile, line);
 
 #ifdef USE_OMP
         params.threads = std::atoi(line.c_str());
 #else
         params.threads = 1;
+#endif /* USE_OMP */
+
+        // get the max preprocessing threads to use
+        getline(pfile, line);
+
+#ifdef USE_OMP
+        params.maxprepthds = std::atoi(line.c_str());
+#else
+        params.maxprepthds = 1;
 #endif /* USE_OMP */
 
         /* Get the min peptide length */

@@ -74,7 +74,7 @@ if __name__ == '__main__':
         sample.write('# Path (absolute or relative) to Workspace directory\n')
         sample.write('workspace=/path/to/workspace\n\n')
 
-        sample.write('# OpenMP Multithreads per MPI process\n')
+        sample.write('# Multithreads per MPI process\n')
         sample.write('cores=24\n\n')
 
         sample.write('# ABSOLUTE path to processed proteome database parts\n')
@@ -162,6 +162,7 @@ if __name__ == '__main__':
 
     # Initialize the parameters
     cores = 24
+    prep_cores = int(cores/4)
     expect_max = 20.0
     dbparts = ''
     ms2data = ''
@@ -182,7 +183,7 @@ if __name__ == '__main__':
     min_hits = 4
     base_int = 100000
     cutoff_ratio = 0.01
-    workspace = './workspace'
+    workspace = '$HOME/hicops_workspace'
     policy = 'cyclic'
     spadmem = 2048
     hicopspath = os.path.dirname(os.path.realpath(__file__))
@@ -242,8 +243,8 @@ if __name__ == '__main__':
             # Cores per node
             elif (param == 'cores'):
                 cores = int(val)
-                if (cores <= 0 or cores > 44):
-                    cores = 44
+                if (cores <= 0 or cores > 64):
+                    cores = 64
                 print ('Using cores/node  =', cores)
 
             # Set max mods
@@ -302,14 +303,14 @@ if __name__ == '__main__':
                 if (dF > 0.02):
                     dF = 0.02
                 dF = float(val)
-                print ('dF           =', dF)
+                print ('Fragment mass tolerance (dF) =', dF)
 
             # Peptide precursor mass tolerance
             elif (param == 'dM'):
                 dM = float(val)
                 if (dM < 0.001):
                     dM = 0.001 
-                print ('dM           =', dM)
+                print ('Peptide mass tolerance (dM) =', dM)
 
             # m/z axis resolution
             elif (param == 'res'):
@@ -318,7 +319,7 @@ if __name__ == '__main__':
                     res = 0.01 
                 if (res > 5.0):
                     res = 5.0
-                print ('resolution   =', res)
+                print ('Resolution   =', res)
 
             # Minimum precursor mass
             elif (param == 'min_prec_mass'):
@@ -327,7 +328,7 @@ if __name__ == '__main__':
                     min_prec_mass = 0 
                 if (min_prec_mass > 10000):
                     min_prec_mass = 10000
-                print ('min_prec_mass =', min_prec_mass)
+                print ('Min precursor mass =', min_prec_mass)
 
             # Maximum precursor mass
             elif (param == 'max_prec_mass'):
@@ -336,7 +337,7 @@ if __name__ == '__main__':
                     max_prec_mass = 0 
                 if (max_prec_mass > 10000):
                     max_prec_mass = 10000
-                print ('max_prec_mass =', max_prec_mass)
+                print ('Max precursor mass =', max_prec_mass)
 
             # Minimum Shared Peaks
             elif (param == 'shp_cnt'):
@@ -389,7 +390,7 @@ if __name__ == '__main__':
                     val = val[:-1]
 
                 workspace = os.path.abspath(str(val))
-                print ('workspace   =', workspace)
+                print ('Workspace   =', workspace)
 
             # Maximum precursor mass
             elif (param == 'top_matches'):
@@ -422,12 +423,10 @@ if __name__ == '__main__':
     # Create a workspace directory
     print ('\nInitializing Workspace at: ', workspace)
 
-    if (os.path.exists(workspace) == False):
-        os.mkdir(workspace)
+    os.makedirs(workspace, exist_ok=True)
 
     # Create the output directory for results
-    if (os.path.exists(workspace + '/output') == False):
-        os.mkdir(workspace + '/output')
+    os.makedirs(workspace + '/output', exist_ok=True)
 
     # Check if the params have been changed from the last run
     if (os.path.isfile(workspace + '/runtime_settings.txt') == False or filecmp.cmp(workspace + '/runtime_settings.txt', paramfile) == False):
@@ -447,6 +446,10 @@ if __name__ == '__main__':
             print ('ABORT: Database part(s) are missing\n')
             exit(-3)
 
+    # if small dM then increase prep_cores
+    if (dM < 20):
+        prep_cores = int(cores/2)
+
 #
 # ----------------------------------------------------------------------------------------------------
 #
@@ -460,6 +463,7 @@ if __name__ == '__main__':
     modfile.write(ms2data + '\n')
     modfile.write(workspace + '/output\n')
     modfile.write(str(cores) + '\n')
+    modfile.write(str(prep_cores)  + '\n')
     modfile.write(str(min_length) + '\n')
     modfile.write(str(max_length) + '\n')
     modfile.write(str(maxz) + '\n')
@@ -493,9 +497,9 @@ if __name__ == '__main__':
     print('You can now run HiCOPS as: \n')
     print('$ mpirun -np [N] [OPTIONS] '+ hicopspath + '/hicops ' + hicopspath + '/uparams.txt\n')
 
+    print('After HiCOPS, run post-processing as: \n')
+    print('$ ' + hicopspath + '/wrappers/psm2excel -i ' + workspace + '/output\n')
 
-    print (' # ---------------------------------------------------------------------------------------------------- #')
-
-    print ('Report Issues: https://github.com/pcdslab/hicops/issues\n')
-
-    print (' # ---------------------------------------------------------------------------------------------------- #\n\n')
+    print ('#----------------------------------------------------------------------------------------------------#')
+    print ('     Read More: https://github.com/pcdslab/hicops/blob/develop/README.md')
+    print ('#----------------------------------------------------------------------------------------------------#\n\n')

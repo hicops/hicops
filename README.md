@@ -236,7 +236,7 @@ $ $HICOPS_INSTALL/wrappers/psm2excel [/path/to/hicops/workspace/output]
 Run the `psm2excel` tool using SLURM and pass the HiCOPS workspace output directory (that was set in the sampleparams.txt file) as parameters.
 
 ```bash
-$ srun --partition=shared  --nodes=1 --ntasks-per-node=1 -t 00:10:00 --export=ALL $HICOPS_INSTALL/wrappers/psm2excel [/path/to/hicops/workspace/output]
+$ srun --partition=compute  --nodes=1 --ntasks-per-node=1 -t 00:15:00 --export=ALL $HICOPS_INSTALL/wrappers/psm2excel -i [/path/to/hicops/workspace/output]
 ```
 
 # About this repository

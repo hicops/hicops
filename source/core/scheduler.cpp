@@ -31,8 +31,8 @@ Scheduler::Scheduler()
     nIOThds = 0;
     eSignal = false;
 
-    /* Set to 25% of the total threads available */
-    maxIOThds = std::max((int_t)1, (int_t)(params.threads/4));
+    /* Set the total threads for preprocessing */
+    maxIOThds = std::max((int_t)1, (int_t)params.maxprepthds);
 
     dump = new lwqueue <thread_t *> (50, false);
 

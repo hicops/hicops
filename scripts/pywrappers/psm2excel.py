@@ -23,6 +23,7 @@
 import os
 import sys
 import glob
+import argparse
 import pandas as pd
 
 
@@ -31,19 +32,25 @@ import pandas as pd
 # The main function
 if __name__ == '__main__':
 
-    if len(sys.argv) <= 1:
-        print ("ERROR: Please provide the path to partial TSV files")
-        exit(0)
+    parser = argparse.ArgumentParser(description='Merge partial TSV files into XLSX')
+    parser.add_argument('-i', '--idir', dest='data_dir', type=str, required=True,
+                        help='Path to partial TSV files')
 
-    if len(sys.argv) > 1:
-        data_dir = sys.argv[1]
-    else:
-        data_dir = './'
+    parser.add_argument('-o', '--ofile', dest='ofile', type=str, required=False, 
+                        help='Path to Output file (default: idir/Results.xlsx')
 
-    if len(sys.argv) > 2:
-        output = sys.argv[2]
+    args = parser.parse_args()
+
+    # get the data directory
+    data_dir = args.data_dir.lstrip(' ')
+
+    # get the output file name
+    output = ''
+    
+    if args.ofile is not None:
+        output = args.ofile.lstrip(' ')
     else:
-        output = ''
+        output = data_dir + '/Results.xlsx'
 
     # Open the TSV files
     data_dir = os.path.expanduser(data_dir)
@@ -52,7 +59,7 @@ if __name__ == '__main__':
     if not os.path.isdir(data_dir):
         print ("Directory does not exist\n")
         sys.exit (-1)
-
+        
     # Get all files with TSV
     tsv_files = glob.glob(data_dir + '/*.tsv')
     #print (tsv_files)
@@ -86,12 +93,7 @@ if __name__ == '__main__':
     #    print(frame.shape)
 
     # Write to Excel file
-
     print ('Writing to Excel...')
-
-    # Check if output file provided
-    if output == '':
-        output = data_dir + '/Concat.xlsx'
 
     # Write to Excel format
     frame.to_excel(output)
