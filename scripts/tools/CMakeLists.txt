@@ -15,7 +15,7 @@ configure_file(${CMAKE_CURRENT_LIST_DIR}/psm2excel.py
     ${CMAKE_BINARY_DIR}/scripts/tools/psm2excel @ONLY)
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/gen_expts.sh
-    ${CMAKE_BINARY_DIR}/scripts/tools/psm2excel @ONLY)
+    ${CMAKE_BINARY_DIR}/scripts/tools/gen_expts @ONLY)
 
 install(
     FILES
