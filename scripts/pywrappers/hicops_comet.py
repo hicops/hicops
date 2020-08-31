@@ -165,8 +165,8 @@ if __name__ == '__main__':
         sample.write('# \n\n')
 
         sample.write('# XSEDE (Comet) Username\n')
-        sample.write('username=username\n\n')
-        
+        sample.write('username=$USER\n\n')
+
         sample.write('# Path (absolute or relative) to Workspace directory\n')
         sample.write('workspace=/path/to/workspace\n\n')
 
@@ -333,6 +333,8 @@ if __name__ == '__main__':
     print   ('*   PCDS Lab, SCIS, FIU   *')
     print   ('***************************\n')
 
+    print ('Provided Params: \n')
+
     # Parse the params file
     with open(paramfile) as params:
         for line in params:
@@ -418,7 +420,7 @@ if __name__ == '__main__':
                     autotune = 0
                 if (autotune > 0):
                     autotune = 1
-                print ('Autotune =', autotune)
+                print ('Optimizations =', autotune)
 
             # Set the MPI binding level
             elif (param == 'bl'):
@@ -429,7 +431,7 @@ if __name__ == '__main__':
 
                 if (val == 'socket' or val == 'numanode' or val == 'core'):
                     bl = val
-                print ('Using MPI bl =', bl)
+                print ('MPI binding level =', bl)
 
                 # Set the MPI binding policy
             elif (param == 'bp'):
@@ -440,7 +442,7 @@ if __name__ == '__main__':
 
                 if (val == 'scatter' or val == 'compact'):
                     bp = val
-                print ('Using MPI bp =', bp)
+                print ('MPI binding policy =', bp)
 
             # Set OMP cores per MPI
             elif (param == 'cores_per_mpi'):
@@ -504,14 +506,14 @@ if __name__ == '__main__':
                 if (dF > 0.02):
                     dF = 0.02
                 dF = float(val)
-                print ('dF           =', dF)
+                print ('Fragment mass tolerance (dF) =', dF)
 
             # Peptide precursor mass tolerance
             elif (param == 'dM'):
                 dM = float(val)
                 if (dM < 0.001):
                     dM = 0.001 
-                print ('dM           =', dM)
+                print ('Peptide mass tolerance (dM) =', dM)
 
             # m/z axis resolution
             elif (param == 'res'):
@@ -520,7 +522,7 @@ if __name__ == '__main__':
                     res = 0.01 
                 if (res > 5.0):
                     res = 5.0
-                print ('resolution   =', res)
+                print ('Resolution   =', res)
 
             # Minimum precursor mass
             elif (param == 'min_prec_mass'):
@@ -529,7 +531,7 @@ if __name__ == '__main__':
                     min_prec_mass = 0 
                 if (min_prec_mass > 10000):
                     min_prec_mass = 10000
-                print ('min_prec_mass =', min_prec_mass)
+                print ('Min precursor mass =', min_prec_mass)
 
             # Maximum precursor mass
             elif (param == 'max_prec_mass'):
@@ -538,7 +540,7 @@ if __name__ == '__main__':
                     max_prec_mass = 0 
                 if (max_prec_mass > 10000):
                     max_prec_mass = 10000
-                print ('max_prec_mass =', max_prec_mass)
+                print ('Max precursor mass =', max_prec_mass)
 
             # Minimum Shared Peaks
             elif (param == 'shp_cnt'):
@@ -591,7 +593,7 @@ if __name__ == '__main__':
                     val = val[:-1]
 
                 workspace = os.path.abspath(str(val))
-                print ('workspace   =', workspace)
+                print ('Workspace   =', workspace)
 
             # Maximum precursor mass
             elif (param == 'top_matches'):
