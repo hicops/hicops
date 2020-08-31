@@ -941,7 +941,7 @@ if __name__ == '__main__':
     print ('SUCCESS\n')
 
     print ('After job completion, run:\n')
-    print ('$ srun --partition=shared  --nodes=1 --ntasks-per-node=1 -t 00:25:00 --export=ALL ' + hicopspath + '/wrappers/psm2excel ' + workspace + '/output')
+    print ('$ srun --partition=compute --nodes=1 --ntasks-per-node=1 -t 00:25:00 --export=ALL ' + hicopspath + '/wrappers/psm2excel ' + workspace + '/output')
 
     print ('\n')
 
