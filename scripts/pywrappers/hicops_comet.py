@@ -859,7 +859,7 @@ if __name__ == '__main__':
 
             for cc in possible:
 
-                if (indexsize/(mpi_per_node * nodes) <= 25E6 or cc < min_threads or mpi_per_node > max_mpi_per_node):
+                if (indexsize/(mpi_per_node * nodes) <= 26E6 or cc < min_threads or mpi_per_node > max_mpi_per_node):
                     break
                 else:
                     threads = cc
@@ -874,7 +874,7 @@ if __name__ == '__main__':
             print ('         Either increase the number of nodes or expect performance degradation due to NUMA access and page faults\n')
 
         # if very small index then the preprocessing threads may be increased to 50%
-        if (mbs_per_numa < 10E6 and dM < 50):
+        if (indexsize/(mpi_per_node * nodes) < 10E6 and dM < 50):
             prep_threads = int(threads/2)
 
         print('Optimized HiCOPS settings...\n')
