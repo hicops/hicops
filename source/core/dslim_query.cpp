@@ -509,7 +509,8 @@ status_t DSLIM_SearchManager(Index *index)
         sync_penalty.start();
 
         // wait for synchronization
-        tim::mpi::barrier(MPI_COMM_WORLD);
+        //tim::mpi::barrier(MPI_COMM_WORLD);
+        status = MPI_Barrier(MPI_COMM_WORLD);
 
         sync_penalty.stop();
 #else
