@@ -145,6 +145,9 @@ if __name__ == '__main__':
 
     # Generate the sampleparams.txt file
     if (paramfile == '-g'):
+        # get user name to make workspace path
+        username = os.environ['USER']
+
         sample = open("./sampleparams.txt","w+")
 
         sample.write('# \n')
@@ -160,15 +163,15 @@ if __name__ == '__main__':
         sample.write('# For more information: https://portal.xsede.org/sdsc-comet\n')
         sample.write('# \n')
         sample.write('# Generated on: ' + (datetime.datetime.now()).strftime("%Y-%m-%d %H:%M %Z") + '\n')
-        sample.write('# \n')
+        sample.write('# \n\n\n')
         sample.write('# IMPORTANT: DO NOT put any spaces between variable=value\n')
         sample.write('# \n\n')
 
         sample.write('# XSEDE (Comet) Username\n')
         sample.write('username=$USER\n\n')
 
-        sample.write('# Path (absolute or relative) to Workspace directory\n')
-        sample.write('workspace=/path/to/workspace\n\n')
+        sample.write('# ABSOLUTE Path to Workspace directory\n')
+        sample.write('workspace=/oasis/scratch/comet/'+ username + '/temp_project/hicops_workspace\n\n')
 
         sample.write('# Job Time: hh:mm:ss (max: 48:00:00)\n')
         sample.write('jobtime=00:45:00\n\n')
@@ -188,9 +191,8 @@ if __name__ == '__main__':
         sample.write('# MPI binding level: core, socket, numanode\n')
         sample.write('bl=socket\n\n')
 
-        sample.write('# Recommended: Auto tune MPI/OpenMP settings based on \n')
-        sample.write('# index size, sockets and NUMA nodes in the system? 1/0? \n')
-        sample.write('autotune=1\n\n')
+        sample.write('# Optimize settings? 1/0? Highly Recommended \n')
+        sample.write('optimize=1\n\n')
 
         sample.write('# ABSOLUTE path to processed proteome database parts\n')
         sample.write('# NOTE: Run the dbprocessor.py to process a FASTA \n')
@@ -289,7 +291,7 @@ if __name__ == '__main__':
     prep_threads = int(threads/4)
     bp = 'scatter'
     bl = 'socket'
-    autotune = 1
+    optimize = 1
     dbparts = ''
     ms2data = ''
     nmods = 0
@@ -309,7 +311,7 @@ if __name__ == '__main__':
     min_hits = 4
     base_int = 100000
     cutoff_ratio = 0.01
-    workspace = '$HOME/hicops_workspace'
+    workspace = '/oasis/scratch/comet/$USER/temp_project/hicops_workspace'
     policy = 'cyclic'
     spadmem = 2048
     indexsize = 0
@@ -414,14 +416,14 @@ if __name__ == '__main__':
                     cores = 24
                 print ('Using cores/node  =', cores)
 
-            # Autotune number of cores and MPI processes to run?
-            elif (param == 'autotune'):
-                autotune = int(val)
-                if (autotune <= 0):
-                    autotune = 0
-                if (autotune > 0):
-                    autotune = 1
-                print ('Optimizations =', autotune)
+            # Optimize number of cores and MPI processes to run?
+            elif (param == 'optimize'):
+                optimize = int(val)
+                if (optimize <= 0):
+                    optimize = 0
+                if (optimize > 0):
+                    optimize = 1
+                print ('Optimizations =', optimize)
 
             # Set the MPI binding level
             elif (param == 'bl'):
@@ -657,15 +659,15 @@ if __name__ == '__main__':
 # ------------------------------ Optimization -------------------------------------------
 #
 
-    # AUTOTUNER
-    if (autotune == 1):
+    # Optimizer
+    if (optimize == 1):
         print ("\n\n****** Autotuning parameters *******\n")
 
         # Call the lsinfo to gather CPU information
         if (os.path.isfile(workspace + '/autogen/info.out') == False):
             genNormalScript(workspace, 'info', 'info', 'compute', '1','1', '00:00:10', 'lscpu | tr -d " \\r" && numactl --hardware | tr -d " \\r"', False, 'none')
 
-            autotune = call("sbatch " + workspace + "/autogen/info", shell=True)
+            optimize = call("sbatch " + workspace + "/autogen/info", shell=True)
             print ('\nWaiting for job scheduler\n')
 
         # Wait for the lscpu process to complete 
@@ -767,7 +769,7 @@ if __name__ == '__main__':
             genOpenMPScript(workspace, 'counter', 'counter', 'compute', '1', str(cores), '00:30:00', str(cores), hicopspath + '/counter', pparams, False, 'none')
 
             # Call the counter process            
-            autotune3 = call('sbatch ' + workspace + '/autogen/counter', shell=True)
+            optimize3 = call('sbatch ' + workspace + '/autogen/counter', shell=True)
 
         # Wait for the counter process to complete
         while (os.path.isfile(workspace + '/autogen/counter.out') == False or checkRunningJobs(username) == True):
