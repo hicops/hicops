@@ -593,12 +593,17 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
 #   endif // _UNIX
 #endif // USE_TIMEMORY
 
+#if defined (USE_TIMEMORY)
+    static wall_tuple_t comm_penalty("comm_ovhd", false);
+#endif // USE_TIMEMORY
+
     if (params.nodes > 1)
     {
 #if defined (USE_TIMEMORY)
-        static wall_tuple_t comm_penalty("comm_ovhd");
         comm_penalty.start();
 #endif // USE_TIMEMORY
+
+        MARK_START(overhead);
 
         ciBuff ++;
         liBuff = iBuff + (ciBuff % NIBUFFS);
@@ -609,6 +614,11 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
         txArray = liBuff->packs;
         liBuff->isDone = false;
         liBuff->batchNum = ss->batchNum;
+
+        MARK_END(overhead);
+
+        if (params.myid == 0)
+            std::cout << "Comm Overhead: \t" << ELAPSED_SECONDS(overhead) << "s" << std::endl;
 
 #if defined (USE_TIMEMORY)
         comm_penalty.stop();
