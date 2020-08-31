@@ -168,7 +168,7 @@ if __name__ == '__main__':
         sample.write('# \n\n')
 
         sample.write('# XSEDE (Comet) Username\n')
-        sample.write('username=$USER\n\n')
+        sample.write('username='+ username + '\n\n')
 
         sample.write('# ABSOLUTE Path to Workspace directory\n')
         sample.write('workspace=/oasis/scratch/comet/'+ username + '/temp_project/hicops_workspace\n\n')
@@ -323,7 +323,7 @@ if __name__ == '__main__':
     jobtime='00:45:00'
     hicopspath = os.path.dirname(os.path.realpath(__file__)) + '/..'
     newparams = False
-    username = '$USER'
+    username = os.environ['USER']
     uparams = ''
     pparams = ''
 
