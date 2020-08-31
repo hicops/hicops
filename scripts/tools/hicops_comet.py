@@ -55,7 +55,7 @@ def checkRunningJobs(username):
         return True
 
 # Generates a normal unicore job script
-def genNormalScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, comd, mail, user):
+def genNormalScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, comd, mail, user, evts):
     script = open(wkspc + '/autogen/' + jobname, 'w+')
     script.write('#!/bin/bash\n')
     script.write('\n')
@@ -68,7 +68,7 @@ def genNormalScript(wkspc, jobname, outname, partition, nds, ntask_per_node, min
     script.write('#SBATCH -t ' + minust + '\n')
 
     if (mail):
-        script.write('#SBATCH --mail-type=ALL' + '\n')
+        script.write('#SBATCH --mail-type=' + evts + '\n')
         script.write('#SBATCH --mail-type=' + user + '\n')
 
     script.write('\n')
@@ -77,7 +77,7 @@ def genNormalScript(wkspc, jobname, outname, partition, nds, ntask_per_node, min
     return
 
 # Generates a multithreaded OpenMP job script
-def genOpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, args, mail, user):
+def genOpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, args, mail, user, evts):
     script = open(wkspc + '/autogen/' + jobname, 'w+')
     script.write('#!/bin/bash\n')
     script.write('\n')
@@ -89,7 +89,7 @@ def genOpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, min
     script.write('#SBATCH --export=ALL\n')
     script.write('#SBATCH -t ' + minust + '\n')
     if (mail):
-        script.write('#SBATCH --mail-type=ALL' + '\n')
+        script.write('#SBATCH --mail-type=' + evts + '\n')
         script.write('#SBATCH --mail-type=' + user + '\n')
 
     script.write('\n')
@@ -100,7 +100,7 @@ def genOpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, min
     return
 
 # Generates a Hybrid MPI/OpenMP job script
-def genMPI_OpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, npernode, blevel, bpolicy, args, mail, user):
+def genMPI_OpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, npernode, blevel, bpolicy, args, mail, user, evts):
     script = open(wkspc + '/autogen/' + jobname, 'w+')
     script.write('#!/bin/bash\n')
     script.write('\n')
@@ -112,7 +112,7 @@ def genMPI_OpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node,
     script.write('#SBATCH --export=ALL\n')
     script.write('#SBATCH -t ' + minust + '\n')
     if (mail):
-        script.write('#SBATCH --mail-type=ALL' + '\n')
+        script.write('#SBATCH --mail-type=' + evts + '\n')
         script.write('#SBATCH --mail-type=' + user + '\n')
     script.write('\n')
     script.write ('export OMP_NUM_THREADS      ' + ompthrds + '\n')
@@ -169,6 +169,12 @@ if __name__ == '__main__':
 
         sample.write('# XSEDE (Comet) Username\n')
         sample.write('username='+ username + '\n\n')
+
+        sample.write('# Get emails for job? 1/0? \n')
+        sample.write('mail=0\n')
+
+        sample.write('# Events to get emails? Options: BEGIN, END, FAIL or ALL\n')
+        sample.write('mailtype=FAIL\n')
 
         sample.write('# ABSOLUTE Path to Workspace directory\n')
         sample.write('workspace=/oasis/scratch/comet/'+ username + '/temp_project/hicops_workspace\n\n')
@@ -326,6 +332,9 @@ if __name__ == '__main__':
     username = os.environ['USER']
     uparams = ''
     pparams = ''
+    mail = False
+    evts = 'FAIL'
+    possible_evts = ['BEGIN', 'END', 'ALL', 'FAIL']
 
 #
 # ------------------------------ Parse Parameters -------------------------------------------
@@ -357,6 +366,27 @@ if __name__ == '__main__':
                     val = val[:-1]
 
                 username = val
+
+            # Set up emails
+            elif (param == 'mail'):
+                mail = int(val)
+                if (mail <= 0):
+                    mail = 0
+                if (mail > 0):
+                    mail = 1
+                print ('Emails =', mail)
+
+            # Email events
+            if (param == 'dbparts'):
+                if (val[-1] == '\n'):
+                    val = val[:-1]
+                if (val[-1] == '\r'):
+                    val = val[:-1]
+
+                evts = val
+                if not evts in possible_evts:
+                    evts = 'FAIL'
+                print ('Email events =', evts)
 
             # Set database file 
             if (param == 'dbparts'):
@@ -665,7 +695,7 @@ if __name__ == '__main__':
 
         # Call the lsinfo to gather CPU information
         if (os.path.isfile(workspace + '/autogen/info.out') == False):
-            genNormalScript(workspace, 'info', 'info', 'compute', '1','1', '00:00:10', 'lscpu | tr -d " \\r" && numactl --hardware | tr -d " \\r"', False, 'none')
+            genNormalScript(workspace, 'info', 'info', 'compute', '1','1', '00:00:10', 'lscpu | tr -d " \\r" && numactl --hardware | tr -d " \\r"', False, username, evts)
 
             optimize = call("sbatch " + workspace + "/autogen/info", shell=True)
             print ('\nWaiting for job scheduler\n')
@@ -766,7 +796,7 @@ if __name__ == '__main__':
                 cleancntr = call("make -C counter allclean", shell=True)
                 makecntr = call("make -C counter", shell=True)
             
-            genOpenMPScript(workspace, 'counter', 'counter', 'compute', '1', str(cores), '00:30:00', str(cores), hicopspath + '/counter', pparams, False, 'none')
+            genOpenMPScript(workspace, 'counter', 'counter', 'compute', '1', str(cores), '00:30:00', str(cores), hicopspath + '/counter', pparams, False, username, evts)
 
             # Call the counter process            
             optimize3 = call('sbatch ' + workspace + '/autogen/counter', shell=True)
@@ -930,10 +960,10 @@ if __name__ == '__main__':
     modfile.close()
 
     # Generate the job script
-    genMPI_OpenMPScript(workspace, 'hicops', 'hicops', 'compute', str(nodes), str(cores), jobtime, str(threads), hicopspath + '/hicops', str(mpi_per_node), bl, bp, uparams, True, username)
+    genMPI_OpenMPScript(workspace, 'hicops', 'hicops', 'compute', str(nodes), str(cores), jobtime, str(threads), hicopspath + '/hicops', str(mpi_per_node), bl, bp, uparams, mail, username, evts)
 
     # Generate the post-processing script
-    genNormalScript(workspace, 'postprocess', 'postprocess', 'shared', '1', '1', "00:20:00", 'psm2excel ' + workspace + '/output', True, username)
+    genNormalScript(workspace, 'postprocess', 'postprocess', 'shared', '1', '1', "00:20:00", 'psm2excel ' + workspace + '/output', mail, username, evts)
 #
 # ------------------------------ Schedule HiCOPS job -------------------------------------------
 #
