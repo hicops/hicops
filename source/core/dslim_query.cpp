@@ -1246,45 +1246,25 @@ VOID DSLIM_IO_Threads_Entry()
 VOID DSLIM_FOut_Thread_Entry()
 {
     int_t batchSize = 0;
-    ebuffer *lbuff = NULL;
-    bool exit = false;
-    for (;;)
-    {
-        sem_wait(&qfoutlock);
 
-        if (qfout->isEmpty())
-        {
-            exit = true;
-        }
-        else
-        {
-            lbuff = qfout->front();
-            qfout->pop();
-        }
+    sem_wait(&qfoutlock);
 
-        sem_post(&qfoutlock);
+    ebuffer *lbuff = qfout->front();
+    qfout->pop();
 
-        if (exit)
-            break;
+    sem_post(&qfoutlock);
 
-        ofstream *fh = new ofstream;
-        string_t fn = params.workspace + "/" +
-                    std::to_string(lbuff->batchNum) +
-                    "_" + std::to_string(params.myid) + ".dat";
+    ofstream *fh = new ofstream;
+    string_t fn = params.workspace + "/" +
+                std::to_string(lbuff->batchNum) +
+                "_" + std::to_string(params.myid) + ".dat";
+    batchSize = lbuff->currptr / (psize * sizeof(ushort_t));
+    fh->open(fn, ios::out | ios::binary);
+    fh->write((char_t *)lbuff->packs, batchSize * sizeof(partRes));
+    fh->write(lbuff->ibuff, lbuff->currptr * sizeof (char_t));
+    fh->close();
 
-        batchSize = lbuff->currptr / (psize * sizeof(ushort_t));
-
-        fh->open(fn, ios::out | ios::binary);
-
-        fh->write((char_t *)lbuff->packs, batchSize * sizeof(partRes));
-        fh->write(lbuff->ibuff, lbuff->currptr * sizeof (char_t));
-
-        fh->close();
-
-        lbuff->isDone = true;
-
-        delete lbuff;
-    }
+    delete lbuff;
 }
 #endif /* USE_MPI */
 
