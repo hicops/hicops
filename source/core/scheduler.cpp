@@ -117,8 +117,8 @@ Scheduler::~Scheduler()
     alpha = alpha1 = 0;
     gamma = gamma1 = 0;
 
-    //for (auto &itr : thread_pool)
-    //    itr.join();
+    for (auto &itr : thread_pool)
+        itr.join();
 
     thread_pool.clear();
 
