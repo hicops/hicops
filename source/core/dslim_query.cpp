@@ -174,7 +174,7 @@ static status_t DSLIM_InitializeMS2Data()
     qfPtrs = new lwqueue<MSQuery*>(nfiles, false);
 
 #ifdef USE_OMP
-#pragma omp parallel for schedule (dynamic, 1)
+#pragma omp parallel for schedule (static)
 #endif/* _OPENMP */
     for (auto fid = 0; fid < nfiles; fid++)
     {
@@ -220,6 +220,7 @@ status_t DSLIM_SearchManager(Index *index)
     int_t batchsize = 0;
 
     double qtime = 0;
+    double ptime = 0;
 
     int_t maxlen = params.max_len;
     int_t minlen = params.min_len;
@@ -231,6 +232,14 @@ status_t DSLIM_SearchManager(Index *index)
     //
     // Initialization
     //
+#if defined (USE_TIMEMORY)
+    wall_tuple_t init("MS2_init");
+#endif // USE_TIMEMORY
+
+    if (params.myid == 0)
+        std::cout << std::endl << "*** Initializing MS2 ***" << std::endl;
+
+    MARK_START(ms2init);
 
     /* The mutex for queryfile vector */
     if (status == SLM_SUCCESS)
@@ -345,6 +354,18 @@ status_t DSLIM_SearchManager(Index *index)
         }
     }
 
+    MARK_END(ms2init);
+
+    if (params.myid == 0)
+    {
+        std::cout << "DONE: MS2 Init: \tstatus: " << status << std::endl;
+        PRINT_ELAPSED(ELAPSED_SECONDS(ms2init));
+    }
+
+#if defined (USE_TIMEMORY)
+    init.stop();
+#endif // USE_TIMEMORY
+
     //
     // Parallel Search
     //
@@ -353,7 +374,7 @@ status_t DSLIM_SearchManager(Index *index)
     while (status == SLM_SUCCESS)
     {
 #if defined(USE_TIMEMORY)
-        static wall_tuple_t sched_penalty("DAG_penalty", false);
+        static wall_tuple_t sched_penalty("DAG_Penalty", false);
         sched_penalty.start();
 #endif
         /* Start computing penalty */
@@ -374,6 +395,7 @@ status_t DSLIM_SearchManager(Index *index)
         }
 
         auto penalty = ELAPSED_SECONDS(penal);
+        ptime += penalty;
 
 #ifndef DIAGNOSE
         if (params.myid == 0)
@@ -398,11 +420,27 @@ status_t DSLIM_SearchManager(Index *index)
 
         MARK_START(sch_time);
 
+#if defined (USE_TIMEMORY)
+        static search_tuple_t search_inst("SearchAlg");
+        search_inst.start();
+#   if defined (_UNIX)
+        static hw_counters_t search_cntr ("SearchAlg");
+        search_cntr.start();
+#   endif // _UNIX
+#endif // USE_TIMEMORY
+
         if (status == SLM_SUCCESS)
         {
             /* Query the chunk */
             status = DSLIM_QuerySpectrum(workPtr, index, (maxlen - minlen + 1));
         }
+
+#if defined (USE_TIMEMORY)
+        search_inst.stop();
+#   if defined (_UNIX)
+        search_cntr.stop();
+#   endif // _UNIX
+#endif // USE_TIMEMORY
 
         status = qPtrs->lockw_();
 
@@ -420,11 +458,17 @@ status_t DSLIM_SearchManager(Index *index)
         if (params.myid == 0)
         {
             std::cout << "\nSearch Time:\t" << ELAPSED_SECONDS(sch_time) << "s" << std::endl;
-            std::cout << "\nCumulative Search Time: " << qtime << "s" << std::endl << std::endl;
         }
 #endif /* DIAGNOSE */
     }
 
+    // print cumulative search time and penalty
+    if (params.myid == 0)
+    {
+        std::cout << "\nCumulative Penalty:     " << ptime << "s" << std::endl;
+        std::cout << "\nCumulative Search Time: " << qtime << "s" << std::endl << std::endl;
+    }
+    
     //
     // Deinitialize
     //
@@ -437,7 +481,6 @@ status_t DSLIM_SearchManager(Index *index)
     {
         /* Deallocate the scheduler module */
         delete SchedHandle;
-
         SchedHandle = NULL;
     }
 
@@ -450,19 +493,19 @@ status_t DSLIM_SearchManager(Index *index)
         comm_penalty.start();
 #endif // USE_TIMEMORY
 
-        MARK_START(dag);
+        MARK_START(comm_ovd);
 
         for (auto& itr : fouts)
             itr.join();
 
-        MARK_END(dag);
+        MARK_END(comm_ovd);
 
 #if defined (USE_TIMEMORY)
         comm_penalty.stop();
 #endif // USE_TIMEMORY
 
         if (params.myid == 0)
-            std::cout << "Comm Overhead: " << ELAPSED_SECONDS(dag) << 's'<< std::endl;
+            std::cout << "Total Comm Overhead: " << ELAPSED_SECONDS(comm_ovd) << 's'<< std::endl;
 
         delete wthread;
 
@@ -479,6 +522,9 @@ status_t DSLIM_SearchManager(Index *index)
         //
         // Synchronization
         //
+
+        MARK_START(sync);
+
 #if defined (USE_TIMEMORY)
         wall_tuple_t sync_penalty("sync_penalty");
         sync_penalty.start();
@@ -488,15 +534,14 @@ status_t DSLIM_SearchManager(Index *index)
 
         sync_penalty.stop();
 #else
-        MARK_START(sync);
 
         status = MPI_Barrier(MPI_COMM_WORLD);
+#endif // USE_TIMEMORY
 
         MARK_END(sync);
 
         if (params.myid == 0)
             std::cout << "Superstep Sync Penalty: " << ELAPSED_SECONDS(sync) << "s" << std::endl<< std::endl;
-#endif // USE_TIMEMORY
 
         //
         // Carry forward dsts for next superstep
@@ -557,17 +602,6 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
     double_t maxmass = params.max_mass;
     ebuffer *liBuff = NULL;
     partRes *txArray = NULL;
-
-#if defined (USE_TIMEMORY)
-    static search_tuple_t search_inst("theSrch");
-    search_inst.start();
-
-    // PAPI is only available on Windows
-#   if defined (_UNIX)
-    static hw_counters_t search_cntr ("theSrch");
-    search_cntr.start();
-#   endif // _UNIX
-#endif // USE_TIMEMORY
 
     if (params.nodes > 1)
     {
@@ -882,15 +916,6 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
         sem_post(&qfoutlock);
     }
 #endif // USE_MPI
-
-#if defined (USE_TIMEMORY)
-    search_inst.stop();
-
-    // PAPI is only available on Windows
-#   if defined (_UNIX)
-    search_cntr.stop();
-#   endif // _UNIX
-#endif // USE_TIMEMORY
 
     return status;
 }
@@ -1253,9 +1278,6 @@ VOID DSLIM_FOut_Thread_Entry()
     int_t batchSize = 0;
     ebuffer *lbuff = NULL;
 
-#if defined (USE_TIMEMORY)
-    thread_local comm_tuple_t comm_inst("result_comm");
-#endif // USE_TIMEMORY
     for (;;)
     {
         sem_wait(&qfoutlock);
@@ -1288,10 +1310,6 @@ VOID DSLIM_FOut_Thread_Entry()
 
         lbuff->isDone = true;
     }
-
-#if defined (USE_TIMEMORY)
-    comm_inst.stop();
-#endif
 }
 #endif /* USE_MPI */
 

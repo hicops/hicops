@@ -93,26 +93,26 @@ using bundle_t          = user_bundle<10, hicops_tag>;
 //
 // Create tuple aliases
 //
-using time_tuple_t      = tim::auto_tuple<wall_clock, cpu_util, thread_cpu_util>;
+using time_tuple_t      = tim::auto_tuple<wall_clock, cpu_util>;
 using mem_tuple_t       = tim::auto_tuple<written_bytes, read_bytes>;
 using wall_tuple_t      = tim::auto_tuple<wall_clock>;
 
-using prep_tuple_t      = tim::auto_tuple<wall_clock, thread_cpu_util, read_bytes>;
+using prep_tuple_t      = tim::auto_tuple<wall_clock, read_bytes>;
 using hw_counters_t     = tim::component_tuple<papi_events_t>;
 using search_tuple_t    = tim::component_tuple<wall_clock, cpu_util, bundle_t>;
-using comm_tuple_t      = tim::auto_tuple<wall_clock, thread_cpu_util, written_bytes>;
+using comm_tuple_t      = tim::auto_tuple<wall_clock, written_bytes>;
 using merge_tuple_t     = tim::auto_tuple<wall_clock, cpu_util, read_bytes>;
 
 // 
 // Mark templates as extern for faster compile times
 //
-extern template class tim::auto_tuple<wall_clock, cpu_util, thread_cpu_util>;
+extern template class tim::auto_tuple<wall_clock, cpu_util>;
 extern template class tim::auto_tuple<written_bytes, read_bytes>;
 extern template class tim::auto_tuple<wall_clock>;
-extern template class tim::auto_tuple<wall_clock, thread_cpu_util, read_bytes>;
+extern template class tim::auto_tuple<wall_clock, read_bytes>;
 extern template class tim::component_tuple<papi_events_t>;
 extern template class tim::component_tuple<wall_clock, cpu_util, bundle_t>;
-extern template class tim::auto_tuple<wall_clock, thread_cpu_util, written_bytes>;
+extern template class tim::auto_tuple<wall_clock, written_bytes>;
 extern template class tim::auto_tuple<wall_clock, cpu_util, read_bytes>;
 
 //
