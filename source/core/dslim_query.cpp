@@ -48,8 +48,6 @@ Scheduler  *SchedHandle    = NULL;
 expeRT     *ePtrs          = NULL;
 
 ebuffer    *iBuff          = NULL;
-int_t         ciBuff         = -1;
-lock_t       writer;
 
 /* Lock for query file vector and thread manager */
 lock_t qfilelock;
@@ -64,7 +62,10 @@ lwbuff<Queries> *qPtrs     = NULL;
 Queries *workPtr           = NULL;
 
 #ifdef USE_MPI
-VOID *DSLIM_FOut_Thread_Entry(VOID *argv);
+lock_t qfoutlock;
+lwqueue<ebuffer*> *qfout   = NULL;
+std::vector<std::thread> fouts;
+VOID DSLIM_FOut_Thread_Entry();
 #endif
 
 /* A queue containing I/O thread state when preempted */
@@ -292,15 +293,9 @@ status_t DSLIM_SearchManager(Index *index)
 #ifdef USE_MPI
     else if (status == SLM_SUCCESS && params.nodes > 1)
     {
-        iBuff = new ebuffer[NIBUFFS];
-
-        status = sem_init(&writer, 0, 0);
-
-        if (wthread != NULL && status == SLM_SUCCESS)
-        {
-            /* Pass the reference to thread block as argument */
-            status = pthread_create(wthread, NULL, &DSLIM_FOut_Thread_Entry, (VOID *)NULL);
-        }
+        iBuff = new ebuffer[nBatches];
+        status = sem_init(&qfoutlock, 0, 1);
+        qfout = new lwqueue<ebuffer*> (nBatches);
     }
 #endif /* USE_MPI */
 
@@ -409,14 +404,6 @@ status_t DSLIM_SearchManager(Index *index)
             status = DSLIM_QuerySpectrum(workPtr, index, (maxlen - minlen + 1));
         }
 
-#ifdef USE_MPI
-        /* Transfer my partial results to others */
-        if (status == SLM_SUCCESS && params.nodes > 1)
-        {
-            status = sem_post(&writer);
-        }
-#endif /* USE_MPI */
-
         status = qPtrs->lockw_();
 
         /* Request next I/O chunk */
@@ -458,16 +445,6 @@ status_t DSLIM_SearchManager(Index *index)
     /* Deinitialize the Communication module */
     if (params.nodes > 1)
     {
-        ciBuff ++;
-        ebuffer *liBuff = iBuff + (ciBuff % NIBUFFS);
-
-        /* Wait for FOut thread to take out iBuff */
-        for (; liBuff->isDone == false; usleep(1000));
-
-        status = sem_post(&writer);
-
-        VOID *ptr = NULL;
-
 #if defined (USE_TIMEMORY)
         wall_tuple_t comm_penalty("comm_ovhd");
         comm_penalty.start();
@@ -475,7 +452,8 @@ status_t DSLIM_SearchManager(Index *index)
 
         MARK_START(dag);
 
-        pthread_join(*wthread, &ptr);
+        for (auto& itr : fouts)
+            itr.join();
 
         MARK_END(dag);
 
@@ -487,8 +465,6 @@ status_t DSLIM_SearchManager(Index *index)
             std::cout << "Comm Overhead: " << ELAPSED_SECONDS(dag) << 's'<< std::endl;
 
         delete wthread;
-
-        sem_destroy(&writer);
 
         if (iBuff != NULL)
         {
@@ -573,9 +549,10 @@ status_t DSLIM_SearchManager(Index *index)
 status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
 {
     status_t status = SLM_SUCCESS;
+    static int_t ciBuff = -1;
+    int_t threads = (int_t) params.threads - (int_t) SchedHandle->getNumActivThds();
     uint_t maxz = params.maxz;
     uint_t dF = params.dF;
-    int_t threads = (int_t) params.threads - (int_t) SchedHandle->getNumActivThds();
     uint_t scale = params.scale;
     double_t maxmass = params.max_mass;
     ebuffer *liBuff = NULL;
@@ -592,39 +569,18 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
 #   endif // _UNIX
 #endif // USE_TIMEMORY
 
-#if defined (USE_TIMEMORY)
-    static wall_tuple_t comm_penalty("comm_ovhd", false);
-#endif // USE_TIMEMORY
-
     if (params.nodes > 1)
     {
-#if defined (USE_TIMEMORY)
-        comm_penalty.start();
-#endif // USE_TIMEMORY
-
-        MARK_START(overhead);
-
         ciBuff ++;
-        liBuff = iBuff + (ciBuff % NIBUFFS);
-
-        /* Wait for FOut thread to take out iBuff */
-        for (; liBuff->isDone == false; usleep(10000));
+        liBuff = iBuff + ciBuff;
 
         txArray = liBuff->packs;
         liBuff->isDone = false;
         liBuff->batchNum = ss->batchNum;
-
-        MARK_END(overhead);
-
-        if (params.myid == 0)
-            std::cout << "Comm Overhead: \t" << ELAPSED_SECONDS(overhead) << "s" << std::endl;
-
-#if defined (USE_TIMEMORY)
-        comm_penalty.stop();
-#endif // USE_TIMEMORY
     }
     else
     {
+        LBE_UNUSED_PARAM(ciBuff);
         LBE_UNUSED_PARAM(liBuff);
     }
 
@@ -915,6 +871,17 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
         /* Update the number of queried spectra */
         spectrumID += ss->numSpecs;
     }
+
+    // Add a thread
+#ifdef USE_MPI
+    if (params.nodes > 1)
+    {
+        sem_wait(&qfoutlock);
+        qfout->push(liBuff);
+        fouts.push_back(std::move(std::thread(DSLIM_FOut_Thread_Entry)));
+        sem_post(&qfoutlock);
+    }
+#endif // USE_MPI
 
 #if defined (USE_TIMEMORY)
     search_inst.stop();
@@ -1281,26 +1248,28 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 }
 
 #ifdef USE_MPI
-VOID *DSLIM_FOut_Thread_Entry(VOID *argv)
+VOID DSLIM_FOut_Thread_Entry()
 {
-    //status_t status = SLM_SUCCESS;
     int_t batchSize = 0;
-    int_t clbuff = -1;
+    ebuffer *lbuff = NULL;
 
 #if defined (USE_TIMEMORY)
     thread_local comm_tuple_t comm_inst("result_comm");
 #endif // USE_TIMEMORY
     for (;;)
     {
-        sem_wait(&writer);
+        sem_wait(&qfoutlock);
 
-        clbuff += 1;
-        ebuffer *lbuff = iBuff + (clbuff % NIBUFFS);
-
-        if (lbuff->isDone == true)
+        if (qfout->isEmpty())
         {
-            //std::cout << "FOut_Thread_Exiting @: " << params.myid <<endl;
+            sem_post(&qfoutlock);
             break;
+        }
+        else
+        {
+            lbuff = qfout->front();
+            qfout->pop();
+            sem_post(&qfoutlock);
         }
 
         ofstream *fh = new ofstream;
@@ -1323,8 +1292,6 @@ VOID *DSLIM_FOut_Thread_Entry(VOID *argv)
 #if defined (USE_TIMEMORY)
     comm_inst.stop();
 #endif
-
-    return argv;
 }
 #endif /* USE_MPI */
 

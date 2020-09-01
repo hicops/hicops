@@ -879,7 +879,7 @@ typedef struct _fResult
 
 } fResult;
 
-#define psize          256
+#define psize          128
 
 typedef struct _ebuffer
 {
