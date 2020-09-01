@@ -31,10 +31,10 @@ using namespace std;
 
 /* Global Variables */
 BOOL         isCarried   = false;
-
 BData       *bdata       = NULL;
-
 extern gParams           params;
+
+std::atomic<bool> score_init(false);
 
 #ifdef USE_MPI
 /* Entry function for DSLIM_Score module */
@@ -90,9 +90,9 @@ status_t DSLIM_DistScoreManager()
             ScoreHandle = new DSLIM_Score(bdata);
 
             if (ScoreHandle == NULL)
-            {
                 status = ERR_INVLD_MEMORY;
-            }
+            else
+                score_init = true;
         }
 
         //
@@ -213,7 +213,7 @@ status_t DSLIM_DistScoreManager()
 
 #ifdef USE_MPI
 /* Entry function for the score communicator */
-VOID *DSLIM_Score_Thread_Entry(VOID *argv)
+VOID DSLIM_Score_Thread_Entry()
 {
     /* Get the number of nodes - 1 */
     int_t nodes   = params.nodes;
@@ -234,7 +234,7 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
 
     /* Avoid race conditions by waiting for
      * ScoreHandle pointer to initialize */
-    while ((VOID *)argv != (VOID *)ScoreHandle);
+    while (!score_init) { usleep(1); }
 
     if (rxRqsts != NULL && rxStats != NULL)
     {
@@ -318,8 +318,6 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
         delete [] rxStats;
         rxStats = NULL;
     }
-
-    return NULL;
 }
 #endif /* USE_MPI */
 

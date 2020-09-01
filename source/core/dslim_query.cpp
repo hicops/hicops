@@ -475,6 +475,8 @@ status_t DSLIM_SearchManager(Index *index)
         for (auto& itr : fouts)
             itr.join();
 
+        fouts.clear();
+
         MARK_END(comm_ovd);
 
 #if defined (USE_TIMEMORY)
@@ -490,6 +492,8 @@ status_t DSLIM_SearchManager(Index *index)
 
         MARK_START(sync);
 
+        if (params.myid == 0)
+            std::cout << std::endl << "Waiting to Sync" << std::endl;
 #if defined (USE_TIMEMORY)
         wall_tuple_t sync_penalty("sync_penalty");
         sync_penalty.start();
@@ -1243,22 +1247,25 @@ VOID DSLIM_FOut_Thread_Entry()
 {
     int_t batchSize = 0;
     ebuffer *lbuff = NULL;
-
+    bool exit = false;
     for (;;)
     {
         sem_wait(&qfoutlock);
 
         if (qfout->isEmpty())
         {
-            sem_post(&qfoutlock);
-            break;
+            exit = true;
         }
         else
         {
             lbuff = qfout->front();
             qfout->pop();
-            sem_post(&qfoutlock);
         }
+
+        sem_post(&qfoutlock);
+
+        if (exit)
+            break;
 
         ofstream *fh = new ofstream;
         string_t fn = params.workspace + "/" +

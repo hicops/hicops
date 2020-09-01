@@ -28,7 +28,7 @@ MPI_Datatype resultF;
 string_t fn;
 
 extern gParams params;
-extern VOID *DSLIM_Score_Thread_Entry(VOID *);
+extern VOID DSLIM_Score_Thread_Entry();
 
 DSLIM_Score::DSLIM_Score()
 {
@@ -65,10 +65,7 @@ DSLIM_Score::DSLIM_Score()
     InitDataTypes();
 
     /* Communication threads */
-    comm_thd = new thread_t;
-
-    /* Create the comm. thread */
-    pthread_create(comm_thd, NULL, &DSLIM_Score_Thread_Entry, this);
+    comm_thd = std::thread(DSLIM_Score_Thread_Entry);
 
     return;
 }
@@ -133,19 +130,13 @@ DSLIM_Score::DSLIM_Score(BData *bd)
     InitDataTypes();
 
     /* Communication threads */
-    comm_thd = new thread_t;
-
-    /* Create the comm thread */
-    pthread_create(comm_thd, NULL, &DSLIM_Score_Thread_Entry, this);
+    comm_thd = std::thread(DSLIM_Score_Thread_Entry);
 
     return;
 }
 
 DSLIM_Score::~DSLIM_Score()
 {
-    /* Wait for score thread to complete */
-    Wait4RX();
-
     if (txSizes != NULL)
     {
         delete[] txSizes;
@@ -679,19 +670,9 @@ status_t DSLIM_Score::RXResults(MPI_Request *rxRqsts, int_t *rxStats)
 status_t DSLIM_Score::Wait4RX()
 {
     /* Wait for score thread to complete */
-    VOID *ptr;
+    comm_thd.join();
 
-    status_t status = SLM_SUCCESS;
-
-    if (comm_thd != NULL)
-    {
-        status = pthread_join(*comm_thd, &ptr);
-
-        delete comm_thd;
-        comm_thd = NULL;
-    }
-
-    return status;
+    return SLM_SUCCESS;
 }
 
 status_t DSLIM_Score::DisplayResults()

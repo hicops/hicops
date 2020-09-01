@@ -21,6 +21,7 @@
 #define DSLIM_SCORE_H_
 
 #include "common.h"
+#include <thread>
 #include <unistd.h>
 #include "config.h"
 #include "slm_dsts.h"
@@ -75,7 +76,7 @@ private:
     expeRT   *ePtr;
     hCell    *heapArray;
     Index    *index;
-    thread_t   *comm_thd;
+    std::thread comm_thd;
 
     /* Data size that I expect to
      * receive from other processes */
