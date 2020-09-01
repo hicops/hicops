@@ -21,7 +21,8 @@
 #define SCHEDULER_H_
 
 #include "common.h"
-#include "lwqueue.h"
+#include <vector>
+#include <thread>
 
 class Scheduler
 {
@@ -33,12 +34,10 @@ private:
 
     BOOL eSignal;
 
-    /* Queues to track threads */
-    lwqueue <thread_t *> *dump;
+    std::vector<std::thread> thread_pool;
 
     /* Lock for above queues */
     lock_t manage;
-    lock_t dumpQ;
 
     /* Thresholds */
     BOOL stopXtra;
@@ -66,8 +65,6 @@ private:
 
 
     /* Private Functions */
-    status_t waitForThread(thread_t *);
-    VOID   flushDumpQueue();
     double_t forecastLASP(double_t yt);
     double_t forecastLASP(double_t yt, double_t deltaS);
     status_t dispatchThread();
@@ -75,13 +72,13 @@ private:
 
 public:
     Scheduler();
-    Scheduler(int_t, int_t);
+    Scheduler(int_t);
     virtual ~Scheduler();
 
     VOID   ioComplete();
     int_t    getNumActivThds();
     BOOL   checkPreempt();
-    status_t takeControl(VOID *argv);
+    status_t takeControl();
     status_t runManager(double_t yt, int_t dec);
     VOID   waitForCompletion();
     BOOL   checkSignal();

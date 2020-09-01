@@ -22,7 +22,7 @@
 #include "slm_dsts.h"
 
 extern gParams params;
-extern VOID *DSLIM_IO_Threads_Entry(VOID *argv);
+extern VOID DSLIM_IO_Threads_Entry();
 
 using namespace std;
 
@@ -34,11 +34,8 @@ Scheduler::Scheduler()
     /* Set the total threads for preprocessing */
     maxIOThds = std::max((int_t)1, (int_t)params.maxprepthds);
 
-    dump = new lwqueue <thread_t *> (50, false);
-
     /* Lock for above queues */
     sem_init(&manage, 0, 1);
-    sem_init(&dumpQ, 0, 1);
 
     /* Thresholds */
     maxpenalty = 2;
@@ -64,7 +61,7 @@ Scheduler::Scheduler()
     dispatchThread();
 }
 
-Scheduler::Scheduler(int_t maxio, int_t dumpsize)
+Scheduler::Scheduler(int_t maxio)
 {
     /* Queues to track threads */
     maxIOThds = maxio;
@@ -72,11 +69,9 @@ Scheduler::Scheduler(int_t maxio, int_t dumpsize)
     eSignal = false;
     stopXtra = 0;
     minrate = 0.30;
-    dump = new lwqueue <thread_t *> (dumpsize, false);
 
     /* Lock for above queues */
     sem_init(&manage, 0, 1);
-    sem_init(&dumpQ, 0, 1);
 
     /* Thresholds */
     maxpenalty = 2;
@@ -122,34 +117,10 @@ Scheduler::~Scheduler()
     alpha = alpha1 = 0;
     gamma = gamma1 = 0;
 
-    /* Wait for any active threads */
-    while (getNumActivThds() != 0)
-    {
-        sleep(0.1);
-    }
-
-    flushDumpQueue();
+    for (auto &itr : thread_pool)
+        itr.join();
 
     sem_destroy(&manage);
-    sem_destroy(&dumpQ);
-
-    delete dump;
-}
-
-VOID Scheduler::flushDumpQueue()
-{
-    sem_wait(&dumpQ);
-
-    while (!dump->isEmpty())
-    {
-        thread_t * pt = dump->front();
-        dump->pop();
-        waitForThread(pt);
-        delete pt;
-		//pt = NULL;
-    }
-
-    sem_post(&dumpQ);
 }
 
 double_t Scheduler::forecastLASP(double_t yt)
@@ -187,12 +158,6 @@ double_t Scheduler::forecastLASP(double_t yt)
     Ftplus1 = St + bt;
 
     return Ftplus1;
-}
-
-status_t Scheduler::waitForThread(thread_t *thd)
-{
-    VOID *ptr = NULL;
-    return pthread_join(*thd, &ptr);
 }
 
 double_t Scheduler::forecastLASP(double_t yt, double_t deltaS)
@@ -274,7 +239,7 @@ BOOL Scheduler::makeDecisions(double_t yt, int_t dec)
         {
             /* Increasing very fast or too much accumulated */
             /* FIXME: maxpenalty needs to be normalized according to the resources in use */
-            if (rate >= minrate && (waitSincelast + Ftplus1) >= maxpenalty)
+            if ((waitSincelast >= 6 * maxpenalty) || (rate >= minrate && (waitSincelast + Ftplus1) >= maxpenalty))
             {
                 decision = true;
                 stopXtra = false;
@@ -312,47 +277,19 @@ BOOL Scheduler::makeDecisions(double_t yt, int_t dec)
 
 status_t Scheduler::dispatchThread()
 {
-    status_t status = SLM_SUCCESS;
-
     if (nIOThds < maxIOThds)
     {
         nIOThds += 1;
 
-        /* Schedule the thread */
-        thread_t *ptr = new thread_t;
-
-        if (ptr != NULL)
-        {
-            /* Pass the reference to thread block as argument */
-            status = pthread_create(ptr, NULL, &DSLIM_IO_Threads_Entry, (VOID *) ptr);
-            ptr = NULL;
-        }
-        else
-        {
-            status = ERR_BAD_MEM_ALLOC;
-            delete ptr;
-        }
+        /* Pass the reference to thread block as argument */
+        thread_pool.push_back(std::move(std::thread(DSLIM_IO_Threads_Entry)));
     }
 
-    return status;
+    return SLM_SUCCESS;
 }
 
-status_t Scheduler::takeControl(VOID *argv)
+status_t Scheduler::takeControl()
 {
-    status_t status = SLM_SUCCESS;
-
-    thread_t *ptr = (thread_t *) argv;
-
-    sem_wait(&dumpQ);
-
-    if (dump->isFull())
-    {
-        flushDumpQueue();
-    }
-
-    /* Mark the thread block for deletion */
-    dump->push(ptr);
-
     sem_wait(&manage);
 
     nIOThds -= 1;
@@ -361,9 +298,7 @@ status_t Scheduler::takeControl(VOID *argv)
 
     sem_post(&manage);
 
-    sem_post(&dumpQ);
-
-    return status;
+    return SLM_SUCCESS;
 }
 
 VOID Scheduler::ioComplete()

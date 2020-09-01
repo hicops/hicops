@@ -17,7 +17,7 @@
  *
  */
 
-#include <pthread.h>
+#include <thread>
 #include <semaphore.h>
 #include <unistd.h>
 #include "dslim_fileout.h"
@@ -37,7 +37,6 @@ extern vector<string_t> queryfiles;
 /* Global variables */
 float_t *hyperscores         = NULL;
 uchar_t *sCArr               = NULL;
-BOOL   ExitSignal          = false;
 
 #ifdef USE_MPI
 DSLIM_Comm *CommHandle    = NULL;
@@ -461,21 +460,6 @@ status_t DSLIM_SearchManager(Index *index)
         std::cout << "\nCumulative Penalty:     " << ptime << "s" << std::endl;
         std::cout << "\nCumulative Search Time: " << qtime << "s" << std::endl << std::endl;
     }
-    
-    //
-    // Deinitialize
-    //
-
-    /* Deinitialize the IO module */
-    status = DSLIM_Deinit_IO();
-
-    /* Delete the scheduler object */
-    if (SchedHandle != NULL)
-    {
-        /* Deallocate the scheduler module */
-        delete SchedHandle;
-        SchedHandle = NULL;
-    }
 
 #ifdef USE_MPI
     /* Deinitialize the Communication module */
@@ -499,10 +483,6 @@ status_t DSLIM_SearchManager(Index *index)
 
         if (params.myid == 0)
             std::cout << "Total Comm Overhead: " << ELAPSED_SECONDS(comm_ovd) << 's'<< std::endl;
-
-#ifdef DIAGNOSE
-        std::cout << "ExitSignal: " << params.myid << std::endl;
-#endif /* DIAGNOSE */
 
         //
         // Synchronization
@@ -543,6 +523,21 @@ status_t DSLIM_SearchManager(Index *index)
         }
     }
 #endif /* USE_MPI */
+
+    //
+    // Deinitialize
+    //
+
+    /* Deinitialize the IO module */
+    status = DSLIM_Deinit_IO();
+
+    /* Delete the scheduler object */
+    if (SchedHandle != NULL)
+    {
+        /* Deallocate the scheduler module */
+        delete SchedHandle;
+        SchedHandle = NULL;
+    }
 
     if (status == SLM_SUCCESS && params.nodes == 1)
     {
@@ -1075,12 +1070,12 @@ static int_t DSLIM_BinFindMax(pepEntry *entries, float_t pmass2, int_t min, int_
  * OUTPUT:
  * @NULL: Nothing
  */
-VOID *DSLIM_IO_Threads_Entry(VOID *argv)
+VOID DSLIM_IO_Threads_Entry()
 {
     status_t status = SLM_SUCCESS;
     Queries *ioPtr = NULL;
 
-    BOOL eSignal = false;
+    thread_local BOOL eSignal = false;
 
     // TODO: verify thread local performance
 #if defined (USE_TIMEMORY)
@@ -1103,7 +1098,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
         if (Query == NULL || Query->isDeInit())
         {
             /* Try getting the Query object from queue if present */
-            status = sem_wait(&ioQlock);
+            sem_wait(&ioQlock);
 
             if (!ioQ->isEmpty())
             {
@@ -1111,7 +1106,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
                 status = ioQ->pop();
             }
 
-            status = sem_post(&ioQlock);
+            sem_post(&ioQlock);
         }
 
         /* If the queue is empty */
@@ -1160,20 +1155,11 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
             {
                 status = qPtrs->unlockw_();
 
-                if (status == SLM_SUCCESS)
-                {
-                    status = sem_wait(&ioQlock);
-                }
-
-                if (status == SLM_SUCCESS)
-                {
-                    status = ioQ->push(Query);
-                }
-
-                if (status == SLM_SUCCESS)
-                {
-                    status = sem_post(&ioQlock);
-                }
+                sem_wait(&ioQlock);
+                
+                status = ioQ->push(Query);
+                
+                sem_post(&ioQlock);
 
                 /* Break from loop */
                 break;
@@ -1249,9 +1235,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
 #endif // USE_TIMEMORY
 
     /* Request pre-emption */
-    SchedHandle->takeControl(argv);
-
-    return NULL;
+    SchedHandle->takeControl();
 }
 
 #ifdef USE_MPI

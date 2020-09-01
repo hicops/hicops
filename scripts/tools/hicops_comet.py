@@ -904,8 +904,8 @@ if __name__ == '__main__':
             print ('         Either increase the number of nodes or expect performance degradation due to NUMA access and page faults\n')
 
         # if very small index then the preprocessing threads may be increased to 50%
-        if (indexsize/(mpi_per_node * nodes) < 10E6 and dM < 50):
-            prep_threads = int(threads/2)
+        if (indexsize/(mpi_per_node * nodes) < 10E6 or dM < 50):
+            prep_threads = int(threads/3)
 
         print('Optimized HiCOPS settings...\n')
         print('Setting Threads/MPI =', threads)
