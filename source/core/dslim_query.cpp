@@ -47,8 +47,6 @@ hCell      *CandidatePSMS  = NULL;
 Scheduler  *SchedHandle    = NULL;
 expeRT     *ePtrs          = NULL;
 
-ebuffer    *iBuff          = NULL;
-
 /* Lock for query file vector and thread manager */
 lock_t qfilelock;
 lwqueue<MSQuery *> *qfPtrs = NULL;
@@ -225,10 +223,6 @@ status_t DSLIM_SearchManager(Index *index)
     int_t maxlen = params.max_len;
     int_t minlen = params.min_len;
 
-#ifdef USE_MPI
-    thread_t *wthread = new thread_t;
-#endif /* USE_MPI */
-
     //
     // Initialization
     //
@@ -302,7 +296,6 @@ status_t DSLIM_SearchManager(Index *index)
 #ifdef USE_MPI
     else if (status == SLM_SUCCESS && params.nodes > 1)
     {
-        iBuff = new ebuffer[nBatches];
         status = sem_init(&qfoutlock, 0, 1);
         qfout = new lwqueue<ebuffer*> (nBatches);
     }
@@ -507,14 +500,6 @@ status_t DSLIM_SearchManager(Index *index)
         if (params.myid == 0)
             std::cout << "Total Comm Overhead: " << ELAPSED_SECONDS(comm_ovd) << 's'<< std::endl;
 
-        delete wthread;
-
-        if (iBuff != NULL)
-        {
-            delete[] iBuff;
-            iBuff = NULL;
-        }
-
 #ifdef DIAGNOSE
         std::cout << "ExitSignal: " << params.myid << std::endl;
 #endif /* DIAGNOSE */
@@ -594,7 +579,6 @@ status_t DSLIM_SearchManager(Index *index)
 status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
 {
     status_t status = SLM_SUCCESS;
-    static int_t ciBuff = -1;
     int_t threads = (int_t) params.threads - (int_t) SchedHandle->getNumActivThds();
     uint_t maxz = params.maxz;
     uint_t dF = params.dF;
@@ -605,8 +589,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
 
     if (params.nodes > 1)
     {
-        ciBuff ++;
-        liBuff = iBuff + ciBuff;
+        liBuff = new ebuffer;
 
         txArray = liBuff->packs;
         liBuff->isDone = false;
@@ -614,7 +597,6 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
     }
     else
     {
-        LBE_UNUSED_PARAM(ciBuff);
         LBE_UNUSED_PARAM(liBuff);
     }
 
@@ -1309,6 +1291,8 @@ VOID DSLIM_FOut_Thread_Entry()
         fh->close();
 
         lbuff->isDone = true;
+
+        delete lbuff;
     }
 }
 #endif /* USE_MPI */
