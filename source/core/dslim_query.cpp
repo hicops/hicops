@@ -299,6 +299,7 @@ status_t DSLIM_SearchManager(Index *index)
         status = sem_init(&qfoutlock, 0, 1);
         qfout = new lwqueue<ebuffer*> (nBatches);
 
+        // create two threads for fout
         for (int i = 0; i < 2; i++)
             fouts.push_back(std::move(std::thread(DSLIM_FOut_Thread_Entry)));
     }
