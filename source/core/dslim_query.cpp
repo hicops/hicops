@@ -63,6 +63,7 @@ lock_t qfoutlock;
 lwqueue<ebuffer*> *qfout   = NULL;
 std::vector<std::thread> fouts;
 VOID DSLIM_FOut_Thread_Entry();
+std::atomic<bool> exitSignal(false);
 #endif
 
 /* A queue containing I/O thread state when preempted */
@@ -297,6 +298,9 @@ status_t DSLIM_SearchManager(Index *index)
     {
         status = sem_init(&qfoutlock, 0, 1);
         qfout = new lwqueue<ebuffer*> (nBatches);
+
+        for (int i = 0; i < 2; i++)
+            fouts.push_back(std::move(std::thread(DSLIM_FOut_Thread_Entry)));
     }
 #endif /* USE_MPI */
 
@@ -391,7 +395,7 @@ status_t DSLIM_SearchManager(Index *index)
 
 #ifndef DIAGNOSE
         if (params.myid == 0)
-            std::cout << "PENALTY: " << penalty << 's'<< std::endl;
+            std::cout << "PENALTY:   \t" << penalty << "s" << std::endl;
 #endif /* DIAGNOSE */
 
         /* Check the status of buffer queues */
@@ -465,6 +469,9 @@ status_t DSLIM_SearchManager(Index *index)
     /* Deinitialize the Communication module */
     if (params.nodes > 1)
     {
+        // signal fout threads to exit
+        exitSignal = true;
+
 #if defined (USE_TIMEMORY)
         wall_tuple_t comm_penalty("comm_ovhd");
         comm_penalty.start();
@@ -893,7 +900,6 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
     {
         sem_wait(&qfoutlock);
         qfout->push(liBuff);
-        fouts.push_back(std::move(std::thread(DSLIM_FOut_Thread_Entry)));
         sem_post(&qfoutlock);
     }
 #endif // USE_MPI
@@ -1246,25 +1252,39 @@ VOID DSLIM_IO_Threads_Entry()
 VOID DSLIM_FOut_Thread_Entry()
 {
     int_t batchSize = 0;
+    ebuffer *lbuff = nullptr;
 
-    sem_wait(&qfoutlock);
+    for (;;usleep(1))
+    {
+        sem_wait(&qfoutlock);
 
-    ebuffer *lbuff = qfout->front();
-    qfout->pop();
+        if (qfout->isEmpty())
+        {
+            sem_post(&qfoutlock);
+            
+            if (exitSignal)
+                return;
 
-    sem_post(&qfoutlock);
+            continue;
+        }
 
-    ofstream *fh = new ofstream;
-    string_t fn = params.workspace + "/" +
-                std::to_string(lbuff->batchNum) +
-                "_" + std::to_string(params.myid) + ".dat";
-    batchSize = lbuff->currptr / (psize * sizeof(ushort_t));
-    fh->open(fn, ios::out | ios::binary);
-    fh->write((char_t *)lbuff->packs, batchSize * sizeof(partRes));
-    fh->write(lbuff->ibuff, lbuff->currptr * sizeof (char_t));
-    fh->close();
+        lbuff = qfout->front();
+        qfout->pop();
 
-    delete lbuff;
+        sem_post(&qfoutlock);
+
+        ofstream *fh = new ofstream;
+        string_t fn = params.workspace + "/" +
+                    std::to_string(lbuff->batchNum) +
+                    "_" + std::to_string(params.myid) + ".dat";
+        batchSize = lbuff->currptr / (psize * sizeof(ushort_t));
+        fh->open(fn, ios::out | ios::binary);
+        fh->write((char_t *)lbuff->packs, batchSize * sizeof(partRes));
+        fh->write(lbuff->ibuff, lbuff->currptr * sizeof (char_t));
+        fh->close();
+
+        delete lbuff;
+    }
 }
 #endif /* USE_MPI */
 
