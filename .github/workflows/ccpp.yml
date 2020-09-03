@@ -22,9 +22,9 @@ jobs:
         cd build-rel
         CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-rel -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=14 ..
         cd ../build-deb
-        CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-deb -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=14 ..
+        CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-deb -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_STANDARD=14 ..
         cd ../build-relwithdeb
-        CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-relwithdeb -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=14 ..
+        CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-relwithdeb -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_STANDARD=14 ..
         cd ../build-nompiomp
         CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-nompiomp -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=14 -DUSE_MPI=OFF -DUSE_OMP=OFF ..
     - name: build
