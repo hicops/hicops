@@ -1,4 +1,4 @@
-name: HiCOPS C/C++ CI
+name: HiCOPS CI
 
 on:
   push:
@@ -20,13 +20,11 @@ jobs:
     - name: configure
       run: |
         cd build-rel
-        CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-rel -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=14 ..
+        CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-rel -DUSE_MPI=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=14 ..
         cd ../build-deb
-        CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-deb -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_STANDARD=14 ..
+        CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-deb -DUSE_MPI=OFF -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_STANDARD=14 ..
         cd ../build-relwithdeb
-        CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-relwithdeb -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_STANDARD=14 ..
-        cd ../build-nompi
-        CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-nompi -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=14 -DUSE_MPI=OFF ..
+        CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-relwithdeb -DUSE_MPI=OFF -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_STANDARD=14 ..
     - name: build
       run: |
         cd build-rel
@@ -34,6 +32,4 @@ jobs:
         cd ../build-deb
         make install -j 4
         cd ../build-relwithdeb
-        make install -j 4
-        cd ../build-nompi
         make install -j 4
