@@ -135,9 +135,7 @@ status_t main(int_t argc, char_t* argv[])
 
     // parse parameters
     if (status == SLM_SUCCESS)
-    {
         status = ParseParams(argv[1]);
-    }
 
     // Print HiCOPS header after the ranks have been assigned
     if (params.myid == 0)
@@ -158,17 +156,13 @@ status_t main(int_t argc, char_t* argv[])
 
             /* Add the matching files */
             if (cfile.find(patt) != std::string::npos)
-            {
                 queryfiles.push_back(params.datapath + '/' + pdir->d_name);
-            }
         }
     }
 
     /* No file to query - Abort */
     if (queryfiles.size() < 1)
-    {
         status = ERR_FILE_NOT_FOUND;
-    }
 
     /* Create local variables to avoid trouble */
     uint_t minlen = params.min_len;
@@ -181,22 +175,17 @@ status_t main(int_t argc, char_t* argv[])
 
         /* Check if successful memory allocation */
         if (slm_index == NULL)
-        {
             status = ERR_INVLD_MEMORY;
-        }
+
     }
 
     // Initialize the mod information
     if (status == SLM_SUCCESS)
-    {
         status = UTILS_InitializeModInfo(&params.vModInfo);
-    }
 
     // Initialize the ModGen Engine
     if (status == SLM_SUCCESS)
-    {
         status = MODS_Initialize();
-    }
 
     // --------------------------------------------------------------------------------------------- //
 
@@ -315,15 +304,11 @@ status_t main(int_t argc, char_t* argv[])
 
         /* We don't need the original data anymore */
     if (status == SLM_SUCCESS)
-    {
         status = DSLIM_DeallocateSpecArr();
-    }
 
     /* Initialize the Scorecard */
     if (status == SLM_SUCCESS)
-    {
         status = DSLIM_InitializeScorecard(slm_index, (maxlen - minlen + 1));
-    }
 
 #if defined (USE_TIMEMORY)
     // stop measurements for indexing
@@ -375,9 +360,7 @@ status_t main(int_t argc, char_t* argv[])
 
     /* De-initialize the ion index */
     for (uint_t peplen = minlen; peplen <= maxlen; peplen++)
-    {
         status = DSLIM_DeallocateIonIndex(slm_index + peplen - minlen);
-    }
 
 #if defined (USE_TIMEMORY)
     // stop instrumentation
@@ -426,11 +409,9 @@ status_t main(int_t argc, char_t* argv[])
     if (status == SLM_SUCCESS)
     {
         for (uint_t peplen = minlen; peplen <= maxlen; peplen++)
-        {
             status = DSLIM_DeallocatePepIndex(slm_index + peplen - minlen);
-        }
-    }
 
+    }
 #ifdef DIAGNOSE2
         std::cout << "SCProc DONE@ " << params.myid << std::endl;
 #endif /* DIAGNOSE2 */
@@ -525,9 +506,7 @@ static status_t ParseParams(char_t* paramfile)
 
         /* Check for a dangling / character */
         if (line.at(line.length()- 1) == '/')
-        {
             line = line.substr(0, line.size() - 1);
-        }
 
         params.dbpath = line;
 
@@ -536,9 +515,7 @@ static status_t ParseParams(char_t* paramfile)
 
         /* Check for a dangling / character */
         if (line.at(line.length()- 1) == '/')
-        {
             line = line.substr(0, line.size() - 1);
-        }
 
         params.datapath = line;
 
@@ -547,9 +524,7 @@ static status_t ParseParams(char_t* paramfile)
 
         /* Check for a dangling / character */
         if (line.at(line.length()- 1) == '/')
-        {
             line = line.substr(0, line.size() - 1);
-        }
 
         params.workspace = line;
 
@@ -643,17 +618,12 @@ static status_t ParseParams(char_t* paramfile)
         getline(pfile, line);
 
         if (!line.compare("cyclic"))
-        {
             params.policy = _cyclic;
-        }
         else if (!line.compare("chunk"))
-        {
             params.policy = _chunk;
-        }
+        
         else if (!line.compare("zigzag"))
-        {
             params.policy = _zigzag;
-        }
 
         /* Get number of mods */
         getline(pfile, line);

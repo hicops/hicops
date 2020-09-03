@@ -582,9 +582,7 @@ typedef struct _heapEntry
     {
         /* Check for self assignment */
         if (this != &rhs) 
-        {
             memcpy(this, &rhs, sizeof(_heapEntry));
-        }
 
         return *this;
     }

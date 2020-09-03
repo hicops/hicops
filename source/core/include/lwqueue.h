@@ -152,9 +152,7 @@ public:
         status_t status = SLM_SUCCESS;
 
         if (isSem)
-        {
             sem_wait (&lock);
-        }
 
         if (filled < cap)
         {
@@ -169,9 +167,7 @@ public:
         }
 
         if (isSem)
-        {
             sem_post (&lock);
-        }
 
         return status;
     }
@@ -181,9 +177,7 @@ public:
         status_t status;
 
         if (isSem)
-        {
             sem_wait (&lock);
-        }
 
         if (filled > 0)
         {
@@ -197,9 +191,7 @@ public:
         }
 
         if (isSem)
-        {
             sem_post (&lock);
-        }
 
         return status;
     }
@@ -209,16 +201,12 @@ public:
         BOOL res = false;
 
         if (isSem)
-        {
             sem_wait (&lock);
-        }
 
         res = (filled == 0);
 
         if (isSem)
-        {
             sem_post (&lock);
-        }
 
         return res;
     }
@@ -228,16 +216,12 @@ public:
         BOOL res = false;
 
         if (isSem)
-        {
             sem_wait (&lock);
-        }
 
         res = (filled == cap);
 
         if (isSem)
-        {
             sem_post (&lock);
-        }
 
         return res;
     }
@@ -247,23 +231,15 @@ public:
         T res;
 
         if (isSem)
-        {
             sem_wait (&lock);
-        }
 
         if (filled > 0)
-        {
             res = arr[head];
-        }
         else
-        {
             res = 0;
-        }
 
         if (isSem)
-        {
             sem_post (&lock);
-        }
 
         return res;
     }
@@ -273,23 +249,15 @@ public:
         T res;
 
         if (isSem)
-        {
             sem_wait (&lock);
-        }
 
         if (filled > 0)
-        {
             res = arr[tail];
-        }
-		else
-		{
-			res = 0;
-		}
+        else
+            res = 0;
 
         if (isSem)
-        {
             sem_post (&lock);
-        }
 
         return res;
     }
@@ -299,16 +267,12 @@ public:
         int_t res = 0;
 
         if (isSem)
-        {
             sem_wait (&lock);
-        }
 
         res = filled;
 
         if (isSem)
-        {
             sem_post (&lock);
-        }
 
         return res;
     }

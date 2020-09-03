@@ -90,7 +90,6 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv);
 static BOOL DSLIM_BinarySearch(Index *, float_t, int_t&, int_t&);
 static int_t  DSLIM_BinFindMin(pepEntry *entries, float_t pmass1, int_t min, int_t max);
 static int_t  DSLIM_BinFindMax(pepEntry *entries, float_t pmass2, int_t min, int_t max);
-static inline status_t DSLIM_WaitFor_IO(int_t &);
 static inline status_t DSLIM_Deinit_IO();
 
 /* FUNCTION: DSLIM_WaitFor_IO
@@ -104,6 +103,8 @@ static inline status_t DSLIM_Deinit_IO();
  * @status: status of execution
  *
  */
+static inline status_t DSLIM_WaitFor_IO(int_t &);
+
 static inline status_t DSLIM_WaitFor_IO(int_t &batchsize)
 {
     status_t status;
@@ -116,18 +117,14 @@ static inline status_t DSLIM_WaitFor_IO(int_t &batchsize)
     /* Check for either a buffer or stopSignal */
     while (qPtrs->isEmptyReadyQ())
     {
-        /* Check if endSignal has been received */
-        if (SchedHandle->checkSignal())
-        {
-            status = qPtrs->unlockr_();
-            status = ENDSIGNAL;
-            break;
-        }
-
         /* If both conditions fail,
          * the I/O threads still working */
         status = qPtrs->unlockr_();
 
+        // safety from a rare race condition
+        if (!SchedHandle->getNumActivThds())
+            SchedHandle->dispatchThread();
+        
         sleep(0.1);
 
         status = qPtrs->lockr_();
@@ -139,9 +136,7 @@ static inline status_t DSLIM_WaitFor_IO(int_t &batchsize)
         workPtr = qPtrs->getWorkPtr();
 
         if (workPtr == NULL)
-        {
             status = ERR_INVLD_PTR;
-        }
 
         status = qPtrs->unlockr_();
 
@@ -246,15 +241,11 @@ status_t DSLIM_SearchManager(Index *index)
     /* Initialize the lw double buffer queues with
      * capacity, min and max thresholds */
     if (status == SLM_SUCCESS)
-    {
         qPtrs = new lwbuff<Queries>(20, 5, 15); // cap, th1, th2
-    }
 
     /* Initialize the ePtrs */
     if (status == SLM_SUCCESS)
-    {
         ePtrs = new expeRT[params.threads];
-    }
 
     /* Create queries buffers and push them to the lwbuff */
     if (status == SLM_SUCCESS)
@@ -281,18 +272,15 @@ status_t DSLIM_SearchManager(Index *index)
 
         /* Check for correct allocation */
         if (ioQ == NULL)
-        {
             status = ERR_BAD_MEM_ALLOC;
-        }
 
         /* Initialize the ioQlock */
         status = sem_init(&ioQlock, 0, 1);
     }
 
     if (status == SLM_SUCCESS && params.nodes == 1)
-    {
         status = DFile_InitFiles();
-    }
+
 #ifdef USE_MPI
     else if (status == SLM_SUCCESS && params.nodes > 1)
     {
@@ -317,9 +305,8 @@ status_t DSLIM_SearchManager(Index *index)
             CommHandle = new DSLIM_Comm(nBatches);
 
             if (CommHandle == NULL)
-            {
                 status = ERR_BAD_MEM_ALLOC;
-            }
+
         }
 
         if (status == SLM_SUCCESS)
@@ -327,9 +314,8 @@ status_t DSLIM_SearchManager(Index *index)
             CandidatePSMS = new hCell[dssize];
 
             if (CandidatePSMS == NULL)
-            {
                 status = ERR_BAD_MEM_ALLOC;
-            }
+
         }
     }
 
@@ -342,13 +328,9 @@ status_t DSLIM_SearchManager(Index *index)
 
         /* Check for correct allocation */
         if (SchedHandle == NULL)
-        {
             status = ERR_BAD_MEM_ALLOC;
-        }
         else
-        {
             scheduler_init = true;
-        }
     }
 
     MARK_END(ms2init);
@@ -366,10 +348,21 @@ status_t DSLIM_SearchManager(Index *index)
     //
     // Parallel Search
     //
+#if defined (USE_TIMEMORY)
+        static search_tuple_t search_inst("SearchAlg");
+        search_inst.start();
+#   if defined (_UNIX)
+        static hw_counters_t search_cntr ("SearchAlg");
+        search_cntr.start();
+#   endif // _UNIX
+#endif // USE_TIMEMORY
 
     /* The main query loop starts here */
-    while (status == SLM_SUCCESS)
+    for (int_t bid = 0; bid < nBatches; bid++)
     {
+        // is it the last iteration
+        bool nLast = bid != (nBatches - 1);
+
 #if defined(USE_TIMEMORY)
         static wall_tuple_t sched_penalty("DAG_Penalty", false);
         sched_penalty.start();
@@ -378,18 +371,12 @@ status_t DSLIM_SearchManager(Index *index)
         MARK_START(penal);
 
         status = DSLIM_WaitFor_IO(batchsize);
-        
+
 #if defined(USE_TIMEMORY)
         sched_penalty.stop();
 #endif
         /* Compute the penalty */
         MARK_END(penal);
-
-        /* Check if endsignal */
-        if (status == ENDSIGNAL)
-        {
-            break;
-        }
 
         auto penalty = ELAPSED_SECONDS(penal);
         ptime += penalty;
@@ -404,8 +391,9 @@ status_t DSLIM_SearchManager(Index *index)
         int_t dec = qPtrs->readyQStatus();
         qPtrs->unlockr_();
 
-        /* Run the Scheduler to manage thread between compute and I/O */
-        SchedHandle->runManager(penalty, dec);
+        if (nLast)
+            /* Run the Scheduler to manage thread between compute and I/O */
+            SchedHandle->runManager(penalty, dec);
 
 #ifndef DIAGNOSE
         if (params.myid == 0)
@@ -417,27 +405,11 @@ status_t DSLIM_SearchManager(Index *index)
 
         MARK_START(sch_time);
 
-#if defined (USE_TIMEMORY)
-        static search_tuple_t search_inst("SearchAlg");
-        search_inst.start();
-#   if defined (_UNIX)
-        static hw_counters_t search_cntr ("SearchAlg");
-        search_cntr.start();
-#   endif // _UNIX
-#endif // USE_TIMEMORY
-
         if (status == SLM_SUCCESS)
         {
             /* Query the chunk */
             status = DSLIM_QuerySpectrum(workPtr, index, (maxlen - minlen + 1));
         }
-
-#if defined (USE_TIMEMORY)
-        search_inst.stop();
-#   if defined (_UNIX)
-        search_cntr.stop();
-#   endif // _UNIX
-#endif // USE_TIMEMORY
 
         status = qPtrs->lockw_();
 
@@ -453,11 +425,21 @@ status_t DSLIM_SearchManager(Index *index)
 
 #ifndef DIAGNOSE
         if (params.myid == 0)
-        {
             std::cout << "\nSearch Time:\t" << ELAPSED_SECONDS(sch_time) << "s" << std::endl;
-        }
+
 #endif /* DIAGNOSE */
     }
+
+#if defined (USE_TIMEMORY)
+        search_inst.stop();
+#   if defined (_UNIX)
+        search_cntr.stop();
+#   endif // _UNIX
+#endif // USE_TIMEMORY
+
+    //
+    // Overheads
+    //
 
     // print cumulative search time and penalty
     if (params.myid == 0)
@@ -540,9 +522,6 @@ status_t DSLIM_SearchManager(Index *index)
     // Deinitialize
     //
 
-    /* Deinitialize the IO module */
-    status = DSLIM_Deinit_IO();
-
     /* Delete the scheduler object */
     if (SchedHandle != NULL)
     {
@@ -550,6 +529,9 @@ status_t DSLIM_SearchManager(Index *index)
         delete SchedHandle;
         SchedHandle = NULL;
     }
+
+    /* Deinitialize the IO module */
+    status = DSLIM_Deinit_IO();
 
     if (status == SLM_SUCCESS && params.nodes == 1)
     {
@@ -561,9 +543,7 @@ status_t DSLIM_SearchManager(Index *index)
 
     /* Delete ptrs */
     if (ptrs)
-    {
         delete[] ptrs;
-    }
 
     /* Return the status of execution */
     return status;
@@ -613,9 +593,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
 
     /* Sanity checks */
     if (Score == NULL || (txArray == NULL && params.nodes > 1))
-    {
         status = ERR_INVLD_MEMORY;
-    }
 
     if (status == SLM_SUCCESS)
     {
@@ -676,9 +654,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
 
                     /* Spectrum violates limits */
                     if (val == false || (maxlimit < minlimit))
-                    {
                         continue;
-                    }
 
                     /* Query all fragments in each spectrum */
                     for (uint_t k = 0; k < qspeclen; k++)
@@ -699,9 +675,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
 
                                 /* If no ions in the bin */
                                 if (end - start < 1)
-                                {
                                     continue;
-                                }
 
                                 auto ptr = std::lower_bound(iAPtr + start, iAPtr + end, minlimit * speclen);
                                 int_t stt = start + std::distance(iAPtr + start, ptr);
@@ -887,9 +861,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
         }
 
         if (params.nodes > 1)
-        {
             liBuff->currptr = ss->numSpecs * psize * sizeof(ushort_t);
-        }
 
         /* Update the number of queried spectra */
         spectrumID += ss->numSpecs;
@@ -977,9 +949,7 @@ static BOOL DSLIM_BinarySearch(Index *index, float_t precmass, int_t &minlimit, 
     }
 
     if (entries[maxlimit].Mass <= pmass2 && entries[minlimit].Mass >= pmass1)
-    {
         rv = true;
-    }
 
     return rv;
 }
@@ -994,9 +964,7 @@ static int_t DSLIM_BinFindMin(pepEntry *entries, float_t pmass1, int_t min, int_
         int_t current = min;
 
         while (entries[current].Mass < pmass1)
-        {
             current++;
-        }
 
         return current;
     }
@@ -1015,9 +983,7 @@ static int_t DSLIM_BinFindMin(pepEntry *entries, float_t pmass1, int_t min, int_
     if (pmass1 == entries[half].Mass)
     {
         while (pmass1 == entries[half].Mass)
-        {
             half--;
-        }
 
         half++;
     }
@@ -1036,9 +1002,7 @@ static int_t DSLIM_BinFindMax(pepEntry *entries, float_t pmass2, int_t min, int_
         int_t current = max;
 
         while (entries[current].Mass > pmass2)
-        {
             current--;
-        }
 
         return current;
     }
@@ -1059,9 +1023,7 @@ static int_t DSLIM_BinFindMax(pepEntry *entries, float_t pmass2, int_t min, int_
         half++;
 
         while (pmass2 == entries[half].Mass)
-        {
             half++;
-        }
 
         half--;
     }
@@ -1085,8 +1047,8 @@ VOID DSLIM_IO_Threads_Entry()
 {
     status_t status = SLM_SUCCESS;
     Queries *ioPtr = NULL;
-
-    thread_local BOOL eSignal = false;
+    bool eSignal = false;
+    bool preempt = false;
 
     // TODO: verify thread local performance
 #if defined (USE_TIMEMORY)
@@ -1118,135 +1080,116 @@ VOID DSLIM_IO_Threads_Entry()
             }
 
             sem_post(&ioQlock);
-        }
 
-        /* If the queue is empty */
-        if (Query == NULL || Query->isDeInit())
-        {
-            /* Otherwise, initialize the object from a file */
-
-            /* lock the query file */
-            sem_wait(&qfilelock);
-
-            /* Check if anymore queryfiles */
-            if (!qfPtrs->isEmpty())
+            /* If the queue is empty */
+            if (Query == NULL || Query->isDeInit())
             {
-                Query = qfPtrs->front();
-                qfPtrs->pop();
-                rem_spec = Query->getQAcount(); // Init to 1 for first loop to run
-            }
-            else
-            {
-                /* Raise the exit signal */
-                eSignal = true;
-            }
+                /* Otherwise, initialize the object from a file */
+                /* lock the query file */
+                sem_wait(&qfilelock);
+                /* Check if anymore queryfiles */
+                if (!qfPtrs->isEmpty())
+                {
+                    Query = qfPtrs->front();
+                    qfPtrs->pop();
+                    // Init to 1 for first loop to run
+                    rem_spec = Query->getQAcount(); 
+                }
+                else
+                {
+                    // Raise the exit signal
+                    eSignal = true;
+                }
 
-            /* Unlock the query file */
-            sem_post(&qfilelock);
+                /* Unlock the query file */
+                sem_post(&qfilelock);
+            }
         }
 
         /* If no more files, then break the inf loop */
         if (eSignal == true)
-        {
             break;
-        }
 
         /*********************************************
          * At this point, we have the data ready     *
          *********************************************/
 
-        /* All set */
-        if (status == SLM_SUCCESS)
+        /* Wait for a I/O request */
+        status = qPtrs->lockw_();
+        sem_wait(&ioQlock);
+
+        /* Empty wait queue or Scheduler preemption signal raised  */
+        preempt = SchedHandle->checkPreempt();
+        
+        if (qPtrs->isEmptyWaitQ() || preempt)
         {
-            /* Wait for a I/O request */
-            status = qPtrs->lockw_();
-
-            /* Empty wait queue or Scheduler preemption signal raised  */
-            if (SchedHandle->checkPreempt() || qPtrs->isEmptyWaitQ())
-            {
-                status = qPtrs->unlockw_();
-
-                sem_wait(&ioQlock);
-                
-                status = ioQ->push(Query);
-                
-                sem_post(&ioQlock);
-
-                /* Break from loop */
-                break;
-            }
-
-            /* Otherwise, get the I/O ptr from the wait queue */
-            ioPtr = qPtrs->getIOPtr();
-
             status = qPtrs->unlockw_();
 
-            /* Reset the ioPtr */
-            ioPtr->reset();
+            status = ioQ->push(Query);
 
-            /* Extract a chunk and return the chunksize */
-            status = Query->ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
+            sem_post(&ioQlock);
 
-            ioPtr->batchNum = Query->curr_chunk;
-            ioPtr->fileNum  = Query->getQfileIndex();
-            Query->curr_chunk++;
+            /* Break from loop */
+            break;
+        }
 
-            /* Lock the ready queue */
-            qPtrs->lockr_();
+        sem_post(&ioQlock);
+
+        /* Otherwise, get the I/O ptr from the wait queue */
+        ioPtr = qPtrs->getIOPtr();
+
+        status = qPtrs->unlockw_();
+
+        /* Reset the ioPtr */
+        ioPtr->reset();
+
+        /* Extract a chunk and return the chunksize */
+        status = Query->ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
+        ioPtr->batchNum = Query->curr_chunk;
+        ioPtr->fileNum  = Query->getQfileIndex();
+        Query->curr_chunk++;
+
+        /* Lock the ready queue */
+        qPtrs->lockr_();
 
 #ifdef USE_MPI
-            if (params.nodes > 1)
-            {
-                /* Add an entry of the added buffer to the CommHandle */
-                status = CommHandle->AddBatch(ioPtr->batchNum, ioPtr->numSpecs, Query->getQfileIndex());
-            }
+        if (params.nodes > 1)
+        {
+            /* Add an entry of the added buffer to the CommHandle */
+            status = CommHandle->AddBatch(ioPtr->batchNum,ioPtr->numSpecs, Query->getQfileIndex());
+        }
 #endif /* USE_MPI */
 
-            /*************************************
-             * Add available data to ready queue *
-             *************************************/
-            qPtrs->IODone(ioPtr);
+        /*************************************
+         * Add available data to ready queue *
+         *************************************/
+        qPtrs->IODone(ioPtr);
 
-            /* Unlock the ready queue */
-            qPtrs->unlockr_();
+        /* Unlock the ready queue */
+        qPtrs->unlockr_();
 
-            /* If no more remaining spectra, then deinit */
-            if (rem_spec < 1)
+        /* If no more remaining spectra, then deinit */
+        if (rem_spec < 1)
+        {
+            status = Query->DeinitQueryFile();
+
+            if (Query != NULL)
             {
-                status = Query->DeinitQueryFile();
-
-                if (Query != NULL)
-                {
-                    delete Query;
-                    Query = NULL;
-                }
+                delete Query;
+                Query = NULL;
             }
         }
-        /*else
-        {
-            std::cout << "ALERT: IOTHD @" << params.myid << std::endl;
-        }*/
+
     }
 
-    /* Check if we ran out of files */
-    if (eSignal == true)
-    {
-        if (Query != NULL)
-        {
-            delete Query;
-            Query = NULL;
-        }
-
-        /* Free the main IO thread */
-        SchedHandle->ioComplete();
-    }
 
 #if defined (USE_TIMEMORY)
     prep_inst.stop();
 #endif // USE_TIMEMORY
 
-    /* Request pre-emption */
-    SchedHandle->takeControl();
+    if (!preempt)
+        /* Request pre-emption */
+        SchedHandle->takeControl();
 }
 
 #ifdef USE_MPI
@@ -1327,6 +1270,7 @@ static inline status_t DSLIM_Deinit_IO()
     ioQ = NULL;
 
     /* Destroy the ioQ lock semaphore */
+    status = sem_destroy(&qfilelock);
     status = sem_destroy(&ioQlock);
 
     return status;

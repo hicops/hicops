@@ -140,10 +140,7 @@ uint_t UTILS_GetNumProcs()
  * OUTPUT:
  * @factorial : the factorial of the input number n
  */
-ull_t UTILS_Factorial(ull_t n)
-{
-    return (n < 2) ? 1 : UTILS_Factorial(n - 1) * n;
-}
+ull_t UTILS_Factorial(ull_t n) { return (n < 2) ? 1 : UTILS_Factorial(n - 1) * n; }
 
 /*
  * FUNCTION: UTILS_Shuffle
@@ -526,9 +523,6 @@ extern "C"
 asm (".symver memcpy, memcpy@GLIBC_2.2.5");
 #endif /* __GNUC__ */
 
-void *__wrap_memcpy(void *dest, const void *src, size_t n)
-{
-    return memcpy(dest, src, n);
-}
+void *__wrap_memcpy(void *dest, const void *src, size_t n) { return memcpy(dest, src, n); }
 }
 

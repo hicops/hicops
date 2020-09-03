@@ -60,9 +60,8 @@ status_t DSLIM_Construct(Index *index)
 
         /* Check if Spectra Array has been allocated */
         if (SpecArr == NULL)
-        {
             status = ERR_BAD_MEM_ALLOC;
-        }
+
     }
 
 
@@ -82,9 +81,8 @@ status_t DSLIM_Construct(Index *index)
 
                 /* Apply SLM-Transform on the chunk */
                 if (status == SLM_SUCCESS)
-                {
                     status = DSLIM_SLMTransform(threads, index, chno);
-                }
+
             }
         }
     }
@@ -133,9 +131,8 @@ status_t DSLIM_Construct(Index *index)
     if (status == SLM_SUCCESS)
     {
         for (uint_t chunk_number = 0; chunk_number < index->nChunks; chunk_number++)
-        {
             status = DSLIM_Optimize(index, chunk_number);
-        }
+
     }
 
     return status;
@@ -190,9 +187,8 @@ status_t DSLIM_AllocateMemory(Index *index)
                 index->ionIndex[i].iA = new uint_t[(size * speclen)];
 
                 if (index->ionIndex[i].iA == NULL)
-                {
                     status = ERR_INVLD_MEMORY;
-                }
+
             }
             else
             {
@@ -238,16 +234,12 @@ status_t DSLIM_ConstructChunk(uint_t threads, Index *index, uint_t chunk_number)
 #ifdef USE_OMP
 
     for (uint_t i = 0; i < threads; i++)
-    {
         BAPtrs[i] = bA + (int_t)(i * scale * maxmass);
-    }
 
         /* Clear the bAPtrs and SAPtrs */
 #pragma omp parallel for num_threads(threads) schedule (static)
     for (uint_t i = 0; i < threads; i++)
-    {
         std::memset(BAPtrs[i], 0x0, (scale * maxmass * sizeof(uint_t)));
-    }
 #else
 
     std::memset(index->ionIndex[chunk_number].bA, 0x0, (((params.scale * params.max_mass) + 1) * sizeof(uint_t)));
@@ -261,9 +253,7 @@ status_t DSLIM_ConstructChunk(uint_t threads, Index *index, uint_t chunk_number)
 
         /* Check for last chunk */
         if (lastChunk == true && index->nChunks > 1)
-        {
             interval = index->lastchunksize;
-        }
 
 #ifdef USE_OMP
 #pragma omp parallel for num_threads(threads) schedule(dynamic, 1)
@@ -342,9 +332,8 @@ status_t DSLIM_ConstructChunk(uint_t threads, Index *index, uint_t chunk_number)
             index->ionIndex[chunk_number].bA[i] = 0;
 
             for (uint_t j = 0; j < threads; j++)
-            {
                 index->ionIndex[chunk_number].bA[i] += BAPtrs[j][i];
-            }
+
         }
 #endif /* USE_OMP */
 
@@ -387,9 +376,7 @@ status_t DSLIM_SLMTransform(uint_t threads, Index *index, uint_t chunk_number)
 #pragma omp parallel for num_threads(threads) schedule(static)
 #endif /* USE_OMP */
     for (uint_t k = 0; k < iAsize; k++)
-    {
         iAPtr[k] = k;
-    }
 
 #ifdef USE_OMP
     /* Parallel Key Value Sort */
@@ -412,9 +399,8 @@ status_t DSLIM_InitializeScorecard(Index *index, uint_t idxs)
     for (uint_t ii = 0; ii < idxs; ii++)
     {
         if (index[ii].chunksize > sz2)
-        {
             sz2 = index[ii].chunksize;
-        }
+
     }
 
     sAize = std::min(sz2, sAize);
@@ -522,9 +508,7 @@ status_t DSLIM_Analyze(uint_t threads, double_t &avg, double_t &std)
 #endif /* USE_OMP */
 
     if (nchunks <= 1)
-    {
         status = ERR_INVLD_SIZE;
-    }
 
     if (status == SLM_SUCCESS)
     {
@@ -543,9 +527,7 @@ status_t DSLIM_Analyze(uint_t threads, double_t &avg, double_t &std)
             arr[i] = 0x0;
 
             for (uint_t j = 0; j < nchunks; j++)
-            {
                 arr[i] += (dslim.pepChunks[j].bA[i+1] - dslim.pepChunks[j].bA[i]);
-            }
 
             arr[i] /= nchunks;
 
@@ -562,9 +544,8 @@ status_t DSLIM_Analyze(uint_t threads, double_t &avg, double_t &std)
         /* Gather the counts to truecount */
 #ifdef USE_OMP
         for (uint_t kk = 0; kk < threads; kk++)
-        {
             truecount += count[kk];
-        }
+
 #endif /* OPENMP */
 
         /* Compute the Standard Deviations */
@@ -633,9 +614,8 @@ status_t DSLIM_Analyze(uint_t threads, double_t &avg, double_t &std)
         /* Gather the counts to truecount */
 #ifdef USE_OMP
         for (uint_t kk = 0; kk < threads; kk++)
-        {
             sum_std += stds[kk];
-        }
+
 #endif /* OPENMP */
 
         sum_std /= truecount;
@@ -793,20 +773,11 @@ int_t DSLIM_GenerateIndex(Index *index, uint_t key)
     uint_t csize = index->lclpepCnt;
 
     if (policy == _chunk)
-    {
         value = (params.myid * csize) + key;
-    }
-
     else if (policy == _cyclic)
-    {
         value = (key * params.nodes) + params.myid;
-    }
-
     else if (policy == _zigzag)
-    {
-        std::cout << "This policy is not implemented yet\n";
         value = false;
-    }
 
     return value;
 }

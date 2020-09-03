@@ -238,10 +238,7 @@ status_t LBE_GeneratePeps(Index *index)
  * OUTPUT:
  * @status: Status of execution
  */
-status_t LBE_Deinitialize(Index *index)
-{
-    return DSLIM_Deinitialize(index);
-}
+status_t LBE_Deinitialize(Index *index) { return DSLIM_Deinitialize(index); }
 
 /*
  * FUNCTION: LBE_Distribute
@@ -491,7 +488,4 @@ VOID LBE_PrintHeader()
     return;
 }
 
-static inline BOOL CmpPepEntries(pepEntry e1, pepEntry e2)
-{
-    return e1 < e2;
-}
+static inline BOOL CmpPepEntries(pepEntry e1, pepEntry e2) { return e1 < e2; }

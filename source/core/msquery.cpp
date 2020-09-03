@@ -489,10 +489,7 @@ status_t MSQuery::DeinitQueryFile()
     return SLM_SUCCESS;
 }
 
-BOOL MSQuery::isDeInit()
-{
-    return ((qfile == NULL) && (QAcount == 0));
-}
+BOOL MSQuery::isDeInit() { return ((qfile == NULL) && (QAcount == 0)); }
 
 /* Operator Overload - To copy to and from the work queue */
 MSQuery& MSQuery::operator=(const MSQuery &rhs)
@@ -524,12 +521,6 @@ MSQuery& MSQuery::operator=(const int_t &rhs)
     return *this;
 }
 
-uint_t MSQuery::getQfileIndex()
-{
-    return qfileIndex;
-}
+uint_t MSQuery::getQfileIndex() { return qfileIndex; }
 
-uint_t MSQuery::getQAcount()
-{
-    return QAcount;
-}
+uint_t MSQuery::getQAcount() { return QAcount; }

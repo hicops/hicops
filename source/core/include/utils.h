@@ -51,13 +51,9 @@ template <class Num>
 void   UTILS_Sort(Num *data, uint_t size, bool descending = false)
 {
     if (descending == false)
-    {
         std::sort(data, data + size);
-    }
     else
-    {
         std::sort(data, data+size, std::greater<Num>());
-    }
 }
 
 /*
@@ -76,13 +72,9 @@ template <class Num>
 void   UTILS_ParallelSort(Num *data, uint_t size, bool descending = false)
 {
     if (descending == false)
-    {
         __gnu_parallel::sort(data, data + size);
-    }
     else
-    {
         __gnu_parallel::sort(data, data+size, std::greater<Num>());
-    }
 }
 
 /*

@@ -81,9 +81,7 @@ status_t DFile_InitFiles()
 status_t DFile_DeinitFiles()
 {
     for (uint_t i = 0; i < params.threads; i++)
-    {
         tsvs[i].close();
-    }
 
     delete[] tsvs;
 

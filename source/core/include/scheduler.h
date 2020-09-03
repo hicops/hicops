@@ -32,8 +32,6 @@ private:
     int_t nIOThds;
     int_t maxIOThds;
 
-    BOOL eSignal;
-
     std::vector<std::thread> thread_pool;
 
     /* Lock for above queues */
@@ -67,7 +65,6 @@ private:
     /* Private Functions */
     double_t forecastLASP(double_t yt);
     double_t forecastLASP(double_t yt, double_t deltaS);
-    status_t dispatchThread();
     BOOL   makeDecisions(double_t yt, int_t decisions);
 
 public:
@@ -75,13 +72,12 @@ public:
     Scheduler(int_t);
     virtual ~Scheduler();
 
-    VOID   ioComplete();
+    status_t dispatchThread();
     int_t    getNumActivThds();
     BOOL   checkPreempt();
     status_t takeControl();
     status_t runManager(double_t yt, int_t dec);
     VOID   waitForCompletion();
-    BOOL   checkSignal();
 };
 
 #endif /* SCHEDULER_H_ */

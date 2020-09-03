@@ -75,9 +75,7 @@ status_t DSLIM_DistScoreManager()
 #ifdef USE_MPI
     /* Check if parameters have been brought */
     if (isCarried == false && params.nodes > 1)
-    {
         status = ERR_INVLD_PARAM;
-    }
 
     /* No need to do anything if only 1 node */
     if (params.nodes > 1)
@@ -101,9 +99,7 @@ status_t DSLIM_DistScoreManager()
         if (status == SLM_SUCCESS)
         {
             if (params.myid == 0)
-            {
                 std::cout << std::endl << "**** Merging Partial Results ****\n" << std::endl;
-            }
 
 #if defined (USE_TIMEMORY)
             merge_tuple_t merge_instr("combine");
@@ -116,9 +112,8 @@ status_t DSLIM_DistScoreManager()
 #endif // USE_TIMEMORY
 
             if (params.myid == 0)
-            {
                 std::cout << std::endl << "Scores Merged with status:\t" << status << std::endl;
-            }
+
         }
 
         //
@@ -134,15 +129,11 @@ status_t DSLIM_DistScoreManager()
             status = ScoreHandle->ScatterScores();
 
             if (params.myid == 0)
-            {
                 std::cout << "Scatter Scores with status:\t" << status << std::endl;
-            }
         }
 
         if (status == SLM_SUCCESS)
-        {
             status = ScoreHandle->Wait4RX();
-        }
 
 #if defined (USE_TIMEMORY)
         sync_penalty.stop();
@@ -164,9 +155,8 @@ status_t DSLIM_DistScoreManager()
 #endif // USE_TIMEMORY
 
             if (params.myid == 0)
-            {
                 std::cout << "Writing Results with status:\t" << status << std::endl;
-            }
+
         }
 
         //
@@ -228,18 +218,14 @@ VOID DSLIM_Score_Thread_Entry()
 
     /* Fill the rxStats with ones - available */
     for (int_t kk = 0; kk < nodes; kk++)
-    {
         rxStats[kk] = 1;
-    }
 
     /* Avoid race conditions by waiting for
      * ScoreHandle pointer to initialize */
     while (!score_init) { usleep(1); }
 
     if (rxRqsts != NULL && rxStats != NULL)
-    {
         ScoreHandle->RXSizes(rxRqsts, rxStats);
-    }
 
     /* Wait 500ms between each loop */
     for (int_t cumulate = 0; cumulate < nodes; usleep(500000))
@@ -258,9 +244,8 @@ VOID DSLIM_Score_Thread_Entry()
                  * have been received
                  */
                 if (rxStats[ll])
-                {
                     cumulate++;
-                }
+
             }
             else
             {
@@ -271,9 +256,7 @@ VOID DSLIM_Score_Thread_Entry()
 
     /* Fill the rxStats with ones - available */
     for (int_t kk = 0; kk < nodes; kk++)
-    {
         rxStats[kk] = 1;
-    }
 
     ScoreHandle->RXResults(rxRqsts, rxStats);
 
@@ -294,9 +277,8 @@ VOID DSLIM_Score_Thread_Entry()
                  * have been received
                  */
                 if (rxStats[ll])
-                {
                     cumulate++;
-                }
+
             }
             else
             {
