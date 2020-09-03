@@ -1,4 +1,4 @@
-![HiCOPS C/C++ CI](https://github.com/mhaseeb123/hicops/workflows/HiCOPS%CI/badge.svg)
+![HiCOPS C/C++ CI](https://github.com/mhaseeb123/hicops/workflows/HiCOPS%20CI/badge.svg)
 
 # HiCOPS
 *HiCOPS*: A computational framework for accelerated peptide identification from LC-MS/MS data on HPC systems.
