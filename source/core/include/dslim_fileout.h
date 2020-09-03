@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef INCLUDE_DSLIM_FILEOUT_H_
-#define INCLUDE_DSLIM_FILEOUT_H_
+#pragma once
 
 #include <sstream>
 #include "common.h"
@@ -31,5 +30,3 @@ status_t    DFile_PrintScore(Index *index, uint_t specid,
                              float_t pmass, hCell *psm, double_t e_x, uint_t npsms);
 status_t    DFile_InitFiles();
 status_t    DFile_DeinitFiles();
-
-#endif /* DSLIM_FILEOUT */

@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef INCLUDE_CONFIG_H_
-#define INCLUDE_CONFIG_H_
+#pragma once
 
 // include the CMake configured macros
 #include <config.hpp>
@@ -26,6 +25,8 @@
 //
 // Universal Constants: Do not change them
 //
+
+// -------------------------------------------------------------------------------- //
 
 /* Max RX buffer size = 512MB */
 #define  RXBUFFERSIZE              (512 * 1024 * 1024)
@@ -56,6 +57,4 @@
                                    NLOSS + \
                                    IMMONIUM)
 
-/*******************************************************************/
-
-#endif /* INCLUDE_CONFIG_H_ */
+// -------------------------------------------------------------------------------- //

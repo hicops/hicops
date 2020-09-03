@@ -20,6 +20,9 @@
 
 #pragma once
 
+// Use MPI based build
+#cmakedefine USE_MPI
+
 // Enable Timemory based instrumentation
 #cmakedefine USE_TIMEMORY
 
@@ -30,7 +33,7 @@
 // If undefined then gumbel distribution fit method will be used
 #cmakedefine TAILFIT
 
-// Do not print progress marks
+// Print progress marks
 #cmakedefine PROGRESS
 
 // maximum peptide sequence length in the database: max 62 allowed

@@ -29,10 +29,6 @@ if (USE_TIMEMORY)
     target_link_libraries(hicops-core timemory-hicops)
 endif()
 
-if(USE_MPI AND MPI_FOUND)
-    target_compile_options(hicops-core PUBLIC -DUSE_MPI)
-endif()
-
 set_target_properties(hicops-core
     PROPERTIES
         CXX_STANDARD 14

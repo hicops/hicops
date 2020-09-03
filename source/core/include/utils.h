@@ -26,7 +26,6 @@
 #include <functional>
 #include <cstdlib>
 #include "common.h"
-#include "common.h"
 #include "slm_dsts.h"
 #include "keyval.h"
 

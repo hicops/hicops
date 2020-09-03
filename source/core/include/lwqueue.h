@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef LWQUEUE_H_
-#define LWQUEUE_H_
+#pragma once 
 
 #include "common.h"
 #include <semaphore.h>
@@ -279,5 +278,3 @@ public:
 
 
 };
-
-#endif /* LWQUEUE_H_ */

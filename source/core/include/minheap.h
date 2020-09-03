@@ -13,9 +13,9 @@
  *
  */
 
-#ifndef MINHEAP_H
-#define MINHEAP_H
+#pragma once
 
+#include "common.h"
 #include <limits>
 #include <iostream>
 
@@ -276,5 +276,3 @@ T minHeap<T>::getMax()
 
     return maxe;
 }
-
-#endif /* MINHEAP_H */

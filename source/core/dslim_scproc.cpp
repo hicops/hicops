@@ -18,7 +18,6 @@
  */
 
 #include <unistd.h>
-#include "common.h"
 #include "dslim.h"
 #include "dslim_score.h"
 #include "dslim_fileout.h"

@@ -16,7 +16,7 @@ jobs:
         mkdir -p build-rel
         mkdir -p build-deb
         mkdir -p build-relwithdeb
-        mkdir -p build-nompiomp
+        mkdir -p build-nompi
     - name: configure
       run: |
         cd build-rel
@@ -25,8 +25,8 @@ jobs:
         CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-deb -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_STANDARD=14 ..
         cd ../build-relwithdeb
         CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-relwithdeb -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_STANDARD=14 ..
-        cd ../build-nompiomp
-        CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-nompiomp -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=14 -DUSE_MPI=OFF -DUSE_OMP=OFF ..
+        cd ../build-nompi
+        CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-nompi -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=14 -DUSE_MPI=OFF ..
     - name: build
       run: |
         cd build-rel
@@ -35,5 +35,5 @@ jobs:
         make install -j 4
         cd ../build-relwithdeb
         make install -j 4
-        cd ../build-nompiomp
+        cd ../build-nompi
         make install -j 4

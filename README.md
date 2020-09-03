@@ -6,7 +6,7 @@
 # Installation
 
 ## Recommended Compiler
-GCC compiler version 7.2.0 or later supporting C++14. You may use Intel or LLVM compilers but make sure to follow through the installation steps accordingly. We have tested the HiCOPS on Linux OS (Ubuntu v16.04, v18.04 and CentOS-7) with GCC v7.2.0, v8.4.0 and v9.3.0 running on Haswell, Broadwell, Kabylake and Skylake processors.
+GCC compiler version 7.2.0 or later supporting C++14, OpenMP and multithreading. You may use Intel or LLVM compilers but make sure to follow through the requirements & installation steps accordingly. We have tested the HiCOPS on Linux OS (Ubuntu v16.04, v18.04 and CentOS-7) with GCC v7.2.0, v8.4.0 and v9.3.0 running on Haswell, Broadwell, Kabylake and Skylake processors.
 
 ## Install and Load the required packages
 Install and load the following packages preferably using [Spack](https://spack.readthedocs.io). Read more about how to install Spack, and how to install and load packages using Spack [here](https://spack.readthedocs.io/en/latest/getting_started.html).
@@ -38,7 +38,9 @@ dyninst@10.2.0       hwloc@2.2.0      libpng@1.6.37        openssl@1.1.1g   py-j
 ```
 
 ### On a regular computer (skip if using XSEDE Comet)
-Install the `mpich` package using `spack install mpich%gcc@version`
+Install the `mpich` package using `spack install mpich%gcc@version`. You may use `openmpi` distribution for MPI as well. 
+
+**Important**: Please make sure that the multiple threads (or thread multiple) option is enabled when installing either MPI distribution. Do not mess this up. Uninstall and reinstall MPI properly if need be.
 
 ### On XSEDE Comet
 Load the MPI and GNU modules
@@ -97,7 +99,6 @@ $ CC=$(which gcc) CXX=$(which g++) cmake .. [CMAKE_OPTIONS] -G [BUILD_SYSTEM] [H
 Available HiCOPS options:
 
 ```bash
-USE_OMP                 Enable the use of OpenMP multithreading. Set to: ON(default), OFF
 USE_MPI                 Enable MPI support. Set to: ON (default), OFF
 USE_TIMEMORY            Enable timemory interface. Set to: ON, OFF (default) => Requires timemory installation.
 USE_MPIP_LIBRARY        Enables the MPIP data_tracker via Timemory. Set to: ON, OFF (default) => Requires timemory installation. 

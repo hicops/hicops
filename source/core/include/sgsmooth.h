@@ -18,10 +18,10 @@
  *
  */
 
-#ifndef __SGSMOOTH_HPP__
-#define __SGSMOOTH_HPP__
+#pragma once
 
 #include <vector>
+#include "common.h"
 #include "lwvector.h"
 
 // savitzky golay smoothing.
@@ -30,5 +30,3 @@ void sg_smooth(lwvector<double> *v, lwvector<double> *ptr, const int w, const in
 //! numerical derivative based on savitzky golay smoothing.
 std::vector<double> sg_derivative(const std::vector<double> &v, const int w,
                                 const int deg, const double h=1.0);
-
-#endif // __SGSMOOTH_HPP__

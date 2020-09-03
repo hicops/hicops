@@ -18,7 +18,6 @@
  */
 
 #include <vector>
-#include "common.h"
 #include "dslim_fileout.h"
 
 /* Global parameters */

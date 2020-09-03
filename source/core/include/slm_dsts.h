@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef INCLUDE_SLM_DSTS_H_
-#define INCLUDE_SLM_DSTS_H_
+#pragma once
 
 #include "common.h"
 #include "config.h"
@@ -916,5 +915,3 @@ typedef struct _ebuffer
     }
 
 } ebuffer;
-
-#endif /* INCLUDE_SLM_DSTS_H_ */

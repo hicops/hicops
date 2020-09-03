@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef DSLIM_SCORE_H_
-#define DSLIM_SCORE_H_
+#pragma once
 
 #include "common.h"
 #include <thread>
@@ -113,5 +112,4 @@ public:
     status_t   FreeDataTypes();
 };
 
-#endif /* USE_MPI */
-#endif /* DSLIM_SCORE_H_ */
+#endif // USE_MPI

@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef INCLUDE_SLMERR_H_
-#define INCLUDE_SLMERR_H_
+#pragma once
 
 /* Error Types and Codes Here */
 
@@ -44,5 +43,3 @@
 
 
 #define ENDSIGNAL                (SLM_ERROR_BASE - 100)
-
-#endif /* INCLUDE_SLMERR_H_ */

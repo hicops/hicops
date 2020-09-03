@@ -5,10 +5,6 @@ project(hicops LANGUAGES C CXX)
 add_executable(hicops ${_EXCLUDE}
     ${CMAKE_CURRENT_LIST_DIR}/hicops.cpp)
 
-if(USE_MPI AND MPI_FOUND)
-    target_compile_options(hicops PUBLIC -DUSE_MPI)
-endif()
-
 # include core/include
 target_include_directories(hicops PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../core/include)
 

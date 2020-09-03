@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef SCHEDULER_H_
-#define SCHEDULER_H_
+#pragma once
 
 #include "common.h"
 #include <vector>
@@ -79,5 +78,3 @@ public:
     status_t runManager(double_t yt, int_t dec);
     VOID   waitForCompletion();
 };
-
-#endif /* SCHEDULER_H_ */

@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef INCLUDE_COMMON_H_
-#define INCLUDE_COMMON_H_
+#pragma once
 
 #include <string>
 #include <iostream>
@@ -88,5 +87,3 @@ using SPECTRUM = double*; // Theoretical Spectrum
 
 using  thread_t = pthread_t;
 using  lock_t = sem_t;
-
-#endif /* INCLUDE_COMMON_H_ */

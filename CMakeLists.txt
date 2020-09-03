@@ -43,7 +43,6 @@ endif()
 ##########################################################################################
 #       CMake settings
 ##########################################################################################
-option(USE_OMP "Enable OpenMP in hicops" ON)
 option(USE_MPI "Enable MPI in hicops" ON)
 option(USE_TIMEMORY "Enable Timemory instrumentation" OFF)
 option(USE_MPIP_LIBRARY "Enable MPIP instrumentation via Timemory" OFF)
@@ -51,10 +50,9 @@ option(USE_MPIP_LIBRARY "Enable MPIP instrumentation via Timemory" OFF)
 ##########################################################################################
 #       MPI and OpenMP
 ##########################################################################################
-find_package(OpenMP)
-find_package(MPI)
+find_package(OpenMP REQUIRED)
 
-if(OpenMP_FOUND AND USE_OMP)
+if(OpenMP_FOUND)
     list(APPEND _OMP OpenMP::OpenMP_CXX)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -DUSE_OMP")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -DUSE_OMP")
@@ -62,10 +60,14 @@ if(OpenMP_FOUND AND USE_OMP)
     set (TMP ompt)
 endif()
 
+if (USE_MPI)
+    find_package(MPI)
+endif()
+
 if(MPI_FOUND AND USE_MPI)
     list(APPEND _MPI MPI::MPI_CXX)
     include_directories(SYSTEM ${MPI_INCLUDE_PATH})
-    target_compile_definitions(MPI::MPI_CXX INTERFACE USE_MPI)
+    target_compile_definitions(MPI::MPI_CXX INTERFACE)
     set (TMP mpi ${TMP})
 endif()
 

@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef LWBUFF_H_
-#define LWBUFF_H_
+#pragma once
 
 #include "common.h"
 #include "lwqueue.h"
@@ -219,5 +218,3 @@ public:
     }
 
 };
-
-#endif /* LWBUFF_H_ */
