@@ -10,7 +10,7 @@
 
 # ------------------------------------------------------------- #
 # NOTE: Always run this script with sudo
-# USAGE: sudo msconvert /path/to/data*[.raw|.RAW]
+# USAGE: sudo msconvert absolute/path/to/data*[.raw|.RAW]
 # DEPENDENCY: docker installed on the system
 # ------------------------------------------------------------- #
 
