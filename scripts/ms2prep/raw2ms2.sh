@@ -10,7 +10,7 @@
 
 # ------------------------------------------------------------- #
 # NOTE: Always run this script with sudo
-# USAGE: sudo msconvert absolute/path/to/data*[.raw|.RAW]
+# USAGE: sudo raw2ms2 absolute/path/to/data*[.raw|.RAW]
 # DEPENDENCY: docker installed on the system
 # ------------------------------------------------------------- #
 
@@ -23,7 +23,7 @@ if [ -z "$1" ]; then
 fi
 
 # make a list of all the .raw and .RAW files
-ls -rt -d -1 "$PWD"/{*,.*} | grep -E "\.raw|\.RAW" > $WDIR/list
+ls -rt -d -1 "$WDIR"/{*,.*} | grep -E "\.raw|\.RAW" > $WDIR/list
 
 # pull msconvert docker image
 docker pull chambm/pwiz-skyline-i-agree-to-the-vendor-licenses
