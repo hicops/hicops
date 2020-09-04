@@ -1,16 +1,17 @@
 #!@BASH_EXECUTABLE@
+
 # Convert RAW files to MS2 for HiCOPS on Linux
+
 # Copyrights(C) 2019 PCDS Laboratory
-# Muhammad Haseeb, and Fahad Saeed
-# School of Computing and Information Sciences
+# Muhammad Haseeb and Fahad Saeed
+# School of Computing and Information Sciences (SCIS)
 # Florida International University (FIU), Miami, FL
 # Email: {mhaseeb, fsaeed}@fiu.edu
-#
 
-#
+
 # NOTE: Always run this script with sudo
 # USAGE: sudo msconvert /path/to/data*.RAW
-#
+# DEPENDENCY: docker installed on the system
 
 # Set working directory from command line
 WDIR=$1
@@ -20,8 +21,8 @@ if [ -z "$1" ]; then
     WDIR=$PWD
 fi
 
-# make a list of all the files that need processing
-ls -rt -d -1 "$WDIR"/{*,.*} > $WDIR/list
+# make a list of all the .raw and .RAW files
+ls -rt -d -1 "$PWD"/{*,.*} | grep -E "\.raw|\.RAW" > $WDIR/list
 
 # pull msconvert docker image
 docker pull chambm/pwiz-skyline-i-agree-to-the-vendor-licenses
