@@ -8,10 +8,11 @@
 # Florida International University (FIU), Miami, FL
 # Email: {mhaseeb, fsaeed}@fiu.edu
 
-
+# ------------------------------------------------------------- #
 # NOTE: Always run this script with sudo
 # USAGE: sudo msconvert /path/to/data*.RAW
 # DEPENDENCY: docker installed on the system
+# ------------------------------------------------------------- #
 
 # Set working directory from command line
 WDIR=$1
