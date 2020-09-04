@@ -8,6 +8,10 @@ if(NOT PYTHON_EXECUTABLE)
     set(PYTHON_EXECUTABLE "/usr/bin/env python")
 endif()
 
+if(NOT BASH_EXECUTABLE)
+    set(BASH_EXECUTABLE "/bin/bash")
+endif()
+
 configure_file(${CMAKE_CURRENT_LIST_DIR}/hicops_comet.py
     ${CMAKE_BINARY_DIR}/scripts/tools/hicops_comet @ONLY)
 
