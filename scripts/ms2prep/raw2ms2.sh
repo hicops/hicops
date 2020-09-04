@@ -8,12 +8,12 @@
 # Florida International University (FIU), Miami, FL
 # Email: {mhaseeb, fsaeed}@fiu.edu
 
-# ------------------------------------------------------------- #
+# --------------------------------------------------------------------------------- #
 # NOTE: Always run this script with sudo
 # USAGE: sudo raw2ms2 absolute/path/to/data*[.raw|.RAW]
 # DEPENDENCY: docker installed on the system
 # HELP: https://hub.docker.com/r/chambm/pwiz-skyline-i-agree-to-the-vendor-licenses
-# ------------------------------------------------------------- #
+# --------------------------------------------------------------------------------- #
 
 # Set working directory from command line
 WDIR=$1
