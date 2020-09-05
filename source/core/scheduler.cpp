@@ -56,8 +56,10 @@ Scheduler::Scheduler()
     alpha = alpha1 = 0.5;
     gamma = gamma1 = 0.8;
 
-    /* Create an IO thread */
-    dispatchThread();
+    // Create at most IO threads
+    auto ts = std::min(maxIOThds, 2);
+    for (auto t = 0; t < ts; t++)
+        dispatchThread();
 }
 
 Scheduler::Scheduler(int_t maxio)
@@ -89,8 +91,10 @@ Scheduler::Scheduler(int_t maxio)
     alpha = alpha1 = 0.5;
     gamma = gamma1 = 0.8;
 
-    /* The main IO thread */
-    dispatchThread();
+    // Create at most IO threads
+    auto ts = std::min(maxIOThds, 2);
+    for (auto t = 0; t < ts; t++)
+        dispatchThread();
 }
 
 Scheduler::~Scheduler()
