@@ -691,13 +691,13 @@ if __name__ == '__main__':
 
     # Optimizer
     if (optimize == 1):
-        print ("\n\n****** Autotuning parameters *******\n")
+        print ("\n\n****** Optimizing parameters *******\n")
 
         # Call the lsinfo to gather CPU information
         if (os.path.isfile(workspace + '/autogen/info.out') == False):
             genNormalScript(workspace, 'info', 'info', 'compute', '1','1', '00:00:10', 'lscpu | tr -d " \\r" && numactl --hardware | tr -d " \\r"', False, username, evts)
 
-            optimize = call("sbatch " + workspace + "/autogen/info", shell=True)
+            optimize = call('sbatch ' + workspace + '/autogen/info', shell=True)
             print ('\nWaiting for job scheduler\n')
 
         # Wait for the lscpu process to complete 

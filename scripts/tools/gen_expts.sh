@@ -8,44 +8,60 @@
 # Email: {mhaseeb, fsaeed}@fiu.edu
 #
 
-echo "Creating duplicate workspaces"
+# print usage
+function usage() {
+    echo "USAGE: gen_expts <src> <dst1> <dst2> <dM>"
+}
 
-# make a copy
-cp workspace1 workspace2 -r
+# if no input params
+if [ -z "$1" ]; then 
+    usage
+    exit 0
+fi
+
+# if no input params
+if [ "$1" = -h ]; then 
+    usage
+    exit 0
+fi
+
+# if everything is fine
+echo "Duplicating workspaces..."
+
+# make a temporary copy
+echo "Source = workspace${1}"
+
+cp workspace${1} workspacetmp -r
+sync
 
 # remove garbage data
-rm workspace2/output/*
-rm workspace2/timemory* -rf
+rm workspacetmp/output/* -rf
+rm workspacetmp/timemory* -rf
 
-# make more copies
-cp workspace2 workspace3 -r
-cp workspace2 workspace4 -r
-
-echo "Making path modifications"
-
-# make appropriate edits
-for i in $(seq 2 4) 
+# loop in the range of dst workspaces
+for i in $(seq ${2} ${3})
 do
-    sed -i "s/\/workspace1/\/workspace$i/g" workspace$i/autogen/hicops
+    cp workspacetmp workspace${i} -r
+    sync
+    n=$((2**$i))
+    m=$((2**${1}))
+    echo "Setting nodes = $n"
+    sed -i "s/\/workspace${1}/\/workspace${i}/g" workspace${i}/autogen/hicops
+    sed -i "s/nodes=${m}/nodes=${n}/g" workspace${i}/autogen/hicops
+    sed -i "s/\/workspace${1}/\/workspace${i}/g" workspace${i}/autogen/uparams.txt
 
-    sed -i "s/\/workspace1/\/workspace$i/g" workspace$i/autogen/uparams.txt
+    echo "Setting dM = ${4}"
+    sed -i "10s/.*/${4}/g" workspace${i}/autogen/uparams.txt
 done
 
-echo "Making edits for dM"
-
-
-# edits for dM
-sed -i 's/10.0/100.0/g' workspace2/autogen/uparams.txt
-
-sed -i 's/10.0/200.0/g' workspace3/autogen/uparams.txt
-
-sed -i 's/10.0/500.0/g' workspace4/autogen/uparams.txt
+# remove temporary data
+rm -rf workspacetmp
 
 echo "Submitting jobs"
 
-for i in $(seq 1 4)
+for i in $(seq ${2} ${3})
 do
-    cd workspace$i
+    cd workspace${i}
     sbatch autogen/hicops
     cd ..
 done
