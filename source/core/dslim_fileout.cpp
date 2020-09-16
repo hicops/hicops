@@ -171,11 +171,3 @@ static string_t DFile_Datetime()
 
     std::string b(buffer);
     return b + std::to_string(params.myid);
-}
-
-#else
-
-status_t DFile_InitFiles() { return SLM_SUCCESS; }
-status_t DFile_DeinitFiles() { return SLM_SUCCESS; }
-status_t DFile_PrintPartials(uint_t , Results *) { return SLM_SUCCESS; }
-status_t DFile_PrintScore(Index *, uint_t, float_t , hCell *, double_t , uint_t ) { return SLM_SUCCESS; }
