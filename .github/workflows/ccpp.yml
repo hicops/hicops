@@ -16,7 +16,6 @@ jobs:
         mkdir -p build-rel
         mkdir -p build-deb
         mkdir -p build-relwithdeb
-        mkdir -p build-nompi
     - name: configure
       run: |
         cd build-rel
