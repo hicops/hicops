@@ -22,23 +22,19 @@
 #include "slm_dsts.h"
 
 extern gParams params;
-extern VOID *DSLIM_IO_Threads_Entry(VOID *argv);
+extern VOID DSLIM_IO_Threads_Entry();
 
 using namespace std;
 
 Scheduler::Scheduler()
 {
     nIOThds = 0;
-    eSignal = false;
 
-    /* Set to 25% of the total threads available */
-    maxIOThds = std::max((int_t)1, (int_t)(params.threads/4));
-
-    dump = new lwqueue <thread_t *> (50, false);
+    /* Set the total threads for preprocessing */
+    maxIOThds = std::max((int_t)1, (int_t)params.maxprepthds);
 
     /* Lock for above queues */
     sem_init(&manage, 0, 1);
-    sem_init(&dumpQ, 0, 1);
 
     /* Thresholds */
     maxpenalty = 2;
@@ -60,23 +56,22 @@ Scheduler::Scheduler()
     alpha = alpha1 = 0.5;
     gamma = gamma1 = 0.8;
 
-    /* Create an IO thread */
-    dispatchThread();
+    // Create at most IO threads
+    auto ts = std::min(maxIOThds, 2);
+    for (auto t = 0; t < ts; t++)
+        dispatchThread();
 }
 
-Scheduler::Scheduler(int_t maxio, int_t dumpsize)
+Scheduler::Scheduler(int_t maxio)
 {
     /* Queues to track threads */
     maxIOThds = maxio;
     nIOThds = 0;
-    eSignal = false;
     stopXtra = 0;
     minrate = 0.30;
-    dump = new lwqueue <thread_t *> (dumpsize, false);
 
     /* Lock for above queues */
     sem_init(&manage, 0, 1);
-    sem_init(&dumpQ, 0, 1);
 
     /* Thresholds */
     maxpenalty = 2;
@@ -96,8 +91,10 @@ Scheduler::Scheduler(int_t maxio, int_t dumpsize)
     alpha = alpha1 = 0.5;
     gamma = gamma1 = 0.8;
 
-    /* The main IO thread */
-    dispatchThread();
+    // Create at most IO threads
+    auto ts = std::min(maxIOThds, 2);
+    for (auto t = 0; t < ts; t++)
+        dispatchThread();
 }
 
 Scheduler::~Scheduler()
@@ -122,34 +119,12 @@ Scheduler::~Scheduler()
     alpha = alpha1 = 0;
     gamma = gamma1 = 0;
 
-    /* Wait for any active threads */
-    while (getNumActivThds() != 0)
-    {
-        sleep(0.1);
-    }
+    for (auto &itr : thread_pool)
+        itr.join();
 
-    flushDumpQueue();
+    thread_pool.clear();
 
     sem_destroy(&manage);
-    sem_destroy(&dumpQ);
-
-    delete dump;
-}
-
-VOID Scheduler::flushDumpQueue()
-{
-    sem_wait(&dumpQ);
-
-    while (!dump->isEmpty())
-    {
-        thread_t * pt = dump->front();
-        dump->pop();
-        waitForThread(pt);
-        delete pt;
-		//pt = NULL;
-    }
-
-    sem_post(&dumpQ);
 }
 
 double_t Scheduler::forecastLASP(double_t yt)
@@ -187,12 +162,6 @@ double_t Scheduler::forecastLASP(double_t yt)
     Ftplus1 = St + bt;
 
     return Ftplus1;
-}
-
-status_t Scheduler::waitForThread(thread_t *thd)
-{
-    VOID *ptr = NULL;
-    return pthread_join(*thd, &ptr);
 }
 
 double_t Scheduler::forecastLASP(double_t yt, double_t deltaS)
@@ -242,16 +211,6 @@ BOOL Scheduler::makeDecisions(double_t yt, int_t dec)
 {
     BOOL decision = false;
 
-    /* Calculate the current rate of change.
-     * Add 0.01s in denominator to attenuate the small yt changes */
-    double_t rate = (yt - ytminus1)/(ytminus1 + 0.01);
-
-    /* Add the next predicted rate of change */
-    rate += (Ftplus1 - yt) / (yt + 0.01);
-
-    /* Divide by 2 for mean */
-    rate /= 2;
-
     waitSincelast += yt;
 
     /* Special case for time step 1 */
@@ -265,36 +224,25 @@ BOOL Scheduler::makeDecisions(double_t yt, int_t dec)
     }
     else
     {
-        if (dec == -1 && nIOThds < 1)
+        if (dec == -1)
         {
-            decision = true;
-            stopXtra = false;
-        }
-        else if (dec == -1 && nIOThds >= 1)
-        {
-            /* Increasing very fast or too much accumulated */
-            /* FIXME: maxpenalty needs to be normalized according to the resources in use */
-            if (rate >= minrate && (waitSincelast + Ftplus1) >= maxpenalty)
+            if (nIOThds < 1)
+            {
+                decision = true;
+                stopXtra = false;
+            }
+            else if (yt >= maxpenalty/20 && waitSincelast >= 2 * maxpenalty)
             {
                 decision = true;
                 stopXtra = false;
             }
         }
-        else if (dec > -1)
+        else if (dec == 1)
         {
-            /* Very low rate - Stop a thread */
-            if (rate < minrate)
-            {
-                decision = false;
+            if (nIOThds > 1)
+                stopXtra = true;
 
-                /* Stop a thread if more than 1 threads running,
-                 * else the one thread will stop naturally
-                 */
-                if (nIOThds > 1)
-                {
-                    stopXtra = true;
-                }
-            }
+            decision = false;
         }
         else
         {
@@ -312,47 +260,19 @@ BOOL Scheduler::makeDecisions(double_t yt, int_t dec)
 
 status_t Scheduler::dispatchThread()
 {
-    status_t status = SLM_SUCCESS;
-
     if (nIOThds < maxIOThds)
     {
         nIOThds += 1;
 
-        /* Schedule the thread */
-        thread_t *ptr = new thread_t;
-
-        if (ptr != NULL)
-        {
-            /* Pass the reference to thread block as argument */
-            status = pthread_create(ptr, NULL, &DSLIM_IO_Threads_Entry, (VOID *) ptr);
-            ptr = NULL;
-        }
-        else
-        {
-            status = ERR_BAD_MEM_ALLOC;
-            delete ptr;
-        }
+        /* Pass the reference to thread block as argument */
+        thread_pool.push_back(std::move(std::thread(DSLIM_IO_Threads_Entry)));
     }
 
-    return status;
+    return SLM_SUCCESS;
 }
 
-status_t Scheduler::takeControl(VOID *argv)
+status_t Scheduler::takeControl()
 {
-    status_t status = SLM_SUCCESS;
-
-    thread_t *ptr = (thread_t *) argv;
-
-    sem_wait(&dumpQ);
-
-    if (dump->isFull())
-    {
-        flushDumpQueue();
-    }
-
-    /* Mark the thread block for deletion */
-    dump->push(ptr);
-
     sem_wait(&manage);
 
     nIOThds -= 1;
@@ -361,36 +281,7 @@ status_t Scheduler::takeControl(VOID *argv)
 
     sem_post(&manage);
 
-    sem_post(&dumpQ);
-
-    return status;
-}
-
-VOID Scheduler::ioComplete()
-{
-    /* Raise the eSignal if this is
-     * the last thread running */
-    sem_wait(&manage);
-
-    if (nIOThds == 1)
-    {
-        eSignal = true;
-    }
-
-    sem_post(&manage);
-
-    return;
-}
-
-BOOL Scheduler::checkSignal()
-{
-    sem_wait(&manage);
-
-    BOOL val = eSignal;
-
-    sem_post(&manage);
-
-    return val;
+    return SLM_SUCCESS;
 }
 
 status_t Scheduler::runManager(double_t yt, int_t dec)
@@ -409,7 +300,7 @@ status_t Scheduler::runManager(double_t yt, int_t dec)
     sem_wait(&manage);
 
     /* Make decisions */
-    if (!eSignal && this->makeDecisions(yt, dec))
+    if (this->makeDecisions(yt, dec))
     {
         status = dispatchThread();
         waitSincelast = 0;
@@ -435,31 +326,15 @@ BOOL Scheduler::checkPreempt()
 {
     sem_wait(&manage);
 
-    BOOL ret = stopXtra;
+    BOOL ret = (nIOThds > 1 && stopXtra);
 
-    stopXtra = false;
+    if (ret)
+    {
+        stopXtra = false;
+        nIOThds -= 1;
+    }
 
     sem_post(&manage);
 
     return ret;
-}
-
-VOID Scheduler::waitForCompletion()
-{
-    while (true)
-    {
-        sem_wait(&manage);
-
-        /* Number of IO threads running */
-        if (nIOThds == 0)
-        {
-            sem_post(&manage);
-            break;
-        }
-
-        sem_post(&manage);
-
-        /* Sleep for 0.1s */
-        sleep(0.1);
-    }
 }

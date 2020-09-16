@@ -43,9 +43,7 @@ DSLIM_Comm::DSLIM_Comm(int_t tbatches)
     nBatches = tbatches / nodes;
 
     if ((remaining > 0) && (remaining > params.myid))
-    {
         nBatches += 1;
-    }
 
     if (nBatches > 0)
     {

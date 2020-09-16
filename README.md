@@ -1,4 +1,4 @@
-![HiCOPS C/C++ CI](https://github.com/mhaseeb123/hicops/workflows/HiCOPS%20C/C++%20CI/badge.svg)
+![HiCOPS C/C++ CI](https://github.com/mhaseeb123/hicops/workflows/HiCOPS%20CI/badge.svg)
 
 # HiCOPS
 *HiCOPS*: A computational framework for accelerated peptide identification from LC-MS/MS data on HPC systems.
@@ -6,7 +6,7 @@
 # Installation
 
 ## Recommended Compiler
-GCC compiler version 7.2.0 or later supporting C++14. You may use Intel or LLVM compilers but make sure to follow through the installation steps accordingly. We have tested the HiCOPS on Linux OS (Ubuntu v16.04, v18.04 and CentOS-7) with GCC v7.2.0, v8.4.0 and v9.3.0 running on Haswell, Broadwell, Kabylake and Skylake processors.
+GCC compiler version 7.2.0 or later supporting C++14, OpenMP and multithreading. You may use Intel or LLVM compilers but make sure to follow through the requirements & installation steps accordingly. We have tested the HiCOPS on Linux OS (Ubuntu v16.04, v18.04 and CentOS-7) with GCC v7.2.0, v8.4.0 and v9.3.0 running on Haswell, Broadwell, Kabylake and Skylake processors.
 
 ## Install and Load the required packages
 Install and load the following packages preferably using [Spack](https://spack.readthedocs.io). Read more about how to install Spack, and how to install and load packages using Spack [here](https://spack.readthedocs.io/en/latest/getting_started.html).
@@ -38,7 +38,9 @@ dyninst@10.2.0       hwloc@2.2.0      libpng@1.6.37        openssl@1.1.1g   py-j
 ```
 
 ### On a regular computer (skip if using XSEDE Comet)
-Install the `mpich` package using `spack install mpich%gcc@version`
+Install the `mpich` package using `spack install mpich%gcc@version`. You may use `openmpi` distribution for MPI as well. 
+
+**Important**: Please make sure that the multiple threads (or thread multiple) option is enabled when installing either MPI distribution. Do not mess this up. Uninstall and reinstall MPI properly if need be.
 
 ### On XSEDE Comet
 Load the MPI and GNU modules
@@ -97,7 +99,6 @@ $ CC=$(which gcc) CXX=$(which g++) cmake .. [CMAKE_OPTIONS] -G [BUILD_SYSTEM] [H
 Available HiCOPS options:
 
 ```bash
-USE_OMP                 Enable the use of OpenMP multithreading. Set to: ON(default), OFF
 USE_MPI                 Enable MPI support. Set to: ON (default), OFF
 USE_TIMEMORY            Enable timemory interface. Set to: ON, OFF (default) => Requires timemory installation.
 USE_MPIP_LIBRARY        Enables the MPIP data_tracker via Timemory. Set to: ON, OFF (default) => Requires timemory installation. 
@@ -156,13 +157,26 @@ $ export LD_LIBRARY_PATH=$HICOPS_INSTALL/lib:$LD_LIBRARY_PATH
 ```
 
 ## Setup Instrumentation (with Timemory) - Optional
-If the `USE_TIMEMORY=ON` option was set in [Configure](###Configure) step, you can add more instrumentation components to the default HiCOPS provided instrumentation by setting the environment variable `HICOPS_INST_COMPONENTS="<component_1>, <component_2>,..."` where each `<component_i>` is a Timemory's component. See more about how to list available timemory components [here](https://timemory.readthedocs.io/en/develop/tools/timemory-avail/README.html?highlight=user_bundle#available-components). 
+If the `USE_TIMEMORY=ON` option was set in [Configure](###Configure) step, the HiCOPS instrumentation can be configured and updated via the following environment variables:
 
-Similarly, the hardware counters used for the instrumentation of HiCOPS' distributed database search algorithm can be *modified* (not appended) by setting the environment variable `HICOPS_PAPI_EVENTS="<counter_1>,<counter2>,...`. The default value of `HICOPS_PAPI_EVENTS=PAPI_TOT_INS, PAPI_TOT_CYC, PAPI_L3_TCM, PAPI_L2_TCA, PAPI_L3_TCA, PAPI_MEM_WCY, PAPI_RES_STL, PAPI_STL_CCY, PAPI_BR_CN, PAPI_BR_PRC, PAPI_FUL_ICY`. 
+```bash
+HICOPS_MPIP_INSTR           Enable MPI data communication instrumentation. Set to: ON (default), OFF
+HICOPS_INST_COMPONENTS      Append to the list of Timemory components (metrics) used for instrumenting the HiCOPS parallel search algorithm. 
+                            Set to: HICOPS_INST_COMPONENTS="<c1>,<c2>,.." where each <ci> is a Timemory component.
+HICOPS_PAPI_EVENTS          Modify (not append) the vector of PAPI hardware counters used for instrumenting the HiCOPS parallel search algorithm.
+                            Set to: HICOPS_PAPI_EVENTS="<hw1>, <hw2>,.." where each <hwi> is a PAPI hardware counter.
+TIMEMORY_ENABLED            Enable/disable Timemory instrumentation interface. Set to : ON (default), OFF
+```
 
-To see which hardware counters are available on your system and their description, run the `papi_avail` tool or refer to the documentation [here](https://icl.utk.edu/papi/).
+See more about how to list available timemory components [here](https://timemory.readthedocs.io/en/develop/tools/timemory-avail/README.html?highlight=user_bundle#available-components). 
 
-**NOTE:** If a PAPI counter is not available on the system but is included in the `HICOPS_PAPI_EVENTS` anyway, the profiler will not instrument any of the counters in the list even if they are available.
+To see which hardware counters are available on your system and their description, use the `papi_avail` or `timemory-avail` tool. Refer to the PAPI documentation [here](https://icl.utk.edu/papi/) for more information. By default, the following hardware counters are inserted into the `HICOPS_PAPI_EVENTS`.
+
+```bash
+HICOPS_PAPI_EVENTS="PAPI_TOT_INS, PAPI_TOT_CYC, PAPI_L3_TCM, PAPI_L2_TCA, PAPI_L3_TCA, PAPI_MEM_WCY, PAPI_RES_STL, PAPI_STL_CCY, PAPI_BR_CN, PAPI_BR_PRC, PAPI_FUL_ICY"
+```
+
+**NOTE:** If a PAPI counter is not available on the system but is added to the `HICOPS_PAPI_EVENTS` anyway, the profiler will not instrument any of the counters in the list regardless of their availability.
 
 ## On a regular computer (skip if using XSEDE Comet)
 1. Generate HiCOPS sample runtime parameters file using the `hicops_config` located at `$HICOPS_INSTALL/bin`.
@@ -191,10 +205,10 @@ $ mpirun -np 4 [OPTIONS] $HICOPS_INSTALL/bin/hicops $HICOPS_INSTALL/bin/uparams.
 **NOTE:** Repeat Steps # 2 and 3 if you modify parameters in the `sampleparams.txt`.
 
 ## On XSEDE Comet
-1. Generate HiCOPS sample runtime parameters file using the `hicops_comet` wrapper script located at `$HICOPS_INSTALL/bin/wrappers`.
+1. Generate HiCOPS sample runtime parameters file using the `hicops_comet` tool located at `$HICOPS_INSTALL/bin/tools`.
 
 ```bash
-$ $HICOPS_INSTALL/bin/wrappers/hicops_comet -g
+$ $HICOPS_INSTALL/bin/tools/hicops_comet -g
 Generated: ./sampleparams.txt
 
 SUCCESS
@@ -202,29 +216,29 @@ SUCCESS
 
 2. Edit the generated sampleparams.txt file and add/modify HiCOPS' runtime parameters.
 
-3. Run HiCOPS using the same wrapper script i.e. `hicops_comet`, however, this time providing the updated sampleparams.txt as parameter to the wrapper.
+3. Run HiCOPS using the same tool i.e. `hicops_comet`, however, this time providing the updated sampleparams.txt as parameter to the tool.
 
 ```bash
-$ $HICOPS_INSTALL/bin/wrappers/hicops_comet sampleparams.txt
+$ $HICOPS_INSTALL/bin/tools/hicops_comet sampleparams.txt
 ```
 
 **NOTE:** Repeat Steps # 2 and 3 if you modify parameters in the `sampleparams.txt`.
 
 # Post-processing HiCOPS output
-HiCOPS generates PSM data in partial TSV files that can be merged using the `psm2excel` tool located at: `$HICOPS_INSTALL/wrappers`. The tool generates a combined Excel file called `Concat.xlsx` containing the final PSM data (no-FDR).
+HiCOPS generates PSM data in partial TSV files that can be merged using the `psm2excel` tool located at: `$HICOPS_INSTALL/tool`. The tool generates a combined Excel file called `Concat.xlsx` containing the final PSM data (no-FDR).
 
 ## On a regular computer (skip if using XSEDE Comet)
 Run the `psm2excel` tool and pass the HiCOPS workspace output directory (that was set in the sampleparams.txt file) as parameter.
 
 ```bash
-$ $HICOPS_INSTALL/wrappers/psm2excel [/path/to/hicops/workspace/output]
+$ $HICOPS_INSTALL/tools/psm2excel [/path/to/hicops/workspace/output]
 ```
 
 ## On XSEDE Comet
 Run the `psm2excel` tool using SLURM and pass the HiCOPS workspace output directory (that was set in the sampleparams.txt file) as parameters.
 
 ```bash
-$ srun --partition=shared  --nodes=1 --ntasks-per-node=1 -t 00:10:00 --export=ALL $HICOPS_INSTALL/wrappers/psm2excel [/path/to/hicops/workspace/output]
+$ srun --partition=compute  --nodes=1 --ntasks-per-node=1 -t 00:15:00 --export=ALL $HICOPS_INSTALL/tools/psm2excel -i [/path/to/hicops/workspace/output]
 ```
 
 # About this repository
@@ -245,8 +259,8 @@ Please include any logs, screenshots and/or helpful observations. Also, do not f
 
 All contributions are welcome including new features, documentation updates and bug fixes.
 
-1. Fork this repository to your local GitHub, make a new branch from the latest `master` branch.
+1. Fork this repository to your local GitHub, checkout a new branch from the `develop` branch.
 2. Make your changes/updates.
-3. Make sure that you pull the latest changes from `hicops:master` into your branch before committing your changes.
+3. Make sure that you pull the latest changes from `hicops:develop` into your branch and merge before committing your changes.
 4. Commit your changes and push your branch to `origin`. i.e. `your_hicops_fork`.
-5. Open a pull request (PR) from `your_hicops_fork:new_branch` to `hicops:master`.
+5. Open a pull request (PR) from `your_hicops_fork:new_branch` to `hicops:develop`.

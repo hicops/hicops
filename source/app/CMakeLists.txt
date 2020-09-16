@@ -5,17 +5,19 @@ project(hicops LANGUAGES C CXX)
 add_executable(hicops ${_EXCLUDE}
     ${CMAKE_CURRENT_LIST_DIR}/hicops.cpp)
 
-if(USE_MPI AND MPI_FOUND)
-    target_compile_options(hicops PUBLIC -DUSE_MPI)
-endif()
-
 # include core/include
 target_include_directories(hicops PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../core/include)
 
 # to include the generated config.hpp
 include_directories(${CMAKE_BINARY_DIR})
 
-target_link_libraries(hicops hicops-core ${MPIP_LIBRARY} ${MPI_LIBRARIES})
+# link appropriate libraries
+target_link_libraries(hicops hicops-core ${MPI_LIBRARIES})
+
+# link to MPIP_LIBRARY if needed
+if (USE_MPIP_LIBRARY)
+    target_link_libraries(hicops ${MPIP_LIBRARY})
+endif()
 
 set_target_properties(hicops
     PROPERTIES

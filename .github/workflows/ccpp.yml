@@ -1,4 +1,4 @@
-name: HiCOPS C/C++ CI
+name: HiCOPS CI
 
 on:
   push:
@@ -12,16 +12,24 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: setup
-      run: mkdir -p build 
+      run: |
+        mkdir -p build-rel
+        mkdir -p build-deb
+        mkdir -p build-relwithdeb
+        mkdir -p build-nompi
     - name: configure
       run: |
-        cd build
-        cmake -DCMAKE_INSTALL_PREFIX=../install .. -DUSE_OMP=ON
+        cd build-rel
+        CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-rel -DUSE_MPI=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=14 ..
+        cd ../build-deb
+        CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-deb -DUSE_MPI=OFF -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_STANDARD=14 ..
+        cd ../build-relwithdeb
+        CC=$(which gcc) CXX=$(which g++) cmake -DCMAKE_INSTALL_PREFIX=../install-relwithdeb -DUSE_MPI=OFF -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_STANDARD=14 ..
     - name: build
       run: |
-        cd build
-        make
-    - name: install
-      run: |
-        cd build
-        make install
+        cd build-rel
+        make install -j 4
+        cd ../build-deb
+        make install -j 4
+        cd ../build-relwithdeb
+        make install -j 4

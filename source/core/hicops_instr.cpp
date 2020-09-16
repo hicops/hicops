@@ -26,13 +26,13 @@
 //
 // Instantiate template classes
 //
-template class tim::auto_tuple<wall_clock, cpu_util, thread_cpu_util>;
+template class tim::auto_tuple<wall_clock, cpu_util>;
 template class tim::auto_tuple<written_bytes, read_bytes>;
 template class tim::auto_tuple<wall_clock>;
-template class tim::auto_tuple<wall_clock, thread_cpu_util, read_bytes>;
+template class tim::auto_tuple<wall_clock, read_bytes>;
 template class tim::component_tuple<papi_events_t>;
 template class tim::component_tuple<wall_clock, cpu_util, bundle_t>;
-template class tim::auto_tuple<wall_clock, thread_cpu_util, written_bytes>;
+template class tim::auto_tuple<wall_clock, written_bytes>;
 template class tim::auto_tuple<wall_clock, cpu_util, read_bytes>;
 
 #endif // USE_TIMEMORY

@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef EXPERT_H_
-#define EXPERT_H_
+#pragma once
 
 #include <vector>
 #include <valarray>
@@ -152,5 +151,3 @@ public:
     status_t ModelSurvivalFunction(double_t &, int_t);
 #endif
 };
-
-#endif /* EXPERT_H_ */

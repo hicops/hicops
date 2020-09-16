@@ -1130,10 +1130,7 @@ status_t expeRT::AddlogWeibull(int_t N, double_t mu, double_t beta, int_t Min, i
     return status;
 }
 
-inline double_t expeRT::MeanSqError(const darray &y)
-{
-    return (y * y).sum();
-}
+inline double_t expeRT::MeanSqError(const darray &y) { return (y * y).sum(); }
 
 double_t expeRT::logWeibullFit(lwvector<double_t> *yy, int_t s, int_t e, int_t niter, double_t lr, double_t cutoff)
 {

@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef MSQUERY_H_
-#define MSQUERY_H_
+#pragma once
 
 #include <string>
 #include "common.h"
@@ -78,5 +77,3 @@ public:
     MSQuery &operator=(const int_t &rhs);
 
 };
-
-#endif /* MSQUERY_H_ */

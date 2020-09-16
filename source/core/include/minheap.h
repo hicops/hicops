@@ -13,9 +13,9 @@
  *
  */
 
-#ifndef MINHEAP_H
-#define MINHEAP_H
+#pragma once
 
+#include "common.h"
 #include <limits>
 #include <iostream>
 
@@ -124,16 +124,10 @@ int minHeap<T>::insert(T &element)
 }
 
 template<class T>
-int minHeap<T>::get_capacity()
-{
-    return capacity;
-}
+int minHeap<T>::get_capacity() { return capacity; }
 
 template<class T>
-int minHeap<T>::get_size()
-{
-    return size;
-}
+int minHeap<T>::get_size() { return size; }
 
 template<class T>
 void minHeap<T>::swap(T& t1, T& t2)
@@ -282,5 +276,3 @@ T minHeap<T>::getMax()
 
     return maxe;
 }
-
-#endif /* MINHEAP_H */

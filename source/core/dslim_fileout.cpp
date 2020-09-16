@@ -18,7 +18,6 @@
  */
 
 #include <vector>
-#include "common.h"
 #include "dslim_fileout.h"
 
 /* Global parameters */
@@ -80,9 +79,7 @@ status_t DFile_InitFiles()
 status_t DFile_DeinitFiles()
 {
     for (uint_t i = 0; i < params.threads; i++)
-    {
         tsvs[i].close();
-    }
 
     delete[] tsvs;
 
@@ -93,7 +90,7 @@ status_t DFile_DeinitFiles()
     return SLM_SUCCESS;
 }
 
-status_t  DFile_PrintPartials(uint_t specid, Results *resPtr)
+status_t DFile_PrintPartials(uint_t specid, Results *resPtr)
 {
     status_t status = SLM_SUCCESS;
     uint_t thno = omp_get_thread_num();
@@ -175,3 +172,10 @@ static string_t DFile_Datetime()
     std::string b(buffer);
     return b + std::to_string(params.myid);
 }
+
+#else
+
+status_t DFile_InitFiles() { return SLM_SUCCESS; }
+status_t DFile_DeinitFiles() { return SLM_SUCCESS; }
+status_t DFile_PrintPartials(uint_t , Results *) { return SLM_SUCCESS; }
+status_t DFile_PrintScore(Index *, uint_t, float_t , hCell *, double_t , uint_t ) { return SLM_SUCCESS; }

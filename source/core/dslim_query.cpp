@@ -17,7 +17,7 @@
  *
  */
 
-#include <pthread.h>
+#include <thread>
 #include <semaphore.h>
 #include <unistd.h>
 #include "dslim_fileout.h"
@@ -37,7 +37,6 @@ extern vector<string_t> queryfiles;
 /* Global variables */
 float_t *hyperscores         = NULL;
 uchar_t *sCArr               = NULL;
-BOOL   ExitSignal          = false;
 
 #ifdef USE_MPI
 DSLIM_Comm *CommHandle    = NULL;
@@ -46,10 +45,6 @@ hCell      *CandidatePSMS  = NULL;
 
 Scheduler  *SchedHandle    = NULL;
 expeRT     *ePtrs          = NULL;
-
-ebuffer    *iBuff          = NULL;
-int_t         ciBuff         = -1;
-lock_t       writer;
 
 /* Lock for query file vector and thread manager */
 lock_t qfilelock;
@@ -64,7 +59,11 @@ lwbuff<Queries> *qPtrs     = NULL;
 Queries *workPtr           = NULL;
 
 #ifdef USE_MPI
-VOID *DSLIM_FOut_Thread_Entry(VOID *argv);
+lock_t qfoutlock;
+lwqueue<ebuffer*> *qfout   = NULL;
+std::vector<std::thread> fouts;
+VOID DSLIM_FOut_Thread_Entry();
+std::atomic<bool> exitSignal(false);
 #endif
 
 /* A queue containing I/O thread state when preempted */
@@ -91,7 +90,6 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv);
 static BOOL DSLIM_BinarySearch(Index *, float_t, int_t&, int_t&);
 static int_t  DSLIM_BinFindMin(pepEntry *entries, float_t pmass1, int_t min, int_t max);
 static int_t  DSLIM_BinFindMax(pepEntry *entries, float_t pmass2, int_t min, int_t max);
-static inline status_t DSLIM_WaitFor_IO(int_t &);
 static inline status_t DSLIM_Deinit_IO();
 
 /* FUNCTION: DSLIM_WaitFor_IO
@@ -105,6 +103,8 @@ static inline status_t DSLIM_Deinit_IO();
  * @status: status of execution
  *
  */
+static inline status_t DSLIM_WaitFor_IO(int_t &);
+
 static inline status_t DSLIM_WaitFor_IO(int_t &batchsize)
 {
     status_t status;
@@ -117,18 +117,14 @@ static inline status_t DSLIM_WaitFor_IO(int_t &batchsize)
     /* Check for either a buffer or stopSignal */
     while (qPtrs->isEmptyReadyQ())
     {
-        /* Check if endSignal has been received */
-        if (SchedHandle->checkSignal())
-        {
-            status = qPtrs->unlockr_();
-            status = ENDSIGNAL;
-            break;
-        }
-
         /* If both conditions fail,
          * the I/O threads still working */
         status = qPtrs->unlockr_();
 
+        // safety from a rare race condition
+        if (!SchedHandle->getNumActivThds())
+            SchedHandle->dispatchThread();
+        
         sleep(0.1);
 
         status = qPtrs->lockr_();
@@ -140,9 +136,7 @@ static inline status_t DSLIM_WaitFor_IO(int_t &batchsize)
         workPtr = qPtrs->getWorkPtr();
 
         if (workPtr == NULL)
-        {
             status = ERR_INVLD_PTR;
-        }
 
         status = qPtrs->unlockr_();
 
@@ -173,7 +167,7 @@ static status_t DSLIM_InitializeMS2Data()
     qfPtrs = new lwqueue<MSQuery*>(nfiles, false);
 
 #ifdef USE_OMP
-#pragma omp parallel for schedule (dynamic, 1)
+#pragma omp parallel for schedule (static)
 #endif/* _OPENMP */
     for (auto fid = 0; fid < nfiles; fid++)
     {
@@ -219,17 +213,22 @@ status_t DSLIM_SearchManager(Index *index)
     int_t batchsize = 0;
 
     double qtime = 0;
+    double ptime = 0;
 
     int_t maxlen = params.max_len;
     int_t minlen = params.min_len;
 
-#ifdef USE_MPI
-    thread_t *wthread = new thread_t;
-#endif /* USE_MPI */
-
     //
     // Initialization
     //
+#if defined (USE_TIMEMORY)
+    wall_tuple_t init("MS2_init");
+#endif // USE_TIMEMORY
+
+    if (params.myid == 0)
+        std::cout << std::endl << "*** Initializing MS2 ***" << std::endl;
+
+    MARK_START(ms2init);
 
     /* The mutex for queryfile vector */
     if (status == SLM_SUCCESS)
@@ -242,15 +241,11 @@ status_t DSLIM_SearchManager(Index *index)
     /* Initialize the lw double buffer queues with
      * capacity, min and max thresholds */
     if (status == SLM_SUCCESS)
-    {
         qPtrs = new lwbuff<Queries>(20, 5, 15); // cap, th1, th2
-    }
 
     /* Initialize the ePtrs */
     if (status == SLM_SUCCESS)
-    {
         ePtrs = new expeRT[params.threads];
-    }
 
     /* Create queries buffers and push them to the lwbuff */
     if (status == SLM_SUCCESS)
@@ -277,30 +272,24 @@ status_t DSLIM_SearchManager(Index *index)
 
         /* Check for correct allocation */
         if (ioQ == NULL)
-        {
             status = ERR_BAD_MEM_ALLOC;
-        }
 
         /* Initialize the ioQlock */
         status = sem_init(&ioQlock, 0, 1);
     }
 
     if (status == SLM_SUCCESS && params.nodes == 1)
-    {
         status = DFile_InitFiles();
-    }
+
 #ifdef USE_MPI
     else if (status == SLM_SUCCESS && params.nodes > 1)
     {
-        iBuff = new ebuffer[NIBUFFS];
+        status = sem_init(&qfoutlock, 0, 1);
+        qfout = new lwqueue<ebuffer*> (nBatches);
 
-        status = sem_init(&writer, 0, 0);
-
-        if (wthread != NULL && status == SLM_SUCCESS)
-        {
-            /* Pass the reference to thread block as argument */
-            status = pthread_create(wthread, NULL, &DSLIM_FOut_Thread_Entry, (VOID *)NULL);
-        }
+        // create two threads for fout
+        for (int i = 0; i < 2; i++)
+            fouts.push_back(std::move(std::thread(DSLIM_FOut_Thread_Entry)));
     }
 #endif /* USE_MPI */
 
@@ -316,9 +305,8 @@ status_t DSLIM_SearchManager(Index *index)
             CommHandle = new DSLIM_Comm(nBatches);
 
             if (CommHandle == NULL)
-            {
                 status = ERR_BAD_MEM_ALLOC;
-            }
+
         }
 
         if (status == SLM_SUCCESS)
@@ -326,9 +314,8 @@ status_t DSLIM_SearchManager(Index *index)
             CandidatePSMS = new hCell[dssize];
 
             if (CandidatePSMS == NULL)
-            {
                 status = ERR_BAD_MEM_ALLOC;
-            }
+
         }
     }
 
@@ -341,48 +328,62 @@ status_t DSLIM_SearchManager(Index *index)
 
         /* Check for correct allocation */
         if (SchedHandle == NULL)
-        {
             status = ERR_BAD_MEM_ALLOC;
-        }
         else
-        {
             scheduler_init = true;
-        }
     }
+
+    MARK_END(ms2init);
+
+    if (params.myid == 0)
+    {
+        std::cout << "DONE: MS2 Init: \tstatus: " << status << std::endl;
+        PRINT_ELAPSED(ELAPSED_SECONDS(ms2init));
+    }
+
+#if defined (USE_TIMEMORY)
+    init.stop();
+#endif // USE_TIMEMORY
 
     //
     // Parallel Search
     //
+#if defined (USE_TIMEMORY)
+        static search_tuple_t search_inst("SearchAlg");
+        search_inst.start();
+#   if defined (_UNIX)
+        static hw_counters_t search_cntr ("SearchAlg");
+        search_cntr.start();
+#   endif // _UNIX
+#endif // USE_TIMEMORY
 
     /* The main query loop starts here */
-    while (status == SLM_SUCCESS)
+    for (int_t bid = 0; bid < nBatches; bid++)
     {
-#if (USE_TIMEMORY)
-        static wall_tuple_t sched_penalty("DAG_penalty", false);
+        // is it the last iteration
+        bool nLast = bid != (nBatches - 1);
+
+#if defined(USE_TIMEMORY)
+        static wall_tuple_t sched_penalty("DAG_Penalty", false);
         sched_penalty.start();
 #endif
         /* Start computing penalty */
         MARK_START(penal);
 
         status = DSLIM_WaitFor_IO(batchsize);
-        
-#if (USE_TIMEMORY)
+
+#if defined(USE_TIMEMORY)
         sched_penalty.stop();
 #endif
         /* Compute the penalty */
         MARK_END(penal);
 
-        /* Check if endsignal */
-        if (status == ENDSIGNAL)
-        {
-            break;
-        }
-
         auto penalty = ELAPSED_SECONDS(penal);
+        ptime += penalty;
 
 #ifndef DIAGNOSE
         if (params.myid == 0)
-            std::cout << "PENALTY: " << penalty << 's'<< std::endl;
+            std::cout << "PENALTY:   \t" << penalty << "s" << std::endl;
 #endif /* DIAGNOSE */
 
         /* Check the status of buffer queues */
@@ -390,8 +391,9 @@ status_t DSLIM_SearchManager(Index *index)
         int_t dec = qPtrs->readyQStatus();
         qPtrs->unlockr_();
 
-        /* Run the Scheduler to manage thread between compute and I/O */
-        SchedHandle->runManager(penalty, dec);
+        if (nLast)
+            /* Run the Scheduler to manage thread between compute and I/O */
+            SchedHandle->runManager(penalty, dec);
 
 #ifndef DIAGNOSE
         if (params.myid == 0)
@@ -409,14 +411,6 @@ status_t DSLIM_SearchManager(Index *index)
             status = DSLIM_QuerySpectrum(workPtr, index, (maxlen - minlen + 1));
         }
 
-#ifdef USE_MPI
-        /* Transfer my partial results to others */
-        if (status == SLM_SUCCESS && params.nodes > 1)
-        {
-            status = sem_post(&writer);
-        }
-#endif /* USE_MPI */
-
         status = qPtrs->lockw_();
 
         /* Request next I/O chunk */
@@ -431,79 +425,65 @@ status_t DSLIM_SearchManager(Index *index)
 
 #ifndef DIAGNOSE
         if (params.myid == 0)
-        {
             std::cout << "\nSearch Time:\t" << ELAPSED_SECONDS(sch_time) << "s" << std::endl;
-            std::cout << "\nCumulative Search Time: " << qtime << "s" << std::endl << std::endl;
-        }
+
 #endif /* DIAGNOSE */
     }
 
+#if defined (USE_TIMEMORY)
+        search_inst.stop();
+#   if defined (_UNIX)
+        search_cntr.stop();
+#   endif // _UNIX
+#endif // USE_TIMEMORY
+
     //
-    // Deinitialize
+    // Overheads
     //
 
-    /* Deinitialize the IO module */
-    status = DSLIM_Deinit_IO();
-
-    /* Delete the scheduler object */
-    if (SchedHandle != NULL)
+    // print cumulative search time and penalty
+    if (params.myid == 0)
     {
-        /* Deallocate the scheduler module */
-        delete SchedHandle;
-
-        SchedHandle = NULL;
+        std::cout << "\nCumulative Penalty:     " << ptime << "s" << std::endl;
+        std::cout << "\nCumulative Search Time: " << qtime << "s" << std::endl << std::endl;
     }
 
 #ifdef USE_MPI
     /* Deinitialize the Communication module */
     if (params.nodes > 1)
     {
-        ciBuff ++;
-        ebuffer *liBuff = iBuff + (ciBuff % NIBUFFS);
-
-        /* Wait for FOut thread to take out iBuff */
-        for (; liBuff->isDone == false; usleep(1000));
-
-        status = sem_post(&writer);
-
-        VOID *ptr = NULL;
+        // signal fout threads to exit
+        exitSignal = true;
 
 #if defined (USE_TIMEMORY)
-        static wall_tuple_t comm_penalty("DAG_penalty");
+        wall_tuple_t comm_penalty("comm_ovhd");
         comm_penalty.start();
-#else
-        MARK_START(dag);
 #endif // USE_TIMEMORY
 
-        pthread_join(*wthread, &ptr);
+        MARK_START(comm_ovd);
+
+        for (auto& itr : fouts)
+            itr.join();
+
+        fouts.clear();
+
+        MARK_END(comm_ovd);
 
 #if defined (USE_TIMEMORY)
         comm_penalty.stop();
-#else
-        MARK_END(dag);
-
-        if (params.myid == 0)
-            std::cout << "DAG Sync Penalty: " << ELAPSED_SECONDS(dag) << 's'<< std::endl;
-
 #endif // USE_TIMEMORY
 
-        delete wthread;
-
-        sem_destroy(&writer);
-
-        if (iBuff != NULL)
-        {
-            delete[] iBuff;
-            iBuff = NULL;
-        }
-
-#ifdef DIAGNOSE
-        std::cout << "ExitSignal: " << params.myid << std::endl;
-#endif /* DIAGNOSE */
+        if (params.myid == 0)
+            std::cout << "Total Comm Overhead: " << ELAPSED_SECONDS(comm_ovd) << 's'<< std::endl;
 
         //
         // Synchronization
         //
+
+        MARK_START(sync);
+
+        if (params.myid == 0)
+            std::cout << std::endl << "Waiting to Sync" << std::endl;
 #if defined (USE_TIMEMORY)
         wall_tuple_t sync_penalty("sync_penalty");
         sync_penalty.start();
@@ -513,15 +493,14 @@ status_t DSLIM_SearchManager(Index *index)
 
         sync_penalty.stop();
 #else
-        MARK_BEGIN(sync);
 
         status = MPI_Barrier(MPI_COMM_WORLD);
+#endif // USE_TIMEMORY
 
         MARK_END(sync);
 
         if (params.myid == 0)
             std::cout << "Superstep Sync Penalty: " << ELAPSED_SECONDS(sync) << "s" << std::endl<< std::endl;
-#endif // USE_TIMEMORY
 
         //
         // Carry forward dsts for next superstep
@@ -539,6 +518,21 @@ status_t DSLIM_SearchManager(Index *index)
     }
 #endif /* USE_MPI */
 
+    //
+    // Deinitialize
+    //
+
+    /* Delete the scheduler object */
+    if (SchedHandle != NULL)
+    {
+        /* Deallocate the scheduler module */
+        delete SchedHandle;
+        SchedHandle = NULL;
+    }
+
+    /* Deinitialize the IO module */
+    status = DSLIM_Deinit_IO();
+
     if (status == SLM_SUCCESS && params.nodes == 1)
     {
         status = DFile_DeinitFiles();
@@ -549,9 +543,7 @@ status_t DSLIM_SearchManager(Index *index)
 
     /* Delete ptrs */
     if (ptrs)
-    {
         delete[] ptrs;
-    }
 
     /* Return the status of execution */
     return status;
@@ -574,45 +566,21 @@ status_t DSLIM_SearchManager(Index *index)
 status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
 {
     status_t status = SLM_SUCCESS;
+    int_t threads = (int_t) params.threads - (int_t) SchedHandle->getNumActivThds();
     uint_t maxz = params.maxz;
     uint_t dF = params.dF;
-    int_t threads = (int_t) params.threads - (int_t) SchedHandle->getNumActivThds();
     uint_t scale = params.scale;
     double_t maxmass = params.max_mass;
     ebuffer *liBuff = NULL;
     partRes *txArray = NULL;
 
-#if defined (USE_TIMEMORY)
-    static search_tuple_t search_inst("theSrch");
-    search_inst.start();
-
-    // PAPI is only available on Windows
-#   if defined (_UNIX)
-    static hw_counters_t search_cntr ("theSrch");
-    search_cntr.start();
-#   endif // _UNIX
-#endif // USE_TIMEMORY
-
     if (params.nodes > 1)
     {
-#if defined (USE_TIMEMORY)
-        static wall_tuple_t comm_penalty("DAG_penalty");
-        comm_penalty.start();
-#endif // USE_TIMEMORY
-
-        ciBuff ++;
-        liBuff = iBuff + (ciBuff % NIBUFFS);
-
-        /* Wait for FOut thread to take out iBuff */
-        for (; liBuff->isDone == false; usleep(10000));
+        liBuff = new ebuffer;
 
         txArray = liBuff->packs;
         liBuff->isDone = false;
         liBuff->batchNum = ss->batchNum;
-
-#if defined (USE_TIMEMORY)
-        comm_penalty.stop();
-#endif // USE_TIMEMORY
     }
     else
     {
@@ -625,9 +593,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
 
     /* Sanity checks */
     if (Score == NULL || (txArray == NULL && params.nodes > 1))
-    {
         status = ERR_INVLD_MEMORY;
-    }
 
     if (status == SLM_SUCCESS)
     {
@@ -688,9 +654,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
 
                     /* Spectrum violates limits */
                     if (val == false || (maxlimit < minlimit))
-                    {
                         continue;
-                    }
 
                     /* Query all fragments in each spectrum */
                     for (uint_t k = 0; k < qspeclen; k++)
@@ -711,9 +675,7 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
 
                                 /* If no ions in the bin */
                                 if (end - start < 1)
-                                {
                                     continue;
-                                }
 
                                 auto ptr = std::lower_bound(iAPtr + start, iAPtr + end, minlimit * speclen);
                                 int_t stt = start + std::distance(iAPtr + start, ptr);
@@ -899,22 +861,21 @@ status_t DSLIM_QuerySpectrum(Queries *ss, Index *index, uint_t idxchunk)
         }
 
         if (params.nodes > 1)
-        {
             liBuff->currptr = ss->numSpecs * psize * sizeof(ushort_t);
-        }
 
         /* Update the number of queried spectra */
         spectrumID += ss->numSpecs;
     }
 
-#if defined (USE_TIMEMORY)
-    search_inst.stop();
-
-    // PAPI is only available on Windows
-#   if defined (_UNIX)
-    search_cntr.stop();
-#   endif // _UNIX
-#endif // USE_TIMEMORY
+    // Add a thread
+#ifdef USE_MPI
+    if (params.nodes > 1)
+    {
+        sem_wait(&qfoutlock);
+        qfout->push(liBuff);
+        sem_post(&qfoutlock);
+    }
+#endif // USE_MPI
 
     return status;
 }
@@ -988,9 +949,7 @@ static BOOL DSLIM_BinarySearch(Index *index, float_t precmass, int_t &minlimit, 
     }
 
     if (entries[maxlimit].Mass <= pmass2 && entries[minlimit].Mass >= pmass1)
-    {
         rv = true;
-    }
 
     return rv;
 }
@@ -1005,9 +964,7 @@ static int_t DSLIM_BinFindMin(pepEntry *entries, float_t pmass1, int_t min, int_
         int_t current = min;
 
         while (entries[current].Mass < pmass1)
-        {
             current++;
-        }
 
         return current;
     }
@@ -1026,9 +983,7 @@ static int_t DSLIM_BinFindMin(pepEntry *entries, float_t pmass1, int_t min, int_
     if (pmass1 == entries[half].Mass)
     {
         while (pmass1 == entries[half].Mass)
-        {
             half--;
-        }
 
         half++;
     }
@@ -1047,9 +1002,7 @@ static int_t DSLIM_BinFindMax(pepEntry *entries, float_t pmass2, int_t min, int_
         int_t current = max;
 
         while (entries[current].Mass > pmass2)
-        {
             current--;
-        }
 
         return current;
     }
@@ -1070,9 +1023,7 @@ static int_t DSLIM_BinFindMax(pepEntry *entries, float_t pmass2, int_t min, int_
         half++;
 
         while (pmass2 == entries[half].Mass)
-        {
             half++;
-        }
 
         half--;
     }
@@ -1092,12 +1043,12 @@ static int_t DSLIM_BinFindMax(pepEntry *entries, float_t pmass2, int_t min, int_
  * OUTPUT:
  * @NULL: Nothing
  */
-VOID *DSLIM_IO_Threads_Entry(VOID *argv)
+VOID DSLIM_IO_Threads_Entry()
 {
     status_t status = SLM_SUCCESS;
     Queries *ioPtr = NULL;
-
-    BOOL eSignal = false;
+    bool eSignal = false;
+    bool preempt = false;
 
     // TODO: verify thread local performance
 #if defined (USE_TIMEMORY)
@@ -1120,7 +1071,7 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
         if (Query == NULL || Query->isDeInit())
         {
             /* Try getting the Query object from queue if present */
-            status = sem_wait(&ioQlock);
+            sem_wait(&ioQlock);
 
             if (!ioQ->isEmpty())
             {
@@ -1128,194 +1079,156 @@ VOID *DSLIM_IO_Threads_Entry(VOID *argv)
                 status = ioQ->pop();
             }
 
-            status = sem_post(&ioQlock);
-        }
+            sem_post(&ioQlock);
 
-        /* If the queue is empty */
-        if (Query == NULL || Query->isDeInit())
-        {
-            /* Otherwise, initialize the object from a file */
-
-            /* lock the query file */
-            sem_wait(&qfilelock);
-
-            /* Check if anymore queryfiles */
-            if (!qfPtrs->isEmpty())
+            /* If the queue is empty */
+            if (Query == NULL || Query->isDeInit())
             {
-                Query = qfPtrs->front();
-                qfPtrs->pop();
-                rem_spec = Query->getQAcount(); // Init to 1 for first loop to run
-            }
-            else
-            {
-                /* Raise the exit signal */
-                eSignal = true;
-            }
+                /* Otherwise, initialize the object from a file */
+                /* lock the query file */
+                sem_wait(&qfilelock);
+                /* Check if anymore queryfiles */
+                if (!qfPtrs->isEmpty())
+                {
+                    Query = qfPtrs->front();
+                    qfPtrs->pop();
+                    // Init to 1 for first loop to run
+                    rem_spec = Query->getQAcount(); 
+                }
+                else
+                {
+                    // Raise the exit signal
+                    eSignal = true;
+                }
 
-            /* Unlock the query file */
-            sem_post(&qfilelock);
+                /* Unlock the query file */
+                sem_post(&qfilelock);
+            }
         }
 
         /* If no more files, then break the inf loop */
         if (eSignal == true)
-        {
             break;
-        }
 
         /*********************************************
          * At this point, we have the data ready     *
          *********************************************/
 
-        /* All set */
-        if (status == SLM_SUCCESS)
+        /* Wait for a I/O request */
+        status = qPtrs->lockw_();
+        sem_wait(&ioQlock);
+
+        /* Empty wait queue or Scheduler preemption signal raised  */
+        preempt = SchedHandle->checkPreempt();
+        
+        if (qPtrs->isEmptyWaitQ() || preempt)
         {
-            /* Wait for a I/O request */
-            status = qPtrs->lockw_();
-
-            /* Empty wait queue or Scheduler preemption signal raised  */
-            if (SchedHandle->checkPreempt() || qPtrs->isEmptyWaitQ())
-            {
-                status = qPtrs->unlockw_();
-
-                if (status == SLM_SUCCESS)
-                {
-                    status = sem_wait(&ioQlock);
-                }
-
-                if (status == SLM_SUCCESS)
-                {
-                    status = ioQ->push(Query);
-                }
-
-                if (status == SLM_SUCCESS)
-                {
-                    status = sem_post(&ioQlock);
-                }
-
-                /* Break from loop */
-                break;
-            }
-
-            /* Otherwise, get the I/O ptr from the wait queue */
-            ioPtr = qPtrs->getIOPtr();
-
             status = qPtrs->unlockw_();
 
-            /* Reset the ioPtr */
-            ioPtr->reset();
+            status = ioQ->push(Query);
 
-            /* Extract a chunk and return the chunksize */
-            status = Query->ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
+            sem_post(&ioQlock);
 
-            ioPtr->batchNum = Query->curr_chunk;
-            ioPtr->fileNum  = Query->getQfileIndex();
-            Query->curr_chunk++;
+            /* Break from loop */
+            break;
+        }
 
-            /* Lock the ready queue */
-            qPtrs->lockr_();
+        sem_post(&ioQlock);
+
+        /* Otherwise, get the I/O ptr from the wait queue */
+        ioPtr = qPtrs->getIOPtr();
+
+        status = qPtrs->unlockw_();
+
+        /* Reset the ioPtr */
+        ioPtr->reset();
+
+        /* Extract a chunk and return the chunksize */
+        status = Query->ExtractQueryChunk(QCHUNK, ioPtr, rem_spec);
+        ioPtr->batchNum = Query->curr_chunk;
+        ioPtr->fileNum  = Query->getQfileIndex();
+        Query->curr_chunk++;
+
+        /* Lock the ready queue */
+        qPtrs->lockr_();
 
 #ifdef USE_MPI
-            if (params.nodes > 1)
-            {
-                /* Add an entry of the added buffer to the CommHandle */
-                status = CommHandle->AddBatch(ioPtr->batchNum, ioPtr->numSpecs, Query->getQfileIndex());
-            }
+        if (params.nodes > 1)
+        {
+            /* Add an entry of the added buffer to the CommHandle */
+            status = CommHandle->AddBatch(ioPtr->batchNum,ioPtr->numSpecs, Query->getQfileIndex());
+        }
 #endif /* USE_MPI */
 
-            /*************************************
-             * Add available data to ready queue *
-             *************************************/
-            qPtrs->IODone(ioPtr);
+        /*************************************
+         * Add available data to ready queue *
+         *************************************/
+        qPtrs->IODone(ioPtr);
 
-            /* Unlock the ready queue */
-            qPtrs->unlockr_();
+        /* Unlock the ready queue */
+        qPtrs->unlockr_();
 
-            /* If no more remaining spectra, then deinit */
-            if (rem_spec < 1)
+        /* If no more remaining spectra, then deinit */
+        if (rem_spec < 1)
+        {
+            status = Query->DeinitQueryFile();
+
+            if (Query != NULL)
             {
-                status = Query->DeinitQueryFile();
-
-                if (Query != NULL)
-                {
-                    delete Query;
-                    Query = NULL;
-                }
+                delete Query;
+                Query = NULL;
             }
         }
-        /*else
-        {
-            std::cout << "ALERT: IOTHD @" << params.myid << std::endl;
-        }*/
+
     }
 
-    /* Check if we ran out of files */
-    if (eSignal == true)
-    {
-        if (Query != NULL)
-        {
-            delete Query;
-            Query = NULL;
-        }
-
-        /* Free the main IO thread */
-        SchedHandle->ioComplete();
-    }
 
 #if defined (USE_TIMEMORY)
     prep_inst.stop();
 #endif // USE_TIMEMORY
 
-    /* Request pre-emption */
-    SchedHandle->takeControl(argv);
-
-    return NULL;
+    if (!preempt)
+        /* Request pre-emption */
+        SchedHandle->takeControl();
 }
 
 #ifdef USE_MPI
-VOID *DSLIM_FOut_Thread_Entry(VOID *argv)
+VOID DSLIM_FOut_Thread_Entry()
 {
-    //status_t status = SLM_SUCCESS;
     int_t batchSize = 0;
-    int_t clbuff = -1;
+    ebuffer *lbuff = nullptr;
 
-#if defined (USE_TIMEMORY)
-    thread_local comm_tuple_t comm_inst("result_comm");
-#endif // USE_TIMEMORY
-    for (;;)
+    for (;;usleep(1))
     {
-        sem_wait(&writer);
+        sem_wait(&qfoutlock);
 
-        clbuff += 1;
-        ebuffer *lbuff = iBuff + (clbuff % NIBUFFS);
-
-        if (lbuff->isDone == true)
+        if (qfout->isEmpty())
         {
-            //std::cout << "FOut_Thread_Exiting @: " << params.myid <<endl;
-            break;
+            sem_post(&qfoutlock);
+            
+            if (exitSignal)
+                return;
+
+            continue;
         }
 
+        lbuff = qfout->front();
+        qfout->pop();
+
+        sem_post(&qfoutlock);
+
         ofstream *fh = new ofstream;
-        string_t fn = params.datapath + "/" +
+        string_t fn = params.workspace + "/" +
                     std::to_string(lbuff->batchNum) +
                     "_" + std::to_string(params.myid) + ".dat";
-
         batchSize = lbuff->currptr / (psize * sizeof(ushort_t));
-
         fh->open(fn, ios::out | ios::binary);
-
         fh->write((char_t *)lbuff->packs, batchSize * sizeof(partRes));
         fh->write(lbuff->ibuff, lbuff->currptr * sizeof (char_t));
-
         fh->close();
 
-        lbuff->isDone = true;
+        delete lbuff;
     }
-
-#if defined (USE_TIMEMORY)
-    comm_inst.stop();
-#endif
-
-    return argv;
 }
 #endif /* USE_MPI */
 
@@ -1357,6 +1270,7 @@ static inline status_t DSLIM_Deinit_IO()
     ioQ = NULL;
 
     /* Destroy the ioQ lock semaphore */
+    status = sem_destroy(&qfilelock);
     status = sem_destroy(&ioQlock);
 
     return status;

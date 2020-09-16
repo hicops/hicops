@@ -25,8 +25,7 @@
  *
 */
 
-#ifndef KEYVAL_H_
-#define KEYVAL_H_
+#pragma once
 
 #include <omp.h>
 #include "common.h"
@@ -198,10 +197,4 @@ VOID KeyVal_Serial_Internal(K *key, V *val, int_t low, int_t high)
  * OUTPUT: none
  */
 template<class K, class V>
-VOID KeyVal_Serial(K *key, V *val, uint_t lenArray)
-{
-    KeyVal_Serial_Internal<K, V>(key, val, 0, lenArray-1);
-}
-
-
-#endif /* KEYVAL_H_ */
+VOID KeyVal_Serial(K *key, V *val, uint_t lenArray) { KeyVal_Serial_Internal<K, V>(key, val, 0, lenArray-1); }

@@ -17,13 +17,12 @@
  *
  */
 
+#pragma once
+
 #include "common.h"
 #include "slm_dsts.h"
 #include "expeRT.h"
 #include "dslim.h"
-
-#ifndef DSLIM_COMM_H_
-#define DSLIM_COMM_H_
 
 #ifdef USE_MPI
 
@@ -47,5 +46,3 @@ public:
 };
 
 #endif /* USE_MPI */
-
-#endif /* DSLIM_COMM_H_ */

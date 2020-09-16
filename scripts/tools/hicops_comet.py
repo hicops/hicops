@@ -37,6 +37,10 @@ from subprocess import call
 from shutil import copyfile
 from functools import reduce
 
+#
+# ------------------------------ Helper Functions -------------------------------------------
+#
+
 # Computes factors of a number in descending order
 def factors(n):    
     return list(set(reduce(list.__add__, ([i, n//i] for i in range(1, int(n**0.5) + 1) if n % i == 0))))
@@ -51,7 +55,7 @@ def checkRunningJobs(username):
         return True
 
 # Generates a normal unicore job script
-def genNormalScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, comd, mail, user):
+def genNormalScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, comd, mail, user, evts):
     script = open(wkspc + '/autogen/' + jobname, 'w+')
     script.write('#!/bin/bash\n')
     script.write('\n')
@@ -64,7 +68,7 @@ def genNormalScript(wkspc, jobname, outname, partition, nds, ntask_per_node, min
     script.write('#SBATCH -t ' + minust + '\n')
 
     if (mail):
-        script.write('#SBATCH --mail-type=ALL' + '\n')
+        script.write('#SBATCH --mail-type=' + evts + '\n')
         script.write('#SBATCH --mail-type=' + user + '\n')
 
     script.write('\n')
@@ -73,7 +77,7 @@ def genNormalScript(wkspc, jobname, outname, partition, nds, ntask_per_node, min
     return
 
 # Generates a multithreaded OpenMP job script
-def genOpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, args, mail, user):
+def genOpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, args, mail, user, evts):
     script = open(wkspc + '/autogen/' + jobname, 'w+')
     script.write('#!/bin/bash\n')
     script.write('\n')
@@ -85,7 +89,7 @@ def genOpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, min
     script.write('#SBATCH --export=ALL\n')
     script.write('#SBATCH -t ' + minust + '\n')
     if (mail):
-        script.write('#SBATCH --mail-type=ALL' + '\n')
+        script.write('#SBATCH --mail-type=' + evts + '\n')
         script.write('#SBATCH --mail-type=' + user + '\n')
 
     script.write('\n')
@@ -96,7 +100,7 @@ def genOpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, min
     return
 
 # Generates a Hybrid MPI/OpenMP job script
-def genMPI_OpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, npernode, blevel, bpolicy, args, mail, user):
+def genMPI_OpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node, minust, ompthrds, command, npernode, blevel, bpolicy, args, mail, user, evts):
     script = open(wkspc + '/autogen/' + jobname, 'w+')
     script.write('#!/bin/bash\n')
     script.write('\n')
@@ -108,7 +112,7 @@ def genMPI_OpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node,
     script.write('#SBATCH --export=ALL\n')
     script.write('#SBATCH -t ' + minust + '\n')
     if (mail):
-        script.write('#SBATCH --mail-type=ALL' + '\n')
+        script.write('#SBATCH --mail-type=' + evts + '\n')
         script.write('#SBATCH --mail-type=' + user + '\n')
     script.write('\n')
     script.write ('export OMP_NUM_THREADS      ' + ompthrds + '\n')
@@ -116,6 +120,10 @@ def genMPI_OpenMPScript(wkspc, jobname, outname, partition, nds, ntask_per_node,
     script.write('ibrun --npernode ' + npernode + ' -bl ' + blevel + ' -bp ' + bpolicy + ' ' + command + ' ' + args)
 
     return
+
+#
+# ------------------------------ Main Function -------------------------------------------
+#
 
 # The main function
 if __name__ == '__main__':
@@ -137,6 +145,9 @@ if __name__ == '__main__':
 
     # Generate the sampleparams.txt file
     if (paramfile == '-g'):
+        # get user name to make workspace path
+        username = os.environ['USER']
+
         sample = open("./sampleparams.txt","w+")
 
         sample.write('# \n')
@@ -152,17 +163,23 @@ if __name__ == '__main__':
         sample.write('# For more information: https://portal.xsede.org/sdsc-comet\n')
         sample.write('# \n')
         sample.write('# Generated on: ' + (datetime.datetime.now()).strftime("%Y-%m-%d %H:%M %Z") + '\n')
-        sample.write('# \n')
+        sample.write('# \n\n\n')
         sample.write('# IMPORTANT: DO NOT put any spaces between variable=value\n')
         sample.write('# \n\n')
 
         sample.write('# XSEDE (Comet) Username\n')
-        sample.write('username=username\n\n')
-        
-        sample.write('# Path (absolute or relative) to Workspace directory\n')
-        sample.write('workspace=/path/to/workspace\n\n')
+        sample.write('username='+ username + '\n\n')
 
-        sample.write('# Job Time: hh:mm:ss\n')
+        sample.write('# Get emails for job? 1/0? \n')
+        sample.write('mail=0\n')
+
+        sample.write('# Events to get emails? Options: BEGIN, END, FAIL or ALL\n')
+        sample.write('mailtype=FAIL\n')
+
+        sample.write('# ABSOLUTE Path to Workspace directory\n')
+        sample.write('workspace=/oasis/scratch/comet/'+ username + '/temp_project/hicops_workspace\n\n')
+
+        sample.write('# Job Time: hh:mm:ss (max: 48:00:00)\n')
         sample.write('jobtime=00:45:00\n\n')
 
         sample.write('# Nodes available\n')
@@ -171,7 +188,7 @@ if __name__ == '__main__':
         sample.write('# Cores per machine\n')
         sample.write('cores=24\n\n')
 
-        sample.write('# OpenMP cores per MPI process\n')
+        sample.write('# Cores per MPI process\n')
         sample.write('cores_per_mpi=12\n\n')
 
         sample.write('# MPI binding policy: scatter, compact \n')
@@ -180,9 +197,8 @@ if __name__ == '__main__':
         sample.write('# MPI binding level: core, socket, numanode\n')
         sample.write('bl=socket\n\n')
 
-        sample.write('# Recommended: Auto tune MPI/OpenMP settings based on \n')
-        sample.write('# index size, sockets and NUMA nodes in the system? 1/0? \n')
-        sample.write('autotune=1\n\n')
+        sample.write('# Optimize settings? 1/0? Highly Recommended \n')
+        sample.write('optimize=1\n\n')
 
         sample.write('# ABSOLUTE path to processed proteome database parts\n')
         sample.write('# NOTE: Run the dbprocessor.py to process a FASTA \n')
@@ -264,7 +280,7 @@ if __name__ == '__main__':
         sys.exit(0)
 
 #
-# ----------------------------------------------------------------------------------------------------
+# ------------------------------ Initialization -------------------------------------------
 #
 
     # Initialize the parameters
@@ -278,9 +294,10 @@ if __name__ == '__main__':
     cores_per_socket = int(cores/sockets)
     cores_per_numa = int (cores/numa)
     threads = cores_per_socket
+    prep_threads = int(threads/4)
     bp = 'scatter'
     bl = 'socket'
-    autotune = 1
+    optimize = 1
     dbparts = ''
     ms2data = ''
     nmods = 0
@@ -300,7 +317,7 @@ if __name__ == '__main__':
     min_hits = 4
     base_int = 100000
     cutoff_ratio = 0.01
-    workspace = './workspace'
+    workspace = '/oasis/scratch/comet/$USER/temp_project/hicops_workspace'
     policy = 'cyclic'
     spadmem = 2048
     indexsize = 0
@@ -312,18 +329,23 @@ if __name__ == '__main__':
     jobtime='00:45:00'
     hicopspath = os.path.dirname(os.path.realpath(__file__)) + '/..'
     newparams = False
-    username = 'mhaseeb'
+    username = os.environ['USER']
     uparams = ''
     pparams = ''
+    mail = False
+    evts = 'FAIL'
+    possible_evts = ['BEGIN', 'END', 'ALL', 'FAIL']
 
 #
-# ----------------------------------------------------------------------------------------------------
+# ------------------------------ Parse Parameters -------------------------------------------
 #
 
     print ('\n***************************')
     print   ('*  HiCOPS for XSEDE Comet *')
     print   ('*   PCDS Lab, SCIS, FIU   *')
     print   ('***************************\n')
+
+    print ('Provided Parameters:')
 
     # Parse the params file
     with open(paramfile) as params:
@@ -344,6 +366,27 @@ if __name__ == '__main__':
                     val = val[:-1]
 
                 username = val
+
+            # Set up emails
+            elif (param == 'mail'):
+                mail = int(val)
+                if (mail <= 0):
+                    mail = 0
+                if (mail > 0):
+                    mail = 1
+                print ('Emails =', mail)
+
+            # Email events
+            if (param == 'dbparts'):
+                if (val[-1] == '\n'):
+                    val = val[:-1]
+                if (val[-1] == '\r'):
+                    val = val[:-1]
+
+                evts = val
+                if not evts in possible_evts:
+                    evts = 'FAIL'
+                print ('Email events =', evts)
 
             # Set database file 
             if (param == 'dbparts'):
@@ -403,14 +446,14 @@ if __name__ == '__main__':
                     cores = 24
                 print ('Using cores/node  =', cores)
 
-            # Autotune number of cores and MPI processes to run?
-            elif (param == 'autotune'):
-                autotune = int(val)
-                if (autotune <= 0):
-                    autotune = 0
-                if (autotune > 0):
-                    autotune = 1
-                print ('Autotune =', autotune)
+            # Optimize number of cores and MPI processes to run?
+            elif (param == 'optimize'):
+                optimize = int(val)
+                if (optimize <= 0):
+                    optimize = 0
+                if (optimize > 0):
+                    optimize = 1
+                print ('Optimizations =', optimize)
 
             # Set the MPI binding level
             elif (param == 'bl'):
@@ -421,7 +464,7 @@ if __name__ == '__main__':
 
                 if (val == 'socket' or val == 'numanode' or val == 'core'):
                     bl = val
-                print ('Using MPI bl =', bl)
+                print ('MPI binding level =', bl)
 
                 # Set the MPI binding policy
             elif (param == 'bp'):
@@ -432,7 +475,7 @@ if __name__ == '__main__':
 
                 if (val == 'scatter' or val == 'compact'):
                     bp = val
-                print ('Using MPI bp =', bp)
+                print ('MPI binding policy =', bp)
 
             # Set OMP cores per MPI
             elif (param == 'cores_per_mpi'):
@@ -496,14 +539,14 @@ if __name__ == '__main__':
                 if (dF > 0.02):
                     dF = 0.02
                 dF = float(val)
-                print ('dF           =', dF)
+                print ('Fragment mass tolerance (dF) =', dF)
 
             # Peptide precursor mass tolerance
             elif (param == 'dM'):
                 dM = float(val)
                 if (dM < 0.001):
                     dM = 0.001 
-                print ('dM           =', dM)
+                print ('Peptide mass tolerance (dM) =', dM)
 
             # m/z axis resolution
             elif (param == 'res'):
@@ -512,7 +555,7 @@ if __name__ == '__main__':
                     res = 0.01 
                 if (res > 5.0):
                     res = 5.0
-                print ('resolution   =', res)
+                print ('Resolution   =', res)
 
             # Minimum precursor mass
             elif (param == 'min_prec_mass'):
@@ -521,7 +564,7 @@ if __name__ == '__main__':
                     min_prec_mass = 0 
                 if (min_prec_mass > 10000):
                     min_prec_mass = 10000
-                print ('min_prec_mass =', min_prec_mass)
+                print ('Min precursor mass =', min_prec_mass)
 
             # Maximum precursor mass
             elif (param == 'max_prec_mass'):
@@ -530,7 +573,7 @@ if __name__ == '__main__':
                     max_prec_mass = 0 
                 if (max_prec_mass > 10000):
                     max_prec_mass = 10000
-                print ('max_prec_mass =', max_prec_mass)
+                print ('Max precursor mass =', max_prec_mass)
 
             # Minimum Shared Peaks
             elif (param == 'shp_cnt'):
@@ -583,7 +626,7 @@ if __name__ == '__main__':
                     val = val[:-1]
 
                 workspace = os.path.abspath(str(val))
-                print ('workspace   =', workspace)
+                print ('Workspace   =', workspace)
 
             # Maximum precursor mass
             elif (param == 'top_matches'):
@@ -610,22 +653,19 @@ if __name__ == '__main__':
     params.close()
 
 #
-# ----------------------------------------------------------------------------------------------------
+# ------------------------------ Workspace Creation -------------------------------------------
 #
 
     # Create a workspace directory
     print ('\nInitializing Workspace at: ', workspace)
 
-    if (os.path.exists(workspace) == False):
-        os.mkdir(workspace)
+    os.makedirs(workspace, exist_ok=True)
 
     # Create the output directory for results
-    if (os.path.exists(workspace + '/output') == False):
-        os.mkdir(workspace + '/output')
+    os.makedirs(workspace + '/output', exist_ok=True)
 
     # Create directory where autogen stuff will be placed
-    if (os.path.exists(workspace + '/autogen') == False):
-        os.mkdir(workspace + '/autogen')
+    os.makedirs(workspace + '/autogen', exist_ok=True)
 
     # Check if the params have been changed from the last run
     if (os.path.isfile(workspace + '/autogen/settings.txt') == False or filecmp.cmp(workspace + '/autogen/settings.txt', paramfile) == False):
@@ -646,18 +686,18 @@ if __name__ == '__main__':
             exit(-3)
 
 #
-# ----------------------------------------------------------------------------------------------------
+# ------------------------------ Optimization -------------------------------------------
 #
 
-    # AUTOTUNER
-    if (autotune == 1):
-        print ("\n\n****** Autotuning parameters *******\n")
+    # Optimizer
+    if (optimize == 1):
+        print ("\n\n****** Optimizing parameters *******\n")
 
         # Call the lsinfo to gather CPU information
         if (os.path.isfile(workspace + '/autogen/info.out') == False):
-            genNormalScript(workspace, 'info', 'info', 'compute', '1','1', '00:00:10', 'lscpu | tr -d " \\r" && numactl --hardware | tr -d " \\r"', False, 'none')
+            genNormalScript(workspace, 'info', 'info', 'compute', '1','1', '00:00:10', 'lscpu | tr -d " \\r" && numactl --hardware | tr -d " \\r"', False, username, evts)
 
-            autotune = call("sbatch " + workspace + "/autogen/info", shell=True)
+            optimize = call('sbatch ' + workspace + '/autogen/info', shell=True)
             print ('\nWaiting for job scheduler\n')
 
         # Wait for the lscpu process to complete 
@@ -756,10 +796,10 @@ if __name__ == '__main__':
                 cleancntr = call("make -C counter allclean", shell=True)
                 makecntr = call("make -C counter", shell=True)
             
-            genOpenMPScript(workspace, 'counter', 'counter', 'compute', '1', str(cores), '00:30:00', str(cores), hicopspath + '/counter', pparams, False, 'none')
+            genOpenMPScript(workspace, 'counter', 'counter', 'compute', '1', str(cores), '00:30:00', str(cores), hicopspath + '/counter', pparams, False, username, evts)
 
             # Call the counter process            
-            autotune3 = call('sbatch ' + workspace + '/autogen/counter', shell=True)
+            optimize3 = call('sbatch ' + workspace + '/autogen/counter', shell=True)
 
         # Wait for the counter process to complete
         while (os.path.isfile(workspace + '/autogen/counter.out') == False or checkRunningJobs(username) == True):
@@ -849,7 +889,7 @@ if __name__ == '__main__':
 
             for cc in possible:
 
-                if (indexsize/(mpi_per_node * nodes) <= 25E6 or cc < min_threads or mpi_per_node > max_mpi_per_node):
+                if (indexsize/(mpi_per_node * nodes) <= 48E6 or cc < min_threads or mpi_per_node > max_mpi_per_node):
                     break
                 else:
                     threads = cc
@@ -863,9 +903,13 @@ if __name__ == '__main__':
             print ('WARNING: Memory required per NUMA node = ' + str(mbs_per_numa) + ' >' + str(numamem) + ' = available NUMA mem\n')
             print ('         Either increase the number of nodes or expect performance degradation due to NUMA access and page faults\n')
 
+        # if very small index then the preprocessing threads may be increased to 50%
+        if (indexsize/(mpi_per_node * nodes) < 10E6 or dM < 50):
+            prep_threads = int(threads/3)
 
-        print('Optimizing HiCOPS settings...\n')
-        print('Setting threads/MPI =', threads)
+        print('Optimized HiCOPS settings...\n')
+        print('Setting Threads/MPI =', threads)
+        print('Setting Max Prep threads/MPI =', prep_threads)
         print('Setting MPI/machine =', mpi_per_node)
         print('Setting MPI Policy  =', bp)
         print('Setting MPI Binding =', bl)
@@ -874,7 +918,7 @@ if __name__ == '__main__':
         print('\nSUCCESS\n')
 
 #
-# ----------------------------------------------------------------------------------------------------
+# ------------------------------ Write uparams.txt -------------------------------------------
 #
 
     # Prepare the uparams.txt file for PCDSFrame
@@ -886,6 +930,7 @@ if __name__ == '__main__':
     modfile.write(ms2data + '\n')
     modfile.write(workspace + '/output\n')
     modfile.write(str(threads) + '\n')
+    modfile.write(str(prep_threads) + '\n')
     modfile.write(str(min_length) + '\n')
     modfile.write(str(max_length) + '\n')
     modfile.write(str(maxz) + '\n')
@@ -915,22 +960,29 @@ if __name__ == '__main__':
     modfile.close()
 
     # Generate the job script
-    genMPI_OpenMPScript(workspace, 'hicops', 'hicops', 'compute', str(nodes), str(cores), jobtime, str(threads), hicopspath + '/hicops', str(mpi_per_node), bl, bp, uparams, True, username)
+    genMPI_OpenMPScript(workspace, 'hicops', 'hicops', 'compute', str(nodes), str(cores), jobtime, str(threads), hicopspath + '/hicops', str(mpi_per_node), bl, bp, uparams, mail, username, evts)
 
     # Generate the post-processing script
-    genNormalScript(workspace, 'postprocess', 'postprocess', 'shared', '1', '1', "00:20:00", 'psm2excel ' + workspace + '/output', True, username)
+    genNormalScript(workspace, 'postprocess', 'postprocess', 'shared', '1', '1', "00:20:00", 'psm2excel ' + workspace + '/output', mail, username, evts)
 #
-# ----------------------------------------------------------------------------------------------------
+# ------------------------------ Schedule HiCOPS job -------------------------------------------
 #
 
     # Run HiCOPS
     cfir = call('sbatch ' + workspace + '/autogen/hicops', shell=True)
 
-    print ('\nThe HiCOPS job is running now\n')
-    print ('You can check the job progress using: squeue -u ' + username + '\n')
-    print ('The output will be written at: '+ workspace + '/output\n\n')
+    print ('\nHiCOPS is running now\n')
+    print ('You can check the job progress by: \n')
+    print ('$ squeue -u $USER\n')
+    print ('The output will be written at: '+ workspace + '/output')
 
     print ('\nSUCCESS\n')
-    print ('Issue Reporting: https://github.com/pcdslab/hicops/issues\n')
 
-    print (' # ---------------------------------------------------------------------------------------------------- #\n\n')
+    print ('After job completion, run:\n')
+    print ('$ srun --partition=compute --nodes=1 --ntasks-per-node=1 -t 00:25:00 --export=ALL ' + hicopspath + '/tools/psm2excel -i ' + workspace + '/output')
+
+    print ('\n')
+
+    print ('#----------------------------------------------------------------------------------------------------#')
+    print ('     Read More: https://github.com/pcdslab/hicops/blob/develop/README.md')
+    print ('#----------------------------------------------------------------------------------------------------#\n\n')

@@ -18,7 +18,6 @@
  */
 
 #include <unistd.h>
-#include "common.h"
 #include "dslim.h"
 #include "dslim_score.h"
 #include "dslim_fileout.h"
@@ -31,10 +30,10 @@ using namespace std;
 
 /* Global Variables */
 BOOL         isCarried   = false;
-
 BData       *bdata       = NULL;
-
 extern gParams           params;
+
+std::atomic<bool> score_init(false);
 
 #ifdef USE_MPI
 /* Entry function for DSLIM_Score module */
@@ -75,9 +74,7 @@ status_t DSLIM_DistScoreManager()
 #ifdef USE_MPI
     /* Check if parameters have been brought */
     if (isCarried == false && params.nodes > 1)
-    {
         status = ERR_INVLD_PARAM;
-    }
 
     /* No need to do anything if only 1 node */
     if (params.nodes > 1)
@@ -90,9 +87,9 @@ status_t DSLIM_DistScoreManager()
             ScoreHandle = new DSLIM_Score(bdata);
 
             if (ScoreHandle == NULL)
-            {
                 status = ERR_INVLD_MEMORY;
-            }
+            else
+                score_init = true;
         }
 
         //
@@ -101,9 +98,7 @@ status_t DSLIM_DistScoreManager()
         if (status == SLM_SUCCESS)
         {
             if (params.myid == 0)
-            {
                 std::cout << std::endl << "**** Merging Partial Results ****\n" << std::endl;
-            }
 
 #if defined (USE_TIMEMORY)
             merge_tuple_t merge_instr("combine");
@@ -116,28 +111,32 @@ status_t DSLIM_DistScoreManager()
 #endif // USE_TIMEMORY
 
             if (params.myid == 0)
-            {
                 std::cout << std::endl << "Scores Merged with status:\t" << status << std::endl;
-            }
+
         }
 
         //
         // scatter local scores to relevant nodes
         //
+
+#if defined (USE_TIMEMORY)
+        wall_tuple_t sync_penalty("comm_ovhd");
+#endif // USE_TIMEMORY
+
         if (status == SLM_SUCCESS)
         {
             status = ScoreHandle->ScatterScores();
 
             if (params.myid == 0)
-            {
                 std::cout << "Scatter Scores with status:\t" << status << std::endl;
-            }
         }
 
         if (status == SLM_SUCCESS)
-        {
             status = ScoreHandle->Wait4RX();
-        }
+
+#if defined (USE_TIMEMORY)
+        sync_penalty.stop();
+#endif // USE_TIMEMORY
 
         //
         // write results to files
@@ -155,9 +154,8 @@ status_t DSLIM_DistScoreManager()
 #endif // USE_TIMEMORY
 
             if (params.myid == 0)
-            {
                 std::cout << "Writing Results with status:\t" << status << std::endl;
-            }
+
         }
 
         //
@@ -166,23 +164,22 @@ status_t DSLIM_DistScoreManager()
         if (status == SLM_SUCCESS)
         {
 #if defined (USE_TIMEMORY)
-        wall_tuple_t sync_penalty("sync_penalty");
-        sync_penalty.start();
+            wall_tuple_t sync_penalty("sync_penalty");
+            sync_penalty.start();
 
-        // wait for synchronization
-        tim::mpi::barrier(MPI_COMM_WORLD);
+            // wait for synchronization
+            tim::mpi::barrier(MPI_COMM_WORLD);
 
-        sync_penalty.stop();
+            sync_penalty.stop();
 #else
-        MARK_START(sync);
+            MARK_START(sync);
 
-        status = MPI_Barrier(MPI_COMM_WORLD);
+            status = MPI_Barrier(MPI_COMM_WORLD);
 
-        MARK_END(sync)
+            MARK_END(sync)
 
-        if (params.myid == 0)
-            std::cout << "Superstep Sync Penalty: " << ELAPSED_SECONDS(sync) << "s" << std::endl<< std::endl;
-
+            if (params.myid == 0)
+                std::cout << "Superstep Sync Penalty: " << ELAPSED_SECONDS(sync) << "s" << std::endl<< std::endl;
 #endif // USE_TIMEMORY
         }
 
@@ -205,7 +202,7 @@ status_t DSLIM_DistScoreManager()
 
 #ifdef USE_MPI
 /* Entry function for the score communicator */
-VOID *DSLIM_Score_Thread_Entry(VOID *argv)
+VOID DSLIM_Score_Thread_Entry()
 {
     /* Get the number of nodes - 1 */
     int_t nodes   = params.nodes;
@@ -220,18 +217,14 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
 
     /* Fill the rxStats with ones - available */
     for (int_t kk = 0; kk < nodes; kk++)
-    {
         rxStats[kk] = 1;
-    }
 
     /* Avoid race conditions by waiting for
      * ScoreHandle pointer to initialize */
-    while ((VOID *)argv != (VOID *)ScoreHandle);
+    while (!score_init) { usleep(1); }
 
     if (rxRqsts != NULL && rxStats != NULL)
-    {
         ScoreHandle->RXSizes(rxRqsts, rxStats);
-    }
 
     /* Wait 500ms between each loop */
     for (int_t cumulate = 0; cumulate < nodes; usleep(500000))
@@ -250,9 +243,8 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
                  * have been received
                  */
                 if (rxStats[ll])
-                {
                     cumulate++;
-                }
+
             }
             else
             {
@@ -263,9 +255,7 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
 
     /* Fill the rxStats with ones - available */
     for (int_t kk = 0; kk < nodes; kk++)
-    {
         rxStats[kk] = 1;
-    }
 
     ScoreHandle->RXResults(rxRqsts, rxStats);
 
@@ -286,9 +276,8 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
                  * have been received
                  */
                 if (rxStats[ll])
-                {
                     cumulate++;
-                }
+
             }
             else
             {
@@ -310,8 +299,6 @@ VOID *DSLIM_Score_Thread_Entry(VOID *argv)
         delete [] rxStats;
         rxStats = NULL;
     }
-
-    return NULL;
 }
 #endif /* USE_MPI */
 

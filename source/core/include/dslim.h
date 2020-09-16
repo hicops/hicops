@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef DSLIM_H_
-#define DSLIM_H_
+#pragma once
 
 #include "common.h"
 #include "utils.h"
@@ -33,7 +32,7 @@
 #define IS_INIT(x,y)                       (((x)>>BITNUM(y)) & 0x1)
 #define INIT(x,y)                          (x | (1 << BITNUM(y)))
 
-#define NIBUFFS                            4
+#define NIBUFFS                            20
 
 /* FUNCTION: DSLIM_Construct
  *
@@ -152,6 +151,9 @@ status_t DSLIM_DeallocateIonIndex(Index *);
 status_t DSLIM_InitDistScore();
 
 #ifdef USE_MPI
+// declare this class here
+class DSLIM_Comm;
+
 status_t DSLIM_CarryForward(Index *, DSLIM_Comm *, expeRT *, hCell *, int_t);
 #endif /* USE_MPI */
 
@@ -199,5 +201,3 @@ status_t DSLIM_WriteCSV(string_t path, uint_t peplen, uint_t chno);
 #ifdef DIAGNOSE
 int_t DSLIM_TestBData();
 #endif /* DIAGNOSE */
-
-#endif /* DSLIM_H_ */

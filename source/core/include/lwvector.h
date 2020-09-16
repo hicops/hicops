@@ -17,15 +17,14 @@
  *
  */
 
-#ifndef LWVECTOR_H_
-#define LWVECTOR_H_
+#pragma once
 
 #include <iostream>
 #include <stdlib.h>
 #include <math.h>
 #include <string>
 #include <cstring>
-#include "config.h"
+#include "common.h"
 
 using namespace std;
 
@@ -437,5 +436,3 @@ public:
     }
 
 };
-
-#endif /* LWVECTOR_H_ */

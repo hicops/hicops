@@ -28,7 +28,7 @@ MPI_Datatype resultF;
 string_t fn;
 
 extern gParams params;
-extern VOID *DSLIM_Score_Thread_Entry(VOID *);
+extern VOID DSLIM_Score_Thread_Entry();
 
 DSLIM_Score::DSLIM_Score()
 {
@@ -65,10 +65,7 @@ DSLIM_Score::DSLIM_Score()
     InitDataTypes();
 
     /* Communication threads */
-    comm_thd = new thread_t;
-
-    /* Create the comm. thread */
-    pthread_create(comm_thd, NULL, &DSLIM_Score_Thread_Entry, this);
+    comm_thd = std::thread(DSLIM_Score_Thread_Entry);
 
     return;
 }
@@ -102,18 +99,12 @@ DSLIM_Score::DSLIM_Score(BData *bd)
         std::memset(rxSizes, 0x0, (sizeof(int_t) * nodes));
         std::memset(txSizes, 0x0, (sizeof(int_t) * nodes));
     }
-    else
-    {
-        throw "FATAL: rxSizes or txSizes == NULL\n";
-    }
 
     myRXsize = 0;
 
     /* Compute myRXsize */
     for (int_t kk = 0; kk < nBatches; kk++)
-    {
         myRXsize += sizeArray[kk];
-    }
 
     /* Allocate for Rx */
     RxValues = new fResult[nSpectra];
@@ -133,19 +124,13 @@ DSLIM_Score::DSLIM_Score(BData *bd)
     InitDataTypes();
 
     /* Communication threads */
-    comm_thd = new thread_t;
-
-    /* Create the comm thread */
-    pthread_create(comm_thd, NULL, &DSLIM_Score_Thread_Entry, this);
+    comm_thd = std::thread(DSLIM_Score_Thread_Entry);
 
     return;
 }
 
 DSLIM_Score::~DSLIM_Score()
 {
-    /* Wait for score thread to complete */
-    Wait4RX();
-
     if (txSizes != NULL)
     {
         delete[] txSizes;
@@ -238,7 +223,7 @@ status_t DSLIM_Score::CombineResults()
 
         for (int_t saa = 0; saa < nSamples; saa++)
         {
-            fn = params.datapath + "/" + std::to_string(vbatch) + "_"
+            fn = params.workspace + "/" + std::to_string(vbatch) + "_"
                     + std::to_string(saa) + ".dat";
 
             fhs[saa].open(fn, ios::in | ios::binary);
@@ -282,9 +267,7 @@ status_t DSLIM_Score::CombineResults()
                 partRes *sResult = iBuffs[sno].packs + spec;
 
                 if (*sResult == 0)
-                {
                     continue;
-                }
 
                 /* Update the number of samples */
                 cpsms += sResult->N;
@@ -363,7 +346,7 @@ status_t DSLIM_Score::CombineResults()
         /* Remove the files when no longer needed */
         for (int_t saa = 0; saa < nSamples; saa++)
         {
-            fn = params.datapath + "/" + std::to_string(vbatch) + "_" + std::to_string(saa)
+            fn = params.workspace + "/" + std::to_string(vbatch) + "_" + std::to_string(saa)
                     + ".dat";
 
             if (fhs[saa].is_open())
@@ -395,9 +378,7 @@ status_t DSLIM_Score::CombineResults()
     {
         /* Set all sizes to zero */
         for (uint_t ky = 0; ky < params.nodes - 1; ky++)
-        {
             txSizes[ky] = 0;
-        }
     }
 
     /* return the status of execution */
@@ -418,19 +399,13 @@ status_t DSLIM_Score::ScatterScores()
 
     /* Fill the txStats with zeros - not available */
     for (int_t kk = 0; kk < nodes; kk++)
-    {
         txStats[kk] = 1;
-    }
 
     /* Check if everything is in order */
     if (txRqsts != NULL && txStats != NULL)
-    {
         status = TXSizes(txRqsts, txStats);
-    }
     else
-    {
         status = ERR_INVLD_MEMORY;
-    }
 
     if (status == SLM_SUCCESS)
     {
@@ -454,9 +429,7 @@ status_t DSLIM_Score::ScatterScores()
                       * have been sent
                       */
                      if (txStats[ll])
-                     {
                          cumulate++;
-                     }
                  }
                  else
                  {
@@ -472,9 +445,7 @@ status_t DSLIM_Score::ScatterScores()
     {
         /* Fill the txStats with zeros - not available */
         for (int_t kk = 0; kk < nodes; kk++)
-        {
             txStats[kk] = 1;
-        }
 
         status = TXResults(txRqsts, txStats);
 
@@ -501,9 +472,7 @@ status_t DSLIM_Score::ScatterScores()
                          * have been sent
                          */
                         if (txStats[ll])
-                        {
                             cumulate++;
-                        }
                     }
                     else
                     {
@@ -679,19 +648,9 @@ status_t DSLIM_Score::RXResults(MPI_Request *rxRqsts, int_t *rxStats)
 status_t DSLIM_Score::Wait4RX()
 {
     /* Wait for score thread to complete */
-    VOID *ptr;
+    comm_thd.join();
 
-    status_t status = SLM_SUCCESS;
-
-    if (comm_thd != NULL)
-    {
-        status = pthread_join(*comm_thd, &ptr);
-
-        delete comm_thd;
-        comm_thd = NULL;
-    }
-
-    return status;
+    return SLM_SUCCESS;
 }
 
 status_t DSLIM_Score::DisplayResults()
@@ -708,9 +667,8 @@ status_t DSLIM_Score::DisplayResults()
     if (mysize > 0)
     {
         for (auto beg = 0; beg < (int_t)params.myid; beg++)
-        {
             offset += txSizes[beg];
-        }
+
     }
 
     fResult *myPtr = TxValues + offset;
@@ -731,9 +689,7 @@ status_t DSLIM_Score::DisplayResults()
     mysize = 0;
 
     for (auto pt = rxSizes; pt < rxSizes + params.nodes; pt++)
-    {
         mysize += *pt;
-    }
 
 #ifdef USE_OMP
 #pragma omp parallel for num_threads(params.threads)
@@ -747,9 +703,7 @@ status_t DSLIM_Score::DisplayResults()
 
     /* Close the files and deallocate objects */
     if (status == SLM_SUCCESS)
-    {
         status = DFile_DeinitFiles();
-    }
 
     return status;
 }

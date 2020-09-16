@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef LBE_H_
-#define LBE_H_
+#pragma once
 
 #include <chrono>
 #include <ctime>
@@ -103,5 +102,3 @@ BOOL LBE_ApplyPolicy(Index *index,  BOOL pepmod, uint_t key);
  * OUTPUT: none
  */
 VOID   LBE_PrintHeader();
-
-#endif /* LBE_H_ */

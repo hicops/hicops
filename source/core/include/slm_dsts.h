@@ -17,8 +17,7 @@
  *
  */
 
-#ifndef INCLUDE_SLM_DSTS_H_
-#define INCLUDE_SLM_DSTS_H_
+#pragma once
 
 #include "common.h"
 #include "config.h"
@@ -360,6 +359,7 @@ typedef struct _Index
 typedef struct _globalParams
 {
     uint_t threads;
+    uint_t maxprepthds;
     uint_t min_len;
     uint_t max_len;
     uint_t maxz;
@@ -394,6 +394,7 @@ typedef struct _globalParams
     _globalParams()
     {
         threads = 1;
+        maxprepthds = 1;
         min_len = 6;
         max_len = 40;
         maxz = 3;
@@ -580,9 +581,7 @@ typedef struct _heapEntry
     {
         /* Check for self assignment */
         if (this != &rhs) 
-        {
             memcpy(this, &rhs, sizeof(_heapEntry));
-        }
 
         return *this;
     }
@@ -832,7 +831,7 @@ typedef struct _BYICount
 
 } BYICount;
 
-#define BYISIZE                 (sizeof(ushort_t) * 2 + sizeof(uint_t) * 2)
+#define BYISIZE                 (sizeof(BYC))
 
 typedef struct _fResult
 {
@@ -877,7 +876,7 @@ typedef struct _fResult
 
 } fResult;
 
-#define psize          256
+#define psize          128
 
 typedef struct _ebuffer
 {
@@ -916,5 +915,3 @@ typedef struct _ebuffer
     }
 
 } ebuffer;
-
-#endif /* INCLUDE_SLM_DSTS_H_ */
