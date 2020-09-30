@@ -15,20 +15,12 @@ endif()
 configure_file(${CMAKE_CURRENT_LIST_DIR}/extractms2.py
     ${CMAKE_BINARY_DIR}/scripts/ms2prep/extractms2 @ONLY)
 
-configure_file(${CMAKE_CURRENT_LIST_DIR}/getseqs.py
-    ${CMAKE_BINARY_DIR}/scripts/ms2prep/getseqs @ONLY)
-
-configure_file(${CMAKE_CURRENT_LIST_DIR}/cluster.py
-    ${CMAKE_BINARY_DIR}/scripts/ms2prep/cluster @ONLY)
-
 configure_file(${CMAKE_CURRENT_LIST_DIR}/raw2ms2.sh
     ${CMAKE_BINARY_DIR}/scripts/ms2prep/raw2ms2 @ONLY)
 
 install(
     FILES
         ${CMAKE_BINARY_DIR}/scripts/ms2prep/extractms2
-        ${CMAKE_BINARY_DIR}/scripts/ms2prep/getseqs
-        ${CMAKE_BINARY_DIR}/scripts/ms2prep/cluster
         ${CMAKE_BINARY_DIR}/scripts/ms2prep/raw2ms2
 
     DESTINATION ms2prep
