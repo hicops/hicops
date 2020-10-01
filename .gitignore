@@ -16,13 +16,45 @@
 # Docs
 *.jekyll-metadata
 
+#IDE files
+/CMakeLists.txt.user*
+/.vscode
+/.vs
+/*.nja
+settings.json
+*.swp
+
+# Edit files
+*~
+._*
+
+# Python
+__pycache__
+
+# misc
+*.autosave
+/coverage.info
+
+# macOS Finder files
+.DS_Store
+
+# images
+/*.png
+/*.tif
+/*.tiff
+/*.jpeg
+/*.jpg
+/*.gif
+/run*.sh
+
+# stashed source tree
+/.stash
 
 # Directories
-parts*
-output*
-build*
-build*/
-install*/
+/parts*
+/output*
+/build*
+/install*
 
 # Precompiled Headers
 *.gch
