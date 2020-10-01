@@ -1,4 +1,5 @@
-toc:
+content_list_title: TABLE OF CONTENTS
+content:
   - title: About
     url: about.md
 
