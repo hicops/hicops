@@ -22,7 +22,6 @@ parts*
 output*
 build*
 build*/
-install*
 install*/
 
 # Precompiled Headers
