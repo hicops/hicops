@@ -1,33 +1,6 @@
 ---
 title: Contributing
 ---
-<style>
-  ul {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background-color: white;
-  }
-  
-  li {
-    float: left;
-  }
-  
-  li a {
-    color: black;
-    text-align: center;
-    padding: 14px 16px;
-    text-decoration: none;
-  }
-    li a:hover:not(.active) {
-      background-color: white;
-    }
-    
-    .active {
-      background-color: white;
-    }
-</style>
 
 # Contributing
 All contributions are welcome including new features, documentation updates and bug fixes.

@@ -1,26 +1,26 @@
 content_list_title: Table of Contents
 content:
   - title: Home
-    url: {{ site.baseurl }}/index
+    url: index
 
   - title: Features
-    url: {{ site.baseurl }}/features
+    url: features
 
   - title: Install
-    url: {{ site.baseurl }}/installation
+    url: installation
 
   - title: Getting Started
-    url: {{ site.baseurl }}/getting_started
+    url: getting_started
 
   - title: Tools
-    url: {{ site.baseurl }}/tools
+    url: tools
 
   - title: Instrumentation
-    url: {{ site.baseurl }}/instrumentation
+    url: instrumentation
 
   - title: Results
-    url: {{ site.baseurl }}/results
+    url: results
 
   - title: Contribute
-    url: {{ site.baseurl }}/contributing
+    url: contributing
 
