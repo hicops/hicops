@@ -21,12 +21,12 @@
           <h2 id="project_tagline">{{ site.description | default: site.github.project_tagline }}</h2>
           
           <h2 id= "navigation_bar">{{ site.data.toc.content_list_title | default: "Table of Content" }}
-              <ul>
+            <ul>
                 {% for item in site.data.toc.content %}
                   <li><a href="{{ item.url }}">{{ item.title }}</a></li>
                 {% endfor %}
               </ul>
-          </nav>
+            </h2>
 
           {% if site.show_downloads %}
             <section id="downloads">
