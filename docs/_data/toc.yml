@@ -1,16 +1,19 @@
 content_list_title: Table of Contents
 content:
-  - title: About
-    url: about
+  - title: Home
+    url: index
 
   - title: Features
     url: features
 
-  - title: Installation
+  - title: Install
     url: installation
 
   - title: Getting Started
     url: getting_started
   
-  - title: Contributing
+  - title: Contributions
     url: contributing
+
+  - title: Support
+    url: report
