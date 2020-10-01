@@ -1,10 +1,16 @@
 content_list_title: TABLE OF CONTENTS
 content:
   - title: About
-    url: about.md
+    url: about
 
   - title: Features
-    url: features.md
+    url: features
 
+  - title: Installation
+    url: installation
+
+  - title: Getting Started
+    url: installation
+  
   - title: Contributions
-    url: contributions.md
+    url: contributions
