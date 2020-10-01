@@ -1,6 +1,5 @@
 ---
 title: Contributing
-toc: false
 ---
 
 # Contributing
@@ -14,5 +13,6 @@ HiCOPS encourages contributions via GitHub pull requests. Please follow the foll
 6. Open a pull request (PR) from `your_hicops_fork:new_branch` to `hicops:develop`.
 7. We will review the changes and merge them into `hicops:develop`.
 
-## Issue Reporting
+
+## Report Bugs or Issues
 Open an [issue](https://github.com/pcdslab/hicops/issues). Please include any logs, screenshots and/or helpful observations. Also, do not forget to describe the dataset(s), database, steps performed etc. so that the issue can be reproduced.
