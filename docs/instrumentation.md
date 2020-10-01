@@ -4,7 +4,39 @@ The instrumentation and performance analysis is provided via Timemory toolkit. H
 ## Provided Interfaces
 HiCOPS provides instrumentation interfaces using Timemory bundles which are C++ tuples containing instrumentation metrics. Time-only measurements are performed via `MACROS` which direct instrumentation to HiCOPS' native instrumentation or Timemory depending on the configuration.
 
-## Enable Instrumentation
+## Install Timemory
+Install timemory using CMake or Spack using the instructions [here](https://timemory.readthedocs.io/en/develop/installation.html). After installation, make sure that the path to timemory installation has been appended to the enviornment variable `CMAKE_PREFIX_PATH`. Also make sure that the Timemory's python package (Pytimemory) is in your `PYTHONPATH`. Also make sure that the environment variable `MPLCONFIGDIR` is set to a writeable directory. e.g. `$HOME/mplconfigdir`
+
+```bash
+$ export CMAKE_PREFIX_PATH=$TIMEMORY_INSTALL:$CMAKE_PREFIX_PATH
+$ export PYTHONPATH=$PYTIMEMORYPATH:$PYTHONPATH
+$ export MPLCONFIGDIR=$HOME/mplconfigdir
+```
+
+### Timemory install example
+All Timemory installation examples can be found [here](https://github.com/NERSC/timemory/wiki/Installation-Examples). Below we demonstrate a couple of them.
+
+#### Using Spack
+If using Spack, you can install and load timemory and its dependencies using:
+
+```bash
+$ spack install timemory%gcc@version +ompt +tools +ompt_library ~dyninst +gotcha +python +papi ~caliper +mpi +mpip_library
+$ spack load -r timemory
+```
+Add the `--only dependencies` flag right after `spack install` in above command if you want to only install the dependencies of Timemory.
+
+#### Using CMake
+If using CMake, then assuming all that all required Timemory dependency packages have been installed and loaded:
+
+```bash
+$ git clone https://github.com/NERSC/timemory.git && cd timemory && mkdir build && cd build
+$ cmake .. -DTIMEMORY_USE_MPI=ON -DTIMEMORY_BUILD_MPIP_LIBRARY=ON -DTIMEMORY_USE_OMPT=ON -DTIMEMORY_USE_GOTCHA=ON -DCMAKE_INSTALL_PREFIX=../install -DCMAKE_CXX_STANDARD=14 -DTIMEMORY_USE_PYTHON=ON -DTIMEMORY_BUILD_TOOLS=ON -DUSE_MPI=ON -DUSE_OPENMP=ON -DTIMEMORY_USE_PAPI=ON
+$ make install
+$ export CMAKE_PREFIX_PATH=$PWD/../install:$CMAKE_PREFIX_PATH
+$ export PYTHONPATH=$PWD:$PYTHONPATH
+```
+
+**NOTE:** Timemory and its dependencies can take upto 2-3 hours to install depending on the system so please be patient.
 
 ## Setup Instrumentation
 If the `USE_TIMEMORY=ON` option is ena, the HiCOPS instrumentation can be configured and updated via the following environment variables:

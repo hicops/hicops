@@ -4,9 +4,6 @@ title: Getting Started
 
 # Getting Started
 
-* TOC
-{:toc}
-
 ## Install Path
 For this document, we will be assuming that the HiCOPS was installed at : `$HICOPS_INSTALL`
 
@@ -18,7 +15,7 @@ $ export LD_LIBRARY_PATH=$HICOPS_INSTALL/lib:$LD_LIBRARY_PATH
 ```
 
 ## Setup instrumentation
-Setup instrumentation by following the instructions in [Instrument](instrumentation.md##Setup_Instrumentation) document. This step is optional. 
+Setup instrumentation by following the instructions in [Instrumentation]({{ site.baseurl }}/instrumentation##Setup_Instrumentation) document. This step is optional. 
 
 ## On a regular computer (skip if using XSEDE Comet)
 Generate HiCOPS sample runtime parameters file using the `hicops_config` located at `$HICOPS_INSTALL/bin`.

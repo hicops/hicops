@@ -32,7 +32,7 @@ HiCOPS is being developed by the Parallel Computing and Data Science Laboratory 
 | Muhammad Haseeb       |       [FIU](https://tinyurl.com/mhaseeb22)       | [mhaseeb123](https://github.com/mhaseeb123) |
 
 ## Contributions
-We welcome contributions via GitHub pull requests. For more information, please refer to [README](ttps://github.com/mhaseeb123/hicops#contributing).
+We welcome contributions via GitHub pull requests. For more information, please refer to [README]({{ site.baseurl }}/contributing).
 
 ## License
 GPL v3.0 for all academic users. Commercial users may acquire a license from the [FIU Technology Transfer Office](http://research.fiu.edu/ored/)
