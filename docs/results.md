@@ -3,9 +3,6 @@ title: Results
 ---
 # Results
 
-* TOC
-{:toc}
-
 ### Speedups vs Tools
 
 ### Parallel Efficiency

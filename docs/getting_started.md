@@ -3,21 +3,24 @@ title: Getting Started
 ---
 
 # Getting Started
-
-## Install Path
 For this document, we will be assuming that the HiCOPS was installed at : `$HICOPS_INSTALL`
 
-## Update environment variables
-Make sure that the `HICOPS_INSTALL/lib` has been added to the environment variable `LD_LIBRARY_PATH`.
+## Set environment variables
+Append  `HICOPS_INSTALL/lib` to the `LD_LIBRARY_PATH`.
 
 ```bash
 $ export LD_LIBRARY_PATH=$HICOPS_INSTALL/lib:$LD_LIBRARY_PATH
 ```
 
-## Setup instrumentation
-Setup instrumentation by following the instructions in [Instrumentation]({{ site.baseurl }}/instrumentation##Setup_Instrumentation) document. This step is optional. 
+## Setup Database
 
-## On a regular computer (skip if using XSEDE Comet)
+## Setup MS dataset
+
+## Setup instrumentation
+Optionally setup instrumentation by following the instructions in [Instrumentation]({{ site.baseurl }}/instrumentation##Setup-Instrumentation) document.
+
+
+## Run HiCOPS
 Generate HiCOPS sample runtime parameters file using the `hicops_config` located at `$HICOPS_INSTALL/bin`.
 
 ```bash
