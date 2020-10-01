@@ -29,14 +29,16 @@
         </header>
     </div>
 
+    <nav>{{ site.data.toc.content_list_title | default: "TABLE OF CONTENT" }}
+      <ul>
+        {% for item in site.data.toc.content %}
+          <li><a href="{{ item.url }}">{{ item.title }}</a></li>
+        {% endfor %}
+      </ul>
+    </nav>
+
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
-      <h2>{{ site.data.toc.content_list_title | default: "TABLE OF CONTENT" }}</h2>
-      <ul>
-         {% for item in site.data.toc.content %}
-            <li><a href="{{ item.url }}">{{ item.title }}</a></li>
-         {% endfor %}
-      </ul>
       <section id="main_content" class="inner">
         {{ content }}
       </section>
