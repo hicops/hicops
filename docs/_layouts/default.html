@@ -9,21 +9,32 @@
 {% seo %}
   <style>
     ul {
-          list-style-type: none;
-          margin: 0;
-          padding: 0;
-          overflow: hidden;
-       }
+      list-style-type: none;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #333;
+    }
 
-      li {
-        float: left;
-      }
+    li {
+      float: left;
+    }
 
-      li a {
-        display: block;
-        padding: 8px;
-        background-color: #dddddd;
-      }
+    li a {
+      display: block;
+      color: white;
+      text-align: center;
+      padding: 14px 16px;
+      text-decoration: none;
+    }
+
+    li a:hover:not(.active) {
+      background: url('../images/bg_hr.png') repeat-x bottom;
+    }
+
+    .active {
+      background-color: #52be44;
+    }
   </style>
   </head>
 
@@ -37,6 +48,11 @@
 
           <h1 id="project_title">{{ site.title | default: site.github.repository_name }}</h1>
           <h2 id="project_tagline">{{ site.description | default: site.github.project_tagline }}</h2>
+          <ul id="main-menu">
+            {% for item in site.data.toc.content %}
+              <li><a href="{{ item.url }}">{{ item.title }}</a></li>
+            {% endfor %}
+          </ul>
 
           {% if site.show_downloads %}
             <section id="downloads">
@@ -49,12 +65,6 @@
 
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
-      <h3>{{ site.data.toc.content_list_title | default: "Table of Contents" }}</h3>
-      <ul id="main-menu">
-        {% for item in site.data.toc.content %}
-          <li><a href="{{ item.url }}">{{ item.title }}</a></li>
-        {% endfor %}
-      </ul>
       <section id="main_content" class="inner">
         {{ content }}
       </section>
