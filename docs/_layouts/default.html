@@ -7,6 +7,24 @@
     <meta name="viewport" content="width=device-width,maximum-scale=2">
     <link rel="stylesheet" type="text/css" media="screen" href="{{ '/assets/css/style.css?v=' | append: site.github.build_revision | relative_url }}">
 {% seo %}
+  <style>
+    ul {
+          list-style-type: none;
+          margin: 0;
+          padding: 0;
+          overflow: hidden;
+       }
+
+      li {
+        float: left;
+      }
+
+      li a {
+        display: block;
+        padding: 8px;
+        background-color: #dddddd;
+      }
+  </style>
   </head>
 
   <body>
@@ -19,13 +37,6 @@
 
           <h1 id="project_title">{{ site.title | default: site.github.repository_name }}</h1>
           <h2 id="project_tagline">{{ site.description | default: site.github.project_tagline }}</h2>
-          
-          <h2 id= "navigation_bar">{{ site.data.toc.content_list_title | default: "Table of Content" }}</h2>
-            <ul id="main-menu">
-              {% for item in site.data.toc.content %}
-                <li><a href="{{ item.url }}">{{ item.title }}</a></li>
-              {% endfor %}
-            </ul>
 
           {% if site.show_downloads %}
             <section id="downloads">
@@ -38,6 +49,12 @@
 
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
+      <h3>{{ site.data.toc.content_list_title | default: "Table of Contents" }}</h3>
+      <ul id="main-menu">
+        {% for item in site.data.toc.content %}
+          <li><a href="{{ item.url }}">{{ item.title }}</a></li>
+        {% endfor %}
+      </ul>
       <section id="main_content" class="inner">
         {{ content }}
       </section>

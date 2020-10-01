@@ -1,8 +1,12 @@
 theme: jekyll-theme-slate
 title: HiCOPS
 description: Accelerated large-scale peptide identification from mass spectrometry data through HPC database peptide search
-incremental: true
+incremental: false
+markdown: kramdown
 timezone: America/New_York
+plugins:
+  - jekyll-toc
+
 page_excerpts: true
 
 # show_downloads: true

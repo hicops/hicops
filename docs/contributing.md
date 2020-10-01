@@ -1,5 +1,6 @@
 ---
 title: Contributing
+toc: false
 ---
 
 # Contributing
