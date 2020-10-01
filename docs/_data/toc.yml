@@ -11,9 +11,12 @@ content:
 
   - title: Getting Started
     url: getting_started
-  
-  - title: Contributions
+
+  - title: Instrumentation
+    url: instrumentation
+
+  - title: Contributing
     url: contributing
 
   - title: Support
-    url: report
+    url: support
