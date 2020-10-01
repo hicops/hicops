@@ -1,4 +1,6 @@
 theme: jekyll-theme-slate
+title: HiCOPS
+description: Accelerated peptide search for identification of peptides from mass spectrometry data.
 incremental: true
 timezone: America/New_York
 page_excerpts: true
