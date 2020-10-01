@@ -12,8 +12,14 @@ content:
   - title: Getting Started
     url: getting_started
 
-  - title: Instrumentation
+  - title: Tools
+    url: tools
+
+  - title: Instrument
     url: instrumentation
+
+  - title: Results
+    url: results
 
   - title: Support
     url: support
