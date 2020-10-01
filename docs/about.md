@@ -4,6 +4,10 @@ HiCOPS is a software framework designed to accelerate database peptide search wo
 # Credits
 Timemory is actively developed by Parallel Computing and Data Science Lab at the Florida International University.
 
+| Name               |                                        Affiliation                                        |                    GitHub                     |
+| ------------------ | :---------------------------------------------------------------------------------------: | :-------------------------------------------: |
+| Muhammad Haseeb       |       [FIU](https://tinyurl.com/mhaseeb22)       | [mhaseeb123](https://github.com/mhaseeb123) |
+
 # Applications
 Computational Proteomics researchers and developers may integrate their algorithms with HiCOPS by simply implementing their serial indexing/serach/post-processing algorithms in HiCOPS.
 
