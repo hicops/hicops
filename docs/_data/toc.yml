@@ -10,7 +10,7 @@ content:
     url: installation
 
   - title: Getting Started
-    url: installation
+    url: getting_started
   
   - title: Contributing
     url: contributing

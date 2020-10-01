@@ -20,13 +20,6 @@
           <h1 id="project_title">{{ site.title | default: site.github.repository_name }}</h1>
           <h2 id="project_tagline">{{ site.description | default: site.github.project_tagline }}</h2>
 
-          <h3>{{ site.data.toc.content_list_title | default: "TABLE OF CONTENT" }}</h3>
-          <ul>
-             {% for item in site.data.toc.content %}
-                <li><a href="{{ item.url }}">{{ item.title }}</a></li>
-             {% endfor %}
-          </ul>
-
           {% if site.show_downloads %}
             <section id="downloads">
               <a class="zip_download_link" href="{{ site.github.zip_url }}">Download this project as a .zip file</a>
@@ -35,6 +28,13 @@
           {% endif %}
         </header>
     </div>
+    
+    <h2>{{ site.data.toc.content_list_title | default: "TABLE OF CONTENT" }}</h2>
+    <ul>
+       {% for item in site.data.toc.content %}
+          <li><a href="{{ item.url }}">{{ item.title }}</a></li>
+       {% endfor %}
+    </ul>
 
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
