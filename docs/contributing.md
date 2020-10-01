@@ -1,4 +1,8 @@
-# Contributions
+---
+title: Contributing
+---
+
+# Contributing
 HiCOPS encourages contributions via GitHub pull requests. Please follow the following method for contributing new algorithms, bug fixes and so on:
 
 1. Fork this repository to your local GitHub account

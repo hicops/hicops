@@ -1,7 +1,8 @@
 theme: jekyll-theme-slate
 title: HiCOPS
-description: Accelerated database peptide search for large-scale identification of peptides from mass spectrometry (MS/MS) data.
+description: Accelerated large-scale peptide identification from mass spectrometry data through HPC database peptide search
 incremental: true
 timezone: America/New_York
 page_excerpts: true
-show_downloads: true
+
+# show_downloads: true
