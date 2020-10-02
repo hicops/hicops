@@ -74,7 +74,7 @@
 
             <!-- second list with dropdowns -->
             {% for item in site.data.toc.content2 %}
-            <li class="main2"><a href="{{ site.baseurl }}/{{ item.url }}" class="dropdown">{{ item.title }}</a>
+            <li class="main2.dropdown"><a href="{{ site.baseurl }}/{{ item.url }}" class="dropdown">{{ item.title }}</a>
               <div class="dropdown-content">
               {% for sub in item.drop %}
                 <a href="{{ site.baseurl }}/{{ item.url }}/{{ sub.url }}">{{ sub.title }}</a>
