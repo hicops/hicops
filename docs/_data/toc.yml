@@ -5,11 +5,14 @@ content1:
   - title: Home
     url: index
 
-  - title: Features
-    url: features
-
 # second list
 content2:
+  - title: Features
+    url: features
+    drop:
+    - title: Instrumentation
+      url: instrumentation
+
   - title: Install
     url: installation
     drop:
@@ -22,19 +25,26 @@ content2:
       - title: Run on XSEDE
         url: xsede
 
-# third list
-content3:
   - title: Tools
     url: tools
+    drop:
+      - title: HiCOPS Config
+        url: runtime/hicops_config
+      - title: HiCOPS Comet
+        url: runtime/hicops_comet
+      - title: Database Prepare
+        url: dbtools/dbprep
+      - title: Raw2MS2
+        url: ms2prep/raw2ms2
+      - title: Extract MS2
+        url: ms2prep/extractms2
 
-  - title: Instrument
-    url: instrumentation
+    
+# third list
+content3:
 
   - title: Integrate
     url: integrate
-
-  - title: Results
-    url: results
 
   - title: Contribute
     url: contributing
