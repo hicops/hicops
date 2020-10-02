@@ -49,14 +49,14 @@ If you are running on XSEDE Comet environment, skip the rest of this document an
 Follow the below instructions if you are running on any system but XSEDE Comet.
 
 #### Generate Params
-* Ensure that the hicops-core library path has been added to `LD_LIBRARY_PATH`.      
+**i.** Ensure that the hicops-core library path is added to `LD_LIBRARY_PATH`.      
 
 ```bash
 # append hicops-core lib path to LD_LIBRARY_PATH.
 $ export LD_LIBRARY_PATH=$PWD/../install/lib:$LD_LIBRARY_PATH
 ```
 
-* Generate HiCOPS template runtime parameters file using the `hicops_config` tool located at `$HICOPS_INSTALL/bin`.     
+**ii.** Generate HiCOPS template runtime parameters file using the `hicops_config` tool located at `$HICOPS_INSTALL/bin`.     
 
 ```bash
 # run hicops_comet with -g
@@ -64,9 +64,9 @@ $ $HICOPS_INSTALL/bin/hicops_config -g
 # generated: ./sampleparams.txt
 ```
 
-* Edit the generated sampleparams.txt file and setup HiCOPS' runtime parameters, database and data paths.     
+**iii.** Edit the generated sampleparams.txt file and setup HiCOPS' runtime parameters, database and data paths.     
 
-* Generate the HiCOPS runtime parameters file (`uparams.txt`) using `hicops_config` as:     
+**iv.** Generate the HiCOPS runtime parameters file (`uparams.txt`) using `hicops_config` as:     
 
 ```bash
 # run hicops_comet with sampleparams.txt
@@ -76,7 +76,11 @@ $ $HICOPS_INSTALL/bin/hicops_config ./sampleparams.txt
 ```
 
 #### Execute
-* Run HiCOPS with `uparams.txt` as input argument with or without MPI depending on HiCOPS install [options]({{ site.baseurl }}/installation#cmake-options). Use the resource manager (SLURM, LSH) if working on a managed cluster system.       
+**v.** Run HiCOPS with `uparams.txt` as input argument with or without MPI depending on HiCOPS install [options]({{ site.baseurl }}/installation#cmake-options). Use the resource manager (SLURM, LSH) if working on a managed cluster system.       
+
+**Note:**  Configure the mpirun options as follows: set binding level to `socket` and binding policy to `scatter`.     
+
+**Note:** We highly recommend running HiCOPS through batch job submission `sbatch` instead of `srun`. Make sure to follow the relevant Hybrid MPI/OpenMP batch submission template when doing so.     
 
 ```bash
 # without MPI
@@ -84,9 +88,7 @@ $ $HICOPS_INSTALL/bin/hicops $HICOPS_INSTALL/bin/uparams.txt
 
 # SLURM without MPI
 $ srun [OPTIONS] $HICOPS_INSTALL/bin/hicops $HICOPS_INSTALL/bin/uparams.txt
-```
 
-```bash
 # with MPI
 $ mpirun -np [P] [OPTIONS] $HICOPS_INSTALL/bin/hicops \\
   $HICOPS_INSTALL/bin/uparams.txt
@@ -94,12 +96,9 @@ $ mpirun -np [P] [OPTIONS] $HICOPS_INSTALL/bin/hicops \\
 # SLURM with MPI
 $ srun [OPTIONS] mpirun -np [P] [OPTIONS] $HICOPS_INSTALL/bin/hicops \\
   $HICOPS_INSTALL/bin/uparams.txt
-```
+```    
 
-**Note:**  Configure the mpirun options as follows: set binding level to `socket` and binding policy to `scatter`.
-**Note:** We highly recommend running HiCOPS through batch job submission `sbatch` instead of `srun`. Make sure to follow the relevant Hybrid MPI/OpenMP batch submission template when doing so.
-
-* After HiCOPS execution is complete, run the `psm2excel` tool with `workspace` output directory (set in the sampleparams.txt file) as arguments.       
+**vi.** After HiCOPS execution is complete, run the `psm2excel` tool with `workspace` output directory (set in the sampleparams.txt file) as arguments.       
 
 ```bash
 # psm2excel
@@ -108,9 +107,9 @@ $ $HICOPS_INSTALL/tools/psm2excel [/path/to/hicops/workspace/output]
 # psm2excel with SLURM
 $ srun [OPTIONS] --nodes=1 $HICOPS_INSTALL/tools/psm2excel -i \\
   [/path/to/hicops/workspace/output]
-```
+```    
 
-**Note:** Repeat Steps 3-5 if you modify parameters in the `sampleparams.txt`.
+**vii.** Repeat Steps **iii.** to **vi.** when you modify parameters in the `sampleparams.txt`.
 
 ## Precautions
 * Always use a unique workspace directory for each experiment, specially for the simultaneously running HiCOPS instances to avoid overwriting intermediate results and other errors.      
