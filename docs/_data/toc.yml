@@ -15,8 +15,11 @@ content:
   - title: Tools
     url: tools
 
-  - title: Instrumentation
+  - title: Instrument
     url: instrumentation
+
+  - title: Integrate
+    url: integrate
 
   - title: Results
     url: results

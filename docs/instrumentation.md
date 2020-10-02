@@ -1,4 +1,4 @@
-# Instrumentation
+# Instrument
 The instrumentation and performance analysis is provided via Timemory toolkit. HiCOPS incorporates instrumentation using C++14 `extern templates` which allow custom instantiation of required instrumentation metrics. Please refer to [Timemory](https://timemory.readthedocs.io/en/develop/about.html) documentation for more information.
 
 ## Provided Interfaces

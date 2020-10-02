@@ -2,7 +2,7 @@
 title: Install
 toc: true
 ---
-# Installation
+# Install
 HiCOPS uses a standard CMake installation. Set the environment variables `CC` and `CXX` before executing CMake to specify the compilers. By default, HiCOPS enables `OPENMP` and `MPI` with no instrumentation. HiCOPS will search the `CMAKE_PREFIX_PATH` for Timemory installation.
 
 ## Environment
