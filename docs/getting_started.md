@@ -50,25 +50,31 @@ Follow the below instructions if you are running on any system but XSEDE Comet.
 
 #### Generate Params
 * Ensure that the hicops-core library path has been added to `LD_LIBRARY_PATH`.      
+
 ```bash
 # append hicops-core lib path to LD_LIBRARY_PATH.
 $ export LD_LIBRARY_PATH=$PWD/../install/lib:$LD_LIBRARY_PATH
-```         
+```
+
 * Generate HiCOPS template runtime parameters file using the `hicops_config` tool located at `$HICOPS_INSTALL/bin`.     
+
 ```bash
 # run hicops_comet with -g
 $ $HICOPS_INSTALL/bin/hicops_config -g
-
 # generated: ./sampleparams.txt
-```         
+```
+
 * Edit the generated sampleparams.txt file and setup HiCOPS' runtime parameters, database and data paths.     
+
 * Generate the HiCOPS runtime parameters file (`uparams.txt`) using `hicops_config` as:     
+
 ```bash
 # run hicops_comet with sampleparams.txt
 $ $HICOPS_INSTALL/bin/hicops_config ./sampleparams.txt
 
 # generated: uparams.txt
-```        
+```
+
 #### Execute
 * Run HiCOPS with `uparams.txt` as input argument with or without MPI depending on HiCOPS install [options]({{ site.baseurl }}/installation#cmake-options). Use the resource manager (SLURM, LSH) if working on a managed cluster system.       
 

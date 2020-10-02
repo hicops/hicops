@@ -1,13 +1,16 @@
 ---
 title: Run on XSEDE
 ---
-# Run HiCOPS on XSEDE Comet
+# Run on XSEDE Comet
 
 **Important:** The instructions contained in this document must be used *ONLY* for the XSEDE Comet system. For any other system, please use the instructions [here]({{ site.baseurl }}/getting_started#any-other-system).
 
-Assuming that the HiCOPS has been installed at : `$HICOPS_INSTALL` and the pre-requisite [Setup]({{ site.baseurl }}/getting_started#setup) steps have been performed.
+## Setup
+Complete the setup steps by following through the instructions in [Getting%20Started]({{ site.baseurl }}/getting_started#setup) document.
 
 ## Steps
+Assuming that the HiCOPS has been installed at : `$HICOPS_INSTALL` and the pre-requisite
+
 * Ensure that the hicops-core library path has been added to `LD_LIBRARY_PATH`.      
 
 ```bash

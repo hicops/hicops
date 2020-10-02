@@ -13,13 +13,13 @@ content2:
   - title: Install
     url: installation
     drop:
-      - title: Packages
+      - title: Required Packages
         url: packages
 
   - title: Getting Started
     url: getting_started
     drop:
-      - title: XSEDE
+      - title: Run on XSEDE
         url: xsede
 
 # third list
