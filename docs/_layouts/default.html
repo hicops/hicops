@@ -16,7 +16,7 @@
       background: url('../images/bg_hr.png') repeat-x bottom;
     }
     
-    li {
+    li.main2 {
       float: left;
     }
     
@@ -33,7 +33,7 @@
     }
 
     li.dropdown {
-    display: inline-block;
+      display: inline-block;
     }
 
     .dropdown-content {
@@ -83,7 +83,7 @@
 
             <!-- second list with dropdowns -->
             {% for item in site.data.toc.content2 %}
-              <li class="dropdown"><a href="{{ site.baseurl }}/{{ item.url }}" class="dropbtn">{{ item.title }}</a>
+              <li class="dropdown" style="float:left"><a href="{{ site.baseurl }}/{{ item.url }}" class="dropbtn">{{ item.title }}</a>
                 <div class="dropdown-content">
                 {% for sub in item.drop %}
                   <a href="{{ site.baseurl }}/{{ item.url }}/{{ sub.url }}">{{ sub.title }}</a>
@@ -136,4 +136,5 @@
       </script>
     {% endif %}
   </body>
+
 </html>
