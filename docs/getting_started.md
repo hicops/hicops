@@ -3,23 +3,42 @@ title: Getting Started
 ---
 
 # Getting Started
-For this document, we will be assuming that the HiCOPS has been installed at: `$HICOPS_INSTALL`
+Follow the below steps to get started with HiCOPS:
+<ul>
+  <li><a href="##Setup">Setup</a>
+    <ul>
+      <li><a href="###Setup-Database">Setup Database   </a></li>
+      <li><a href="###Setup-MS/MS-Dataset">Setup MS/MS Data   </a></li>
+      <li><a href="###Setup-Instrumentation">Setup Instrumentation   </a></li>
+    </ul>
+  </li>
+  <li><a href="##Run-HiCOPS">Run   </a>
+    <ul>
+      <li><a href="###XSEDE-Comet">XSEDE Comet    </a></li>
+      <li><a href="###Any-Other-System">Any Other System    </a></li>
+    </ul>
+  </li>
+  <li><a href="##Precautions">Precautions    </a></li>
+</ul>
 
-## Setup Database
+## Setup
+Setup the peptide database, experimental MS/MS dataset and HiCOPS instrumentation using the below instructions.
+
+### Setup Database
 Get the desired protein sequence database from UniProt/Swissprot. Digest the protein sequence database into a peptide sequence database using Digestor tool available with [OpenMS](https://www.openms.de/) or using [ProteoWizard](http://proteowizard.sourceforge.net/). Make sure that the generated peptide sequence database is in FASTA format. Use the `db_prep` tool to separate coarse-grained peptide sequence clusters. This tool will generate many files in `./parts/len.pep` directory. Read more about the usage of `db_prep` tool [here]({{ site.baseurl }}/tools/database/db_prep).
 
-## Setup MS/MS dataset
+### Setup MS/MS Dataset
 HiCOPS currently only supports the `MS2` format for experimental MS/MS data. Please convert all experimental MS/MS data files into this format using the `raw2ms2` command line tool available with HiCOPS. Read more about the usage of `raw2ms2` tool [here]({{ site.baseurl }}/tools/ms2prep/raw2ms2).
 
-## Setup instrumentation
+### Setup Instrumentation
 Optional: If HiCOPS instrumentation was enabled during build, it can be configured and modified using the following environment variables. See how to enable HiCOPS instrumentation in the [Installation]({{ site.baseurl }}/installations) document:
 
-| Variable                 | Description                                                                                                       |
-|--------------------------|-------------------------------------------------------------------------------------------------------------------|
-| `TIMEMORY_ENABLED`       | Enable/disable Timemory instrumentation interface. Set to : ON (default), OFF                                     |
-| `HICOPS_MPIP_INSTR`      | Enable MPI data communication instrumentation. Set to: ON (default), OFF                                          |
-| `HICOPS_INST_COMPONENTS` | Append instrumentation components. Set to: `HICOPS_INST_COMPONENTS="c1,c2,.."` where `ci` is a Timemory component |
-| `HICOPS_PAPI_EVENTS`     | Modify the hardware counters. Set to: `HICOPS_PAPI_EVENTS="h1,h2,.."` where `hi` is a PAPI counter                |
+| Variable                 | Description                                                                                 |
+|--------------------------|---------------------------------------------------------------------------------------------|
+| `TIMEMORY_ENABLED`       | Enable/disable Timemory instrumentation interface. Set to : ON (default), OFF               |
+| `HICOPS_MPIP_INSTR`      | Enable MPI data communication instrumentation. Set to: ON (default), OFF                    |
+| `HICOPS_INST_COMPONENTS` | Add inst components. Set as: `HICOPS_INST_COMPONENTS="c1,.."` where `ci` is a Timemory comp |
+| `HICOPS_PAPI_EVENTS`     | Modify hardware counters. Set as: `HICOPS_PAPI_EVENTS="h1,.."` where `hi` is a PAPI counter |
 
 To list all available timemory components [here](https://timemory.readthedocs.io/en/develop/tools/timemory-avail/README.html?highlight=user_bundle#available-components). By default, the following hardware counters are inserted into the `HICOPS_PAPI_EVENTS`.
 
@@ -34,15 +53,15 @@ To see which hardware counters are available on your system and their descriptio
 **NOTE:** If a PAPI counter is not available on the system but is added to the `HICOPS_PAPI_EVENTS` anyway, the profiler will not instrument any of the counters in the list regardless of their availability.
 
 ## Run HiCOPS
-Read the following instructions to run HiCOPS based on your environment.
+Follow the instructions relevant to your compute environment to seamlessly run HiCOPS. We categorize the compute environments into two categories
 
 ### XSEDE Comet
-If you are running on XSEDE Comet, skip the rest of this page and follow the instructions in [XSEDE]({{ site.baseurl }}/getting_started/xsede) document.
+If you are running on XSEDE Comet environment, skip the rest of this document and follow the instructions [here]({{ site.baseurl }}/getting_started/xsede).
 
-### Otherwise
-Follow the steps mentioned below. We will use the `hicops_config` tool to generate input parameters file, called `uparams.txt` for HiCOPS. Information on `hicops_comet` tool can be found [here]({{ site.baseurl }}/tools/runtime/hicops_config).
+### Any Other System
+Follow the below instructions if you are running on any system but XSEDE Comet.
 
-#### Parameter Generation
+#### Generate Params
 1. Ensure that the hicops-core library path has been added to `LD_LIBRARY_PATH`.      
 
 ```bash
@@ -53,10 +72,10 @@ $ export LD_LIBRARY_PATH=$PWD/../install/lib:$LD_LIBRARY_PATH
 2. Generate HiCOPS template runtime parameters file using the `hicops_config` tool located at `$HICOPS_INSTALL/bin`.     
 
 ```bash
+# run hicops_comet with -g
 $ $HICOPS_INSTALL/bin/hicops_config -g
-Generated: ./sampleparams.txt
 
-SUCCESS
+# generated: ./sampleparams.txt
 ```
 
 3. Edit the generated sampleparams.txt file and setup HiCOPS' runtime parameters, database and data paths.     
@@ -64,56 +83,50 @@ SUCCESS
 4. Generate the HiCOPS runtime parameters file (`uparams.txt`) using `hicops_config` as:     
 
 ```bash
+# run hicops_comet with sampleparams.txt
 $ $HICOPS_INSTALL/bin/hicops_config ./sampleparams.txt
-# uparams.txt will be generated
-Generated: uparams.txt
+
+# generated: uparams.txt
 ```
-
-**Note:** Repeat Steps 3-4 when you modify parameters in the `sampleparams.txt`.       
-
-#### Local Computer
-1. Generate `uparams.txt` file using the steps [above](###Parameter-Generation).         
-
-2. Run HiCOPS with `uparams.txt` as input argument with or without MPI depending on HiCOPS install [options]({{ site.baseurl }}/installation/##CMake-Options).       
+#### Execute
+5. Run HiCOPS with `uparams.txt` as input argument with or without MPI depending on HiCOPS install [options]({{ site.baseurl }}/installation/##CMake-Options). Use the resource manager (SLURM, LSH) if working on a managed cluster system.       
 
 ```bash
-# without using MPI
+# without MPI
 $ $HICOPS_INSTALL/bin/hicops $HICOPS_INSTALL/bin/uparams.txt
 
-# using MPI
+# SLURM without MPI
+$ srun [OPTIONS] $HICOPS_INSTALL/bin/hicops $HICOPS_INSTALL/bin/uparams.txt
+```
+
+```bash
+# with MPI
 $ mpirun -np [P] [OPTIONS] $HICOPS_INSTALL/bin/hicops \\
   $HICOPS_INSTALL/bin/uparams.txt
-```
 
-**Note:**  Configure the mpirun options as follows: set binding level to `socket` and binding policy to `scatter`.
-
-3. After HiCOPS execution is complete, run the `psm2excel` tool with `workspace` output directory (set in the sampleparams.txt file) as arguments.       
-
-```bash
-$ $HICOPS_INSTALL/tools/psm2excel [/path/to/hicops/workspace/output]
-```
-
-#### SLURM
-1. Generate `uparams.txt` file using the steps [above](###Parameter-Generation).         
-
-2. Run HiCOPS with `uparams.txt` as input argument using SLURM with or without MPI depending on HiCOPS install [options]({{ site.baseurl }}/installation/##CMake-Options).        
-
-```bash
-# without using MPI
-$ srun [OPTIONS] $HICOPS_INSTALL/bin/hicops $HICOPS_INSTALL/bin/uparams.txt
-
-# using MPI
+# SLURM with MPI
 $ srun [OPTIONS] mpirun -np [P] [OPTIONS] $HICOPS_INSTALL/bin/hicops \\
   $HICOPS_INSTALL/bin/uparams.txt
 ```
 
-**Note:** We highly recommend running HiCOPS through batch job submission via `sbatch` instead of `srun`. Make sure to follow the Hybrid MPI/OpenMP batch submission template when doing so.
-
 **Note:**  Configure the mpirun options as follows: set binding level to `socket` and binding policy to `scatter`.
+**Note:** We highly recommend running HiCOPS through batch job submission `sbatch` instead of `srun`. Make sure to follow the relevant Hybrid MPI/OpenMP batch submission template when doing so.
 
-3. After HiCOPS execution, run the `psm2excel` tool using SLURM with `workspace` output directory (set in the sampleparams.txt file) as arguments.
+6. After HiCOPS execution is complete, run the `psm2excel` tool with `workspace` output directory (set in the sampleparams.txt file) as arguments.       
 
 ```bash
+# psm2excel
+$ $HICOPS_INSTALL/tools/psm2excel [/path/to/hicops/workspace/output]
+
+# psm2excel with SLURM
 $ srun [OPTIONS] --nodes=1 $HICOPS_INSTALL/tools/psm2excel -i \\
   [/path/to/hicops/workspace/output]
 ```
+
+**Note:** Repeat Steps 3-5 if you modify parameters in the `sampleparams.txt`.
+
+## Precautions
+* Always use a unique workspace directory for each experiment, specially for the simultaneously running HiCOPS instances to avoid overwriting intermediate results and other errors.      
+* Do not run too many simultaneous HiCOPS instances with large number of nodes allocated to each instance to avoid performance degradation due to shared file system storage network.       
+* Do not modify the generated files such as `uparams.txt` manually and instead re-generate using the relevant tools.    
+* Avoid using relative paths in the sampleparams.txt file to avoid any errors.    
