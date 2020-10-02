@@ -2,6 +2,7 @@
 title: Install
 toc: true
 ---
+
 # Install
 HiCOPS uses a standard CMake installation. Set the environment variables `CC` and `CXX` before executing CMake to specify the compilers. By default, HiCOPS enables `OpenMP` and `MPI` and disables instrumentation support. HiCOPS will search the `CMAKE_PREFIX_PATH` for Timemory installation.
 
@@ -15,10 +16,10 @@ HiCOPS uses a standard CMake installation. Set the environment variables `CC` an
 **Important**: Please make sure that your MPI distribution supports multiple threads (MPI thread multiple) option.
 
 ## Required Packages
-Install all required packages by following the instructions [here]({{ site.baseurl }}/installation/packages#Required-Packages).
+Install all required packages by following the instructions [here]({{ site.baseurl }}/installation/packages#required-packages).
 
 ## Instrumentation Support
-Optional: Install Timemory to enable instrumentation by following the instructions [here]({{ site.baseurl }}/installation/packages##Optional-Packages).
+Optional: Install Timemory to enable instrumentation by following the instructions [here]({{ site.baseurl }}/installation/packages#optional-packages).
 
 ## Install HiCOPS
 Install HiCOPS using Git & CMake using the following steps:

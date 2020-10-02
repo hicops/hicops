@@ -64,9 +64,27 @@
           <h1 id="project_title">{{ site.title | default: site.github.repository_name }}</h1>
           <h2 id="project_tagline">{{ site.description | default: site.github.project_tagline }}</h2>
           
+          <!-- NAVIGATION LOOP -->
           <ul class="main">
-            {% for item in site.data.toc.content %}
+
+            <!-- first list -->
+            {% for item in site.data.toc.content1 %}
               <li class = "main2"><a href="{{ site.baseurl }}/{{ item.url }}">{{ item.title }}</a></li>
+            {% endfor %}
+
+            <!-- second list with dropdowns -->
+            {% for item in site.data.toc.content2 %}
+            <li class="dropdown"><a href="{{ site.baseurl }}/{{ item.url }}" class="dropdown">{{ item.title }}</a>
+              <div class="dropdown-content">
+              {% for sub in item.drop %}
+                <a href="{{ site.baseurl }}/{{ item.url }}/{{ sub.url }}">sub.title</a>
+              {% endfor %}
+            </li>
+            {% endfor %}
+
+            <!-- third list -->
+            {% for item in site.data.toc.content3 %}
+            <li class = "main2"><a href="{{ site.baseurl }}/{{ item.url }}">{{ item.title }}</a></li>
             {% endfor %}
           </ul>
 

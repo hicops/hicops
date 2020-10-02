@@ -4,34 +4,21 @@ title: Getting Started
 
 # Getting Started
 Follow the below steps to get started with HiCOPS:
-<ul>
-  <li><a href="##Setup">Setup</a>
-    <ul>
-      <li><a href="###Setup-Database">Setup Database   </a></li>
-      <li><a href="###Setup-MS/MS-Dataset">Setup MS/MS Data   </a></li>
-      <li><a href="###Setup-Instrumentation">Setup Instrumentation   </a></li>
-    </ul>
-  </li>
-  <li><a href="##Run-HiCOPS">Run   </a>
-    <ul>
-      <li><a href="###XSEDE-Comet">XSEDE Comet    </a></li>
-      <li><a href="###Any-Other-System">Any Other System    </a></li>
-    </ul>
-  </li>
-  <li><a href="##Precautions">Precautions    </a></li>
-</ul>
+
+* TOC
+{:toc}
 
 ## Setup
 Setup the peptide database, experimental MS/MS dataset and HiCOPS instrumentation using the below instructions.
 
 ### Setup Database
-Get the desired protein sequence database from UniProt/Swissprot. Digest the protein sequence database into a peptide sequence database using Digestor tool available with [OpenMS](https://www.openms.de/) or using [ProteoWizard](http://proteowizard.sourceforge.net/). Make sure that the generated peptide sequence database is in FASTA format. Use the `db_prep` tool to separate coarse-grained peptide sequence clusters. This tool will generate many files in `./parts/len.pep` directory. Read more about the usage of `db_prep` tool [here]({{ site.baseurl }}/tools/database/db_prep).
+Get the desired protein sequence database from UniProt/Swissprot. Digest the protein sequence database into a peptide sequence database using Digestor tool available with [OpenMS](https://www.openms.de/) or using [ProteoWizard](http://proteowizard.sourceforge.net/). Make sure that the generated peptide sequence database is in FASTA format. Use the `db_prep` tool to separate coarse-grained peptide sequence clusters. This tool will generate many files in `./parts/len.pep` directory. Read more about the usage of `db_prep` tool [here]({{ site.baseurl }}/tools/dbtools/dbprep).
 
 ### Setup MS/MS Dataset
 HiCOPS currently only supports the `MS2` format for experimental MS/MS data. Please convert all experimental MS/MS data files into this format using the `raw2ms2` command line tool available with HiCOPS. Read more about the usage of `raw2ms2` tool [here]({{ site.baseurl }}/tools/ms2prep/raw2ms2).
 
 ### Setup Instrumentation
-Optional: If HiCOPS instrumentation was enabled during build, it can be configured and modified using the following environment variables. See how to enable HiCOPS instrumentation in the [Installation]({{ site.baseurl }}/installations) document:
+Optional: If HiCOPS instrumentation was enabled during build, it can be configured and modified using the following environment variables. See how to enable HiCOPS instrumentation in the [Installation]({{ site.baseurl }}/installation) document:
 
 | Variable                 | Description                                                                                 |
 |--------------------------|---------------------------------------------------------------------------------------------|
@@ -62,34 +49,28 @@ If you are running on XSEDE Comet environment, skip the rest of this document an
 Follow the below instructions if you are running on any system but XSEDE Comet.
 
 #### Generate Params
-1. Ensure that the hicops-core library path has been added to `LD_LIBRARY_PATH`.      
-
+* Ensure that the hicops-core library path has been added to `LD_LIBRARY_PATH`.      
 ```bash
 # append hicops-core lib path to LD_LIBRARY_PATH.
 $ export LD_LIBRARY_PATH=$PWD/../install/lib:$LD_LIBRARY_PATH
-```
-
-2. Generate HiCOPS template runtime parameters file using the `hicops_config` tool located at `$HICOPS_INSTALL/bin`.     
-
+```         
+* Generate HiCOPS template runtime parameters file using the `hicops_config` tool located at `$HICOPS_INSTALL/bin`.     
 ```bash
 # run hicops_comet with -g
 $ $HICOPS_INSTALL/bin/hicops_config -g
 
 # generated: ./sampleparams.txt
-```
-
-3. Edit the generated sampleparams.txt file and setup HiCOPS' runtime parameters, database and data paths.     
-
-4. Generate the HiCOPS runtime parameters file (`uparams.txt`) using `hicops_config` as:     
-
+```         
+* Edit the generated sampleparams.txt file and setup HiCOPS' runtime parameters, database and data paths.     
+* Generate the HiCOPS runtime parameters file (`uparams.txt`) using `hicops_config` as:     
 ```bash
 # run hicops_comet with sampleparams.txt
 $ $HICOPS_INSTALL/bin/hicops_config ./sampleparams.txt
 
 # generated: uparams.txt
-```
+```        
 #### Execute
-5. Run HiCOPS with `uparams.txt` as input argument with or without MPI depending on HiCOPS install [options]({{ site.baseurl }}/installation/##CMake-Options). Use the resource manager (SLURM, LSH) if working on a managed cluster system.       
+* Run HiCOPS with `uparams.txt` as input argument with or without MPI depending on HiCOPS install [options]({{ site.baseurl }}/installation#cmake-options). Use the resource manager (SLURM, LSH) if working on a managed cluster system.       
 
 ```bash
 # without MPI
@@ -112,7 +93,7 @@ $ srun [OPTIONS] mpirun -np [P] [OPTIONS] $HICOPS_INSTALL/bin/hicops \\
 **Note:**  Configure the mpirun options as follows: set binding level to `socket` and binding policy to `scatter`.
 **Note:** We highly recommend running HiCOPS through batch job submission `sbatch` instead of `srun`. Make sure to follow the relevant Hybrid MPI/OpenMP batch submission template when doing so.
 
-6. After HiCOPS execution is complete, run the `psm2excel` tool with `workspace` output directory (set in the sampleparams.txt file) as arguments.       
+* After HiCOPS execution is complete, run the `psm2excel` tool with `workspace` output directory (set in the sampleparams.txt file) as arguments.       
 
 ```bash
 # psm2excel

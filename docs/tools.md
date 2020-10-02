@@ -2,17 +2,15 @@
 title: tools
 ---
 
-**Table of Contents**
+# HICOPS Tools
+
+This section covers the executable tools that are distributed as part of HiCOPS. The provided tools aid in peptide database processing, MS/MS data conversions, and runtime support. The subsequent sections provide an overview of the listed tools.
 
 * TOC
 {:toc}
 
-# HICOPS Tools
-
-This section covers the executable tools that are distributed as part of HiCOPS. The provided tools aid in peptide database processing, MS/MS data conversions, and runtime support. The subsequent sections provide an overview of each tool.
-
 ## Runtime
-The following tools help in running HiCOPS and generating input parameters.
+The following tools help generate input parameters and run HiCOPS.
 
 ### [hicops_config]({{ site.baseurl }}/tools/runtime/hicops_config)
 This tool generates a compact params file, called `uparams.txt` from a user-friendly parameters/setting file. The generated `uparams.txt` is used with HiCOPS as arguments. A template of user-friendly parameters file can also be generated. More details [here]({{ site.baseurl }}/tools/runtime/hicops_config).
@@ -23,7 +21,7 @@ This tool serves as the main utility for running HiCOPS on XSEDE Comet using a u
 ## Database Preprocessing
 The following tools help prepare the peptide sequence database for HiCOPS.
 
-### [db_prep]({{ site.baseurl }}/tools/database/db_prep)
+### [db_prep]({{ site.baseurl }}/tools/dbtools/dbprep)
 This tool prepares coarse-grained peptide sequence clusters from a peptide sequence database (in FASTA format). The generated files are used as input database to HiCOPS. More details [here]({{ site.baseurl }}/tools/database/db_prep).
 
 ## MS Data Processing

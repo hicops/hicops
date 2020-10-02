@@ -1,17 +1,29 @@
 content_list_title: Table of Contents
-content:
+
+# first list
+content1:
   - title: Home
     url: index
 
   - title: Features
     url: features
 
+# second list
+content2:
   - title: Install
     url: installation
+    drop:
+      - title: Packages
+        url: packages
 
   - title: Getting Started
     url: getting_started
+    drop:
+      - title: XSEDE
+        url: xsede
 
+# third list
+content3:
   - title: Tools
     url: tools
 
@@ -26,4 +38,3 @@ content:
 
   - title: Contribute
     url: contributing
-
