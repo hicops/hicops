@@ -34,13 +34,16 @@ $ CC=$(which gcc) CXX=$(which g++) cmake .. [CMAKE_OPTIONS] -G [BUILD_SYSTEM] [H
 
 # build and install
 $ make install -j [JOBS]
+
+# append  hicops-core lib path to LD_LIBRARY_PATH.
+$ export LD_LIBRARY_PATH=$PWD/../install/lib:$LD_LIBRARY_PATH
 ```
 
-**NOTE:** Compiling HiCOPS with Timemory enabled may take some time (~ 3-5 minutes)
+**Note:** Compiling HiCOPS with Timemory enabled may take some time (~ 3-5 minutes)
 
 ## CMake Options
 
-The available CMake options for HiCOPS:
+The available CMake options for HiCOPS include:
 
 | Option             | Description                                                                                             |
 |--------------------|---------------------------------------------------------------------------------------------------------|
@@ -48,16 +51,16 @@ The available CMake options for HiCOPS:
 | `USE_TIMEMORY`     | Enable timemory interface. Set to: ON, OFF (default) => Requires timemory installation.                 |
 | `USE_MPIP_LIBRARY` | Enables the MPIP data_tracker via Timemory. Set to: ON, OFF (default) => Requires timemory installation |
 | `TAILFIT`          | Use the tailfit method instead of Gumbelfit for e-value computation. Set to: ON (default), OFF          |
-| `PROGRESS`         | Display progress marks. Set to: ON (default), OFF                                                       |
+| `PROGRESS`         | Display  HiCOPS progress marks. Set to: ON (default), OFF                                               |
 | `MAX_SEQ_LEN`      | Allowed maximum peptide sequence length. Set to: 7 to 60. Default: 60                                   |
 | `QALEN`            | Maximum number of top K peaks to keep when spectrum preprocess. Default: 100                            |
 | `QCHUNK`           | Max size of each batch extracted from the dataset. Default: 10000                                       |
 | `MAX_HYPERSCORE`   | Maximum allowed hyperscore computed. Default: 100                                                       |
 
-Available CMake build control options:
+Available CMake build control options include:
 
 | Option                 | Description                                                                     |
 |------------------------|---------------------------------------------------------------------------------|
 | `CMAKE_INSTALL_PREFIX` | Set the installation path for HiCOPS, must be a writable directory without sudo |
 | `CMAKE_BUILD_TYPE`     | Build type. Set to: Release, Debug, MinSizeRel, RelWithDebInfo (default)        |
-| `CMAKE_CXX_STANDARD`   | C++ standard. Set to: 11, 14 (default), 17                                      |
+| `CMAKE_CXX_STANDARD`   | C++ standard. Set to: 14 (default), 17                                          |

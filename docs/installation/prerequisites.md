@@ -2,7 +2,7 @@
 title: Prerequisites
 ---
 
-# Install Prerequisites
+# Prerequisites
 
 ## Required Packages
 Install and load the latest versions of the following packages, preferably through [Spack](https://spack.readthedocs.io). Read more about how to install Spack, and how to install and load packages using Spack [here](https://spack.readthedocs.io/en/latest/getting_started.html).
@@ -18,6 +18,8 @@ Install and load the latest versions of the following packages, preferably throu
 | py-subprocess32    | py-cycler         | py-openpyxl   |
 | py-six             | py-argparse       | py-matplotlib |
 | py-pytz            | mpich             | python        |
+
+**Note:** You may skip MPI installation if you are running on a cluster system with built-in MPI distribution and simply load that into your environment.
 
 ## Optional Packages
 Install the optional packages, preferably using Spack.

@@ -3,25 +3,51 @@ title: Getting Started
 ---
 
 # Getting Started
-For this document, we will be assuming that the HiCOPS was installed at : `$HICOPS_INSTALL`
-
-## Set environment variables
-Append  `HICOPS_INSTALL/lib` to the `LD_LIBRARY_PATH`.
-
-```bash
-$ export LD_LIBRARY_PATH=$HICOPS_INSTALL/lib:$LD_LIBRARY_PATH
-```
+For this document, we will be assuming that the HiCOPS has been installed at : `$HICOPS_INSTALL`
 
 ## Setup Database
 
-## Setup MS dataset
+
+## Setup MS/MS dataset
+HiCOPS currently only supports the `MS2` format for experimental MS/MS data. Please convert all experimental MS/MS data files into this format using the `raw2ms2` command line tool available with HiCOPS. Read more about the usage of `raw2ms2` tool [here]({{ site.baseurl }}/tools/ms2prep/raw2ms2).
 
 ## Setup instrumentation
-Optionally setup instrumentation by following the instructions in [Instrumentation]({{ site.baseurl }}/instrumentation##Setup-Instrumentation) document.
+Optional: If HiCOPS instrumentation was enabled during build, it can be configured and modified using the following environment variables. See how to enable HiCOPS instrumentation in the [Installation]({{ site.baseurl }}/installations) document:
 
+| Variable                 | Description                                                                                                          |
+|--------------------------|----------------------------------------------------------------------------------------------------------------------|
+| `TIMEMORY_ENABLED`       | Enable/disable Timemory instrumentation interface. Set to : ON (default), OFF                                        |
+| `HICOPS_MPIP_INSTR`      | Enable MPI data communication instrumentation. Set to: ON (default), OFF                                             |
+| `HICOPS_INST_COMPONENTS` | Append instrumentation components. Set to: HICOPS_INST_COMPONENTS="c1,c2,.." where ci is a Timemory component  |
+| `HICOPS_PAPI_EVENTS`     | Modify the hardware counters. Set to: HICOPS_PAPI_EVENTS="h1,h2,.." where hi is a PAPI counter                 |
+
+To list all available timemory components [here](https://timemory.readthedocs.io/en/develop/tools/timemory-avail/README.html?highlight=user_bundle#available-components). By default, the following hardware counters are inserted into the `HICOPS_PAPI_EVENTS`.
+
+```bash
+HICOPS_PAPI_EVENTS="PAPI_TOT_INS, PAPI_TOT_CYC, PAPI_L3_TCM, \\
+PAPI_L2_TCA, PAPI_L3_TCA, PAPI_MEM_WCY, PAPI_RES_STL, \\
+PAPI_STL_CCY, PAPI_BR_CN, PAPI_BR_PRC, PAPI_FUL_ICY"
+``` 
+
+To see which hardware counters are available on your system and their description, use the `papi_avail` or `timemory-avail` tool. Refer to the PAPI documentation [here](https://icl.utk.edu/papi/) for more information. 
+
+**NOTE:** If a PAPI counter is not available on the system but is added to the `HICOPS_PAPI_EVENTS` anyway, the profiler will not instrument any of the counters in the list regardless of their availability.
+
+## Run HiCOPS on XSEDE Comet
+Follow the instructions in [XSEDE]({{ site.baseurl }}/getting_started/xsede) document.
 
 ## Run HiCOPS
-Generate HiCOPS sample runtime parameters file using the `hicops_config` located at `$HICOPS_INSTALL/bin`.
+Follow the steps mentioned below. We will use the `hicops_config` tool to generate input parameters file, called `uparams.txt` for HiCOPS. Information on `hicops_comet` tool can be found [here]({{ site.baseurl }}/tools/runtime/hicops_config).
+
+### Parameter Generation
+1. Ensure that the hicops-core library path has been added to `LD_LIBRARY_PATH`.      
+
+```bash
+# append hicops-core lib path to LD_LIBRARY_PATH.
+$ export LD_LIBRARY_PATH=$PWD/../install/lib:$LD_LIBRARY_PATH
+```
+
+2. Generate HiCOPS template runtime parameters file using the `hicops_config` tool located at `$HICOPS_INSTALL/bin`.     
 
 ```bash
 $ $HICOPS_INSTALL/bin/hicops_config -g
@@ -30,55 +56,61 @@ Generated: ./sampleparams.txt
 SUCCESS
 ```
 
-Edit the generated sampleparams.txt file and add/modify HiCOPS' runtime parameters.
-Generate the HiCOPS runtime parameters file (called `uparams.txt`) as:
+3. Edit the generated sampleparams.txt file and setup HiCOPS' runtime parameters, database and data paths.     
+
+4. Generate the HiCOPS runtime parameters file (`uparams.txt`) using `hicops_config` as:     
 
 ```bash
 $ $HICOPS_INSTALL/bin/hicops_config ./sampleparams.txt
+# uparams.txt will be generated
 Generated: uparams.txt
 ```
 
-Run HiCOPS with `uparams.txt` as arguments and optionally MPI if `USE_MPI=ON` was set in [Configure](###Configure) stage.
+**Note:** Repeat Steps 3-4 when you modify parameters in the `sampleparams.txt`.       
+
+### Local Computer
+1. Generate `uparams.txt` file using the steps [above](###Parameter-Generation).         
+
+2. Run HiCOPS with `uparams.txt` as input argument with or without MPI depending on HiCOPS install [options]({{ site.baseurl }}/installation/##CMake-Options).       
 
 ```bash
-$ mpirun -np 4 [OPTIONS] $HICOPS_INSTALL/bin/hicops $HICOPS_INSTALL/bin/uparams.txt
+# without using MPI
+$ $HICOPS_INSTALL/bin/hicops $HICOPS_INSTALL/bin/uparams.txt
+
+# using MPI
+$ mpirun -np [P] [OPTIONS] $HICOPS_INSTALL/bin/hicops \\
+  $HICOPS_INSTALL/bin/uparams.txt
 ```
 
-**NOTE:** Repeat Steps # 2 and 3 if you modify parameters in the `sampleparams.txt`.
+**Note:**  Configure the mpirun options as follows: set binding level to `socket` and binding policy to `scatter`.
 
-## On XSEDE Comet
-Generate HiCOPS sample runtime parameters file using the `hicops_comet` tool located at `$HICOPS_INSTALL/bin/tools`.
-
-```bash
-$ $HICOPS_INSTALL/bin/tools/hicops_comet -g
-Generated: ./sampleparams.txt
-
-SUCCESS
-```
-
-Edit the generated sampleparams.txt file and add/modify HiCOPS' runtime parameters.
-
-Run HiCOPS using the same tool i.e. `hicops_comet`, however, this time providing the updated sampleparams.txt as parameter to the tool.
-
-```bash
-$ $HICOPS_INSTALL/bin/tools/hicops_comet sampleparams.txt
-```
-
-**NOTE:** Repeat Steps # 2 and 3 if you modify parameters in the `sampleparams.txt`.
-
-# Post-processing HiCOPS output
-HiCOPS generates PSM data in partial TSV files that can be merged using the `psm2excel` tool located at: `$HICOPS_INSTALL/tool`. The tool generates a combined Excel file called `Concat.xlsx` containing the final PSM data (no-FDR).
-
-## On a regular computer (skip if using XSEDE Comet)
-Run the `psm2excel` tool and pass the HiCOPS workspace output directory (that was set in the sampleparams.txt file) as parameter.
+3. After HiCOPS execution is complete, run the `psm2excel` tool with `workspace` output directory (set in the sampleparams.txt file) as arguments.       
 
 ```bash
 $ $HICOPS_INSTALL/tools/psm2excel [/path/to/hicops/workspace/output]
 ```
 
-## On XSEDE Comet
-Run the `psm2excel` tool using SLURM and pass the HiCOPS workspace output directory (that was set in the sampleparams.txt file) as parameters.
+### SLURM
+1. Generate `uparams.txt` file using the steps [above](###Parameter-Generation).         
+
+2. Run HiCOPS with `uparams.txt` as input argument using SLURM with or without MPI depending on HiCOPS install [options]({{ site.baseurl }}/installation/##CMake-Options).        
 
 ```bash
-$ srun --partition=compute  --nodes=1 --ntasks-per-node=1 -t 00:15:00 --export=ALL $HICOPS_INSTALL/tools/psm2excel -i [/path/to/hicops/workspace/output]
+# without using MPI
+$ srun [OPTIONS] $HICOPS_INSTALL/bin/hicops $HICOPS_INSTALL/bin/uparams.txt
+
+# using MPI
+$ srun [OPTIONS] mpirun -np [P] [OPTIONS] $HICOPS_INSTALL/bin/hicops \\
+  $HICOPS_INSTALL/bin/uparams.txt
+```
+
+**Note:** We highly recommend running HiCOPS through batch job submission via `sbatch` instead of `srun`. Make sure to follow the Hybrid MPI/OpenMP batch submission template when doing so.
+
+**Note:**  Configure the mpirun options as follows: set binding level to `socket` and binding policy to `scatter`.
+
+3. After HiCOPS execution, run the `psm2excel` tool using SLURM with `workspace` output directory (set in the sampleparams.txt file) as arguments.
+
+```bash
+$ srun [OPTIONS] --nodes=1 $HICOPS_INSTALL/tools/psm2excel -i \\
+  [/path/to/hicops/workspace/output]
 ```
