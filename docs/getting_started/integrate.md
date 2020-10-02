@@ -1,8 +1,8 @@
 ---
-title: Integrate
+title: Integration
 ---
 
-# Integrate
+# Integration
 HiCOPS provides a function interface for integrating database peptide search algorithms its parallel core library. Currently, all HiCOPS data structures, boiler-plate code, parallel algorithms are exposed publicly to allow full control. 
 
 ## Methods

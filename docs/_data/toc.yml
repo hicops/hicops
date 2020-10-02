@@ -24,6 +24,8 @@ content2:
     drop:
       - title: Run on XSEDE
         url: xsede
+      - title: Integration
+        url: integrate
 
   - title: Tools
     url: tools
@@ -42,9 +44,5 @@ content2:
     
 # third list
 content3:
-
-  - title: Integrate
-    url: integrate
-
   - title: Contribute
     url: contributing
