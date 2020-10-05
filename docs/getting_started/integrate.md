@@ -5,7 +5,7 @@ title: Integration
 # Integration
 HiCOPS provides a function interface for integrating database peptide search algorithms its parallel core library. Currently, all HiCOPS data structures, boiler-plate code, parallel algorithms are exposed publicly to allow full control. 
 
-## Methods
+## Function Interface
 The shared memory versions of algorithms are implemented inside relevant functions using OpenMP or `C++::threads` depending on the function's specification. The following sub-sections will provide an overview of integrating new or existing shared memory database peptide search algorithms with HiCOPS parallel library.
 
 ### Database Indexing
@@ -16,7 +16,7 @@ The shared memory versions of algorithms are implemented inside relevant functio
 
 ### Statistical Scoring
 
-### False Discovery Rate
+### False Discovery Rate (FDR)
 
 
 ## Active Development (Future)

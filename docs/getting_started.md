@@ -20,12 +20,12 @@ HiCOPS currently only supports the `MS2` format for experimental MS/MS data. Ple
 ### Setup Instrumentation
 Optional: If HiCOPS instrumentation was enabled during build, it can be configured and modified using the following environment variables. See how to enable HiCOPS instrumentation in the [Installation]({{ site.baseurl }}/installation) document:
 
-| Variable                 | Description                                                                                 |
-|--------------------------|---------------------------------------------------------------------------------------------|
-| `TIMEMORY_ENABLED`       | Enable/disable Timemory instrumentation interface. Set to : ON (default), OFF               |
-| `HICOPS_MPIP_INSTR`      | Enable MPI data communication instrumentation. Set to: ON (default), OFF                    |
-| `HICOPS_INST_COMPONENTS` | Add inst components. Set as: `HICOPS_INST_COMPONENTS="c1,.."` where `ci` is a Timemory comp |
-| `HICOPS_PAPI_EVENTS`     | Modify hardware counters. Set as: `HICOPS_PAPI_EVENTS="h1,.."` where `hi` is a PAPI counter |
+| Variable                 | Description                                                                                  |
+|--------------------------|----------------------------------------------------------------------------------------------|
+| `TIMEMORY_ENABLED`       | Enable/disable Timemory instrumentation interface. Set to : ON (default), OFF                |
+| `HICOPS_MPIP_INSTR`      | Enable MPI data communication instrumentation. Set to: ON (default), OFF                     |
+| `HICOPS_INST_COMPONENTS` | Add more inst components. Set as: `HICOPS_INST_COMPONENTS="ci,.."` where `ci`= Timemory comp |
+| `HICOPS_PAPI_EVENTS`     | Modify hardware counters. Set as: `HICOPS_PAPI_EVENTS="hi,.."` where `hi`= PAPI counter      |
 
 To list all available timemory components [here](https://timemory.readthedocs.io/en/develop/tools/timemory-avail/README.html?highlight=user_bundle#available-components). By default, the following hardware counters are inserted into the `HICOPS_PAPI_EVENTS`.
 
@@ -90,11 +90,11 @@ $ $HICOPS_INSTALL/bin/hicops $HICOPS_INSTALL/bin/uparams.txt
 $ srun [OPTIONS] $HICOPS_INSTALL/bin/hicops $HICOPS_INSTALL/bin/uparams.txt
 
 # with MPI
-$ mpirun -np [P] [OPTIONS] $HICOPS_INSTALL/bin/hicops \\
+$ mpirun -np [N] [OPTIONS] $HICOPS_INSTALL/bin/hicops \\
   $HICOPS_INSTALL/bin/uparams.txt
 
 # SLURM with MPI
-$ srun [OPTIONS] mpirun -np [P] [OPTIONS] $HICOPS_INSTALL/bin/hicops \\
+$ srun [OPTIONS] mpirun -np [N] [OPTIONS] $HICOPS_INSTALL/bin/hicops \\
   $HICOPS_INSTALL/bin/uparams.txt
 ```    
 
