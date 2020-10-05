@@ -1,7 +1,7 @@
 ---
 title: Run on XSEDE Comet
 ---
-# Run on XSEDE Comet
+
 Follow the below steps to run HiCOPS on XSEDE Comet:
 
 * TOC

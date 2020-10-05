@@ -1,10 +1,12 @@
 ---
 title: hicops_config
 ---
-# hicops_config
+
 Command line tool that takes in the user paramters and generates a file, called `uparams.txt`, which is used as arguments to the `hicops` binary. This tool also generates a template user paramter file which can be modified as needed and then used used with `hicops_config` to generate the `uparams.txt` file. 
 
 **Note:** Regenerate a `uparams.txt` everytime you modify the user parameters.
+
+**Note:** If you are working on XSEDE Comet, you can follow an easier workflow by following instructions [here]({{ site.baseurl }}/getting_started/xsede) and using the [hicops_comet]({{ site.baseurl }}/tools/runtime/hicops_comet) tool.
 
 ## General Syntax
 
@@ -31,7 +33,7 @@ $ $HICOPS_INSTALL/bin/hicops_config <params.txt>
 
 ## Example Usage
 
-```
+```bash
 $ $HICOPS_INSTALL/bin/hicops_config userparams.txt
 
 *****************************
@@ -78,3 +80,4 @@ $ /disk/raptor/lclhome/mhase003/repos/hicops/install-no-inst/bin/tools/psm2excel
 #----------------------------------------------------------------------------------------------------#
      Read More: https://github.com/pcdslab/hicops/blob/develop/README.md
 #----------------------------------------------------------------------------------------------------#
+```

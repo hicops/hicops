@@ -1,8 +1,6 @@
 ---
-title: tools
+title: Tools
 ---
-
-# HICOPS Tools
 
 This section covers the executable tools that are distributed as part of HiCOPS. The provided tools aid in peptide database processing, MS/MS data conversions, and runtime support. The subsequent sections provide an overview of the listed tools.
 

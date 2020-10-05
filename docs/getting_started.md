@@ -2,7 +2,6 @@
 title: Getting Started
 ---
 
-# Getting Started
 Follow the below steps to get started with HiCOPS:
 
 * TOC

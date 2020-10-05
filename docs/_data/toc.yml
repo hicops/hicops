@@ -4,15 +4,11 @@ content_list_title: Table of Contents
 content1:
   - title: Home
     url: index
+  - title: Features
+    url: features
 
 # second list
 content2:
-  - title: Features
-    url: features
-    drop:
-    - title: Instrumentation
-      url: instrumentation
-
   - title: Install
     url: installation
     drop:
