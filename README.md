@@ -90,7 +90,7 @@ Install HiCOPS using Git & CMake using the following steps:
 ### Configure
 
 ```bash
-$ git clone https://github.com/pcdslab/hicops
+$ git clone https://github.com/hicops/hicops
 $ cd hicops
 $ mkdir build && cd build
 $ CC=$(which gcc) CXX=$(which g++) cmake .. [CMAKE_OPTIONS] -G [BUILD_SYSTEM] [HICOPS_OPTIONS]
@@ -250,15 +250,14 @@ $ srun --partition=compute  --nodes=1 --ntasks-per-node=1 -t 00:15:00 --export=A
 ## Code Maintainers
 1. [Muhammad Haseeb](https://github.com/mhaseeb123)
 
-## Issue Reporting
-Open an issue [here](https://github.com/pcdslab/hicops/issues) (preferred) or email: mhase003@fiu.edu or fsaeed@fiu.edu. Use the template subject line: \[BUG:HiCOPS]: *One line summary of the issue*.  
+## Issues and Feature Requests
+Open an issue [here](https://github.com/hicops/hicops/issues).
 
 Please include any logs, screenshots and/or helpful observations. Also, do not forget to describe the dataset(s), database, steps performed etc. so that the issue can be reproduced.
 
 ## Contributing
 
-All contributions are welcome including new features, documentation updates and bug fixes.
-
+All contributions are welcome including new features, documentation updates and bug fixes through the GitHub pull requests. A general guideline for contribution steps would be:
 1. Fork this repository to your local GitHub, checkout a new branch from the `develop` branch.
 2. Make your changes/updates.
 3. Make sure that you pull the latest changes from `hicops:develop` into your branch and merge before committing your changes.
