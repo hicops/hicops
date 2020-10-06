@@ -19,7 +19,7 @@ This various features provided by the HiCOPS include:
 ## Parallel Core Design
 The HiCOPS parallel core desig n is based onthe Bulk Synchronous Parallel (BSP) model and divides the database peptide search workflow in ***four*** supersteps. The algorithmic work in each superstep is executed in asynchronous parallel fashion and synchronization is performed between supersteps if required. The first superstep partitions the database in a load balanced fashion constructing partial databases. The second superstep preprocesses the experimental MS data in parallel. The third superstep performs the partial database peptide search producing intermediate results which are stored at the shared file system. The final superstep assembles the intermediate results yielding complete results which are written back to the shared file system. A high-level graphical design of HiCOPS superstep model is shown in the following figure.
 
-![HiCOPS Supersteps]({{ site.baseurl }}/assets/main.jpg){: .align-center height="275" }
+![HiCOPS Supersteps]({{ site.baseurl }}/assets/main.jpg){: .align-center height="290" }
 
 Several optimization techniques including buffering, sampling, overlapped computations and communications and task scheduling are implemented to aid in optimal parallel performance. Further, the core library packs parallel versions of many core algorithms and the essential boiler-plate code for quicker development of new tools based on the discussed parallel design. Read more about the HiCOPS parallel design, its mathematical analysis and optimizations in our original research paper [here]().
 
