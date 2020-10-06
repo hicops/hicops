@@ -125,7 +125,10 @@ $ srun [OPTIONS] --nodes=1 $HICOPS_INSTALL/tools/psm2excel -i \\
 **vii.** Repeat Steps **iii.** to **vi.** when you modify parameters in the `sampleparams.txt`.
 
 ## Precautions
+Please read and follow the following precautions to avoid any errors.
+
 * Always use a unique workspace directory for each experiment, specially for the simultaneously running HiCOPS instances to avoid overwriting intermediate results and other errors.      
-* Do not run too many simultaneous HiCOPS instances with large number of nodes allocated to each instance to avoid performance degradation due to shared file system storage network.       
-* Do not modify the generated files such as `uparams.txt` manually and instead re-generate using the relevant tools.    
+* Always convert the TSV results into Excel file using `psm2excel` (last step) before using the same workspace folder for another experiment. It is always better to use a unique workspace folder for each experimental run.     
+* Do not run too many simultaneous HiCOPS instances with large number of nodes allocated to each instance to avoid I/O bandwidth contention and thus, performance degradation.      
+* Do not modify the generated files such as `uparams.txt` manually and instead re-generate using the relevant runtime tool.    
 * Avoid using relative paths in the sampleparams.txt file to avoid any errors.    

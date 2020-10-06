@@ -30,6 +30,7 @@ HiCOPS is being developed by the Parallel Computing and Data Science Laboratory 
 | Name               |                                        Affiliation                                        |                    GitHub                     |
 | ------------------ | :---------------------------------------------------------------------------------------: | :-------------------------------------------: |
 | Muhammad Haseeb       |       [FIU](https://tinyurl.com/mhaseeb22)       | [mhaseeb123](https://github.com/mhaseeb123) |
+| Fahad Saeed           |       [FIU](https://saeedlab.cis.fiu.edu)       | [pcdslab](https://github.com/pcdslab)       |
 
 ## Contributions
 We welcome contributions via GitHub pull requests. For more information, please refer to [Contributing]({{ site.baseurl }}/contributing) document.

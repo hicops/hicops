@@ -84,8 +84,6 @@ std::ostream& operator<<(std::ostream &out, const _heapEntry &c)
 // ----------------------------------------------------------------------------------
 //
 
-VOID *DSLIM_IO_Threads_Entry(VOID *argv);
-
 /* Static function */
 static BOOL DSLIM_BinarySearch(Index *, float_t, int_t&, int_t&);
 static int_t  DSLIM_BinFindMin(pepEntry *entries, float_t pmass1, int_t min, int_t max);

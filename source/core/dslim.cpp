@@ -64,7 +64,6 @@ status_t DSLIM_Construct(Index *index)
 
     }
 
-
     if (status == SLM_SUCCESS)
     {
         /* Allocate memory for all chunks */

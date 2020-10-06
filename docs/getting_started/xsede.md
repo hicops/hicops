@@ -16,7 +16,7 @@ Follow the below steps to run HiCOPS on XSEDE Comet:
 **Important:** The instructions in this document are ***ONLY*** for the XSEDE Comet system. For any other system, please use the instructions detailed [here]({{ site.baseurl }}/getting_started).
 
 ## Setup
-Complete the setup steps by following through the instructions in [Getting%20Started]({{ site.baseurl }}/getting_started#setup) document.
+Complete the setup steps by following through the instructions in [Getting Started]({{ site.baseurl }}/getting_started#setup) document.
 
 ## Run HiCOPS
 Assuming that the HiCOPS has been installed at : `$HICOPS_INSTALL`.
@@ -59,4 +59,4 @@ $ srun --partition=compute  --nodes=1 --ntasks-per-node=1 -t 00:15:00 \\
 **vi.** Repeat Steps **iii** to **v** when you modify parameters in the `sampleparams.txt`.
 
 ## Precautions
-Please read the precautions mentioned [here]({{ site.baseurl }}/getting_started#precautions) to ensure correct and efficient HiCOPS experimental runs.
+Please read and understand the precautions mentioned [here]({{ site.baseurl }}/getting_started#precautions) before running HiCOPS.
