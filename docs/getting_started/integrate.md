@@ -83,23 +83,23 @@ The database search (scoring) superstep in HiCOPS is implemented through 3 paral
 A schematic setup of parallel sub-task setup along with task-scheduling and queues is shown in the following figure. For more details, please refer to the original research paper [here]().
 
 <p align="center">
-<img src="{{ site.baseurl }}/_assets/sched.jpg" title="Sub-task setup with queues and thread management.     " height="160">
+<img src="{{ site.baseurl }}/_figs/sched.jpg" height="160">
+</p>
 
 #### Relevant Functions
 * The sub-task *R* executes the following function using `std::thread` parallel model.      
-</p>
 
 ```cpp
 void DSLIM_IO_Threads_Entry();
 ```
 
-* The sub-task *I* executes the function using `OpenMP` parallel fashion.
+* The sub-task *I* executes the function using `OpenMP` parallel fashion.     
 
 ```cpp
 status DSLIM_QuerySpectrum(Queries *batch, Index *index, const uint_t total_index_segments);
 ```
 
-* The sub-task *K* executes the following function using `std::thread` parallel model.
+* The sub-task *K* executes the following function using `std::thread` parallel model.    
 
 ```cpp
 void DSLIM_FOut_Thread_Entry();
