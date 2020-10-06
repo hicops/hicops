@@ -2,6 +2,8 @@
 title: Getting Started
 ---
 
+# Getting Started
+
 Follow the below steps to get started with HiCOPS:
 
 <!-- TOC -->
@@ -20,19 +22,15 @@ Follow the below steps to get started with HiCOPS:
 <!-- /TOC -->
 
 ## Setup
-<a id="markdown-setup" name="setup"></a>
 Setup the peptide database, experimental MS/MS dataset and HiCOPS instrumentation using the below instructions.
 
 ### Setup Database
-<a id="markdown-setup-database" name="setup-database"></a>
 Get the desired protein sequence database from UniProt/Swissprot. Digest the protein sequence database into a peptide sequence database using Digestor tool available with [OpenMS](https://www.openms.de/) or using [ProteoWizard](http://proteowizard.sourceforge.net/). Make sure that the generated peptide sequence database is in FASTA format. Use the `db_prep` tool to separate coarse-grained peptide sequence clusters. This tool will generate many files in `./parts/len.pep` directory. Read more about the usage of `db_prep` tool [here]({{ site.baseurl }}/tools/dbtools/dbprep).
 
 ### Setup MS/MS Dataset
-<a id="markdown-setup-ms%2Fms-dataset" name="setup-ms%2Fms-dataset"></a>
 HiCOPS currently only supports the `MS2` format for experimental MS/MS data. Please convert all experimental MS/MS data files into this format using the `raw2ms2` command line tool available with HiCOPS. Read more about the usage of `raw2ms2` tool [here]({{ site.baseurl }}/tools/ms2prep/raw2ms2).
 
 ### Setup Instrumentation
-<a id="markdown-setup-instrumentation" name="setup-instrumentation"></a>
 Optional: If HiCOPS instrumentation was enabled during build, it can be configured and modified using the following environment variables. See how to enable HiCOPS instrumentation in the [Installation]({{ site.baseurl }}/installation) document:
 
 | Variable                 | Description                                                                                  |
@@ -55,19 +53,15 @@ To see which hardware counters are available on your system and their descriptio
 **NOTE:** If a PAPI counter is not available on the system but is added to the `HICOPS_PAPI_EVENTS` anyway, the profiler will not instrument any of the counters in the list regardless of their availability.
 
 ## Run HiCOPS
-<a id="markdown-run-hicops" name="run-hicops"></a>
 Follow the instructions relevant to your compute environment to seamlessly run HiCOPS. We categorize the compute environments into two categories
 
 ### XSEDE Comet
-<a id="markdown-xsede-comet" name="xsede-comet"></a>
 If you are running on XSEDE Comet environment, skip the rest of this document and follow the instructions [here]({{ site.baseurl }}/getting_started/xsede).
 
 ### Any Other System
-<a id="markdown-any-other-system" name="any-other-system"></a>
 Follow the below instructions if you are running on any system but XSEDE Comet.
 
 #### Generate Params
-<a id="markdown-generate-params" name="generate-params"></a>
 **i.** Ensure that the hicops-core library path is added to `LD_LIBRARY_PATH`.      
 
 ```bash
@@ -95,7 +89,6 @@ $ $HICOPS_INSTALL/bin/hicops_config ./sampleparams.txt
 ```
 
 #### Execute
-<a id="markdown-execute" name="execute"></a>
 **v.** Run HiCOPS with `uparams.txt` as input argument with or without MPI depending on HiCOPS install [options]({{ site.baseurl }}/installation#cmake-options). Use the resource manager (SLURM, LSH) if working on a managed cluster system.       
 
 **Note:**  Configure the mpirun options as follows: set binding level to `socket` and binding policy to `scatter`.     
@@ -132,7 +125,6 @@ $ srun [OPTIONS] --nodes=1 $HICOPS_INSTALL/tools/psm2excel -i \\
 **vii.** Repeat Steps **iii.** to **vi.** when you modify parameters in the `sampleparams.txt`.
 
 ## Precautions
-<a id="markdown-precautions" name="precautions"></a>
 * Always use a unique workspace directory for each experiment, specially for the simultaneously running HiCOPS instances to avoid overwriting intermediate results and other errors.      
 * Do not run too many simultaneous HiCOPS instances with large number of nodes allocated to each instance to avoid performance degradation due to shared file system storage network.       
 * Do not modify the generated files such as `uparams.txt` manually and instead re-generate using the relevant tools.    

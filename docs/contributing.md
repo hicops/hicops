@@ -1,7 +1,10 @@
 ---
 title: Contribute
 ---
+
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)]({{ site.baseurl }}/contributing#Contribute)
+
+# Contribute
 
 All contributions are welcome including new features, documentation updates and bug fixes. Please follow the standard GitHub pull request workflow for contributing. Here are the steps to follow:
 
