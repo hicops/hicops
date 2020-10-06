@@ -9,7 +9,9 @@ toc: true
 
 HiCOPS is a software framework designed to accelerate database peptide search workflows on HPC environments for large-scale peptide identification from the mass spectrometry (MS/MS) data. The HiCOPS parallel implements many optimization techniques, algorithms for data indexing, processing, analysis and regression, and novel data structures that can be used to develop new database peptide search algorithms or parallelize existing ones.
 
-HiCOPS has been implemented using C++14, Python 3.7 and Bash. Detailed information about HiCOPS development, upcoming changes can be found in [README](https://github.com/mhaseeb123/hicops) on GitHub.
+HiCOPS has been implemented using C++14, Python 3.7 and Bash. Detailed information about HiCOPS development, upcoming changes can be found in [README](https://github.com/mhaseeb123/hicops) on GitHub. A high-level graphical abstract of our parallel software framework is shown in the following figure.
+
+![Graphical Abstract]({{ site.baseurl }}/assets/grabs.jpg){: .center-image height="450" }
 
 ## Research
 Please read the following research paper for extensive introduction to the research work, parallel design and technical concepts behind HiCOPS. A preprint of the paper is available [here]().
