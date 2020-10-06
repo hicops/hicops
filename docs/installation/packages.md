@@ -2,6 +2,8 @@
 title: Required Packages
 ---
 
+# Required Packages
+
 Install and load the latest versions of the following packages, preferably through [Spack](https://spack.readthedocs.io). Read more about how to install Spack, and how to install and load packages using Spack [here](https://spack.readthedocs.io/en/latest/getting_started.html).
 
 | Required Packages  |                   |               |

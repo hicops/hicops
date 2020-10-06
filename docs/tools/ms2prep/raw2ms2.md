@@ -2,6 +2,8 @@
 title: raw2ms2
 ---
 
+# raw2ms2
+
 Command-line tool that converts the raw experimental MS/MS data to the `MS2` format. This tool is a Linux wrapper for the ProteoWizard's [msconvert](http://proteowizard.sourceforge.net/tools.shtml) tool and requires `docker` to be installed to run. Please see [this](https://hub.docker.com/r/chambm/pwiz-skyline-i-agree-to-the-vendor-licenses) for additional information. HiCOPS only supports the `MS2` format as of now thus, all data must be converted to MS2 before using with HiCOPS.
 
 **Note:** If you are working on a Windows machine, please use the `msconvert` tool directly and not use this `docker` based tool for better performance.

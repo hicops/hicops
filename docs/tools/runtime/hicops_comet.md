@@ -2,6 +2,8 @@
 title: hicops_comet
 ---
 
+# hicops_comet
+
 Command-line tool that parses user parameters, and creates and runs the HiCOPS parallel tasks on the XSEDE Comet cluster. This tool also generates a template user paramter file which can be modified as needed and then used used with `hicops_comet` to run HiCOPS.
 
 **Note:** This tool is specialized only when running HiCOPS on XSEDE Comet. For any other system, please follow the instructions [here]({{ site.baseurl }}/getting_started#any-other-system) and use the [hicops_config]({{ site.baseurl }}/tools/runtime/hicops_config) tool instead.

@@ -2,6 +2,8 @@
 title: hicops_config
 ---
 
+# hicops_config
+
 Command line tool that takes in the user paramters and generates a file, called `uparams.txt`, which is used as arguments to the `hicops` binary. This tool also generates a template user paramter file which can be modified as needed and then used used with `hicops_config` to generate the `uparams.txt` file. 
 
 **Note:** Regenerate a `uparams.txt` everytime you modify the user parameters.

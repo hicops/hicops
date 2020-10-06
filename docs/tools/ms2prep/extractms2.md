@@ -2,6 +2,8 @@
 title: extractms2
 ---
 
+# extractms2
+
 Command-line tool that extracts the specified (by index numbers beginning with 1) MS/MS spectra from a `MS2` file and writes them to a new `MS2` file. This tool may be used for sampling dataset, debugging, testing and so on.
 
 ## General Syntax
