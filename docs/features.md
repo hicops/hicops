@@ -17,7 +17,7 @@ This various features provided by the HiCOPS include:
 <!-- /TOC -->
 
 ## Parallel Core Design
-The HiCOPS parallel core desig n is based onthe Bulk Synchronous Parallel (BSP) model and divides the database peptide search workflow in ***four*** supersteps. The algorithmic work in each superstep is executed in asynchronous parallel fashion and synchronization is performed between supersteps if required. The first superstep partitions the database in a load balanced fashion constructing partial databases. The second superstep preprocesses the experimental MS data in parallel. The third superstep performs the partial database peptide search producing intermediate results which are stored at the shared file system. The final superstep assembles the intermediate results yielding complete results which are written back to the shared file system. A high-level graphical design of HiCOPS supersteps is shown in the following figure.
+The HiCOPS parallel core design is based on the Bulk Synchronous Parallel (BSP) model building the database peptide search workflow using ***four*** supersteps. The algorithmic work in each superstep is executed in asynchronous parallel fashion and synchronization is performed between supersteps, if required. The first superstep partitions the massive database in a load balanced fashion among parallel MPI tasks. The second superstep preprocesses batches of experimental MS data and creates an index. The third superstep performs the partial database peptide search storing the intermediate results on the shared file system. The final superstep assembles the intermediate results yielding complete results. A high-level graphical design of HiCOPS superstep model is shown in the following figure.
 
 ![HiCOPS Supersteps]({{ site.baseurl }}/assets/main.jpg){: .align-center height="291" }
 
@@ -27,7 +27,7 @@ Several optimization techniques including buffering, sampling, overlapped comput
 The proposed parallel design along with appropriate optimizations allow maximum utilization of underlying resources with minimal overheads enabling ultra-fast peptide search speeds. The highlights of performance evaluation results include:
 
 * **Speedup vs Other tools:** More than 100x against all tools and up to 420x for large workloads compared to MSFragger.      
-* **Parallel Efficiency:** 75-85% when the workload size is sufficiently large.     
+* **Parallel Efficiency:** 75-85% when the workload size is sufficiently large for up to 72 parallel nodes (x24 = 1728 cores).     
 * **Load Imabalance:** Less than 10%.    
 * **Roofline:** Super-linear speedups with increasing nodes when the problem size is large.    
 * **Comm/Compute Ratio:** Less than 5%.      

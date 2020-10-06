@@ -24,15 +24,15 @@ Please cite us if you use our work. Thank you.
 Computational Proteomics researchers and developers can utilize HiCOPS core library to accelerate their worklflows. Integration is as simple as implementing shared-memory versions of database indexing, filtering, peptide-to-spectrum scoring, post-processing etc. algorithms within HiCOPS.
 
 ## Supported Environments
-HiCOPS can seamlessly run on any symmetric multicore multinode (the most common) HPC environment. Sufficient amount of memory resources must be allocated to HiCOPS for database indexing.
+HiCOPS can seamlessly run on any Linux based personal laptops, desktops, workstations and symmetric multicore multinode (the most common) HPC systems. Sufficient amount of memory resources must be allocated to HiCOPS for database indexing.
 
 ## Credits
 HiCOPS is being developed by the Parallel Computing and Data Science Laboratory at Florida International University.
 
-| Name               |                                        Affiliation                                        |                    GitHub                     |
-| ------------------ | :---------------------------------------------------------------------------------------: | :-------------------------------------------: |
-| Muhammad Haseeb       |       [FIU](https://tinyurl.com/mhaseeb22)       | [mhaseeb123](https://github.com/mhaseeb123) |
-| Fahad Saeed           |       [FIU](https://saeedlab.cis.fiu.edu)       | [pcdslab](https://github.com/pcdslab)       |
+| Name                  |                                        Affiliation                                        |                    GitHub                     |
+| --------------------- | :---------------------------------------------------------------------------------------: | :-------------------------------------------: |
+| Muhammad Haseeb       |       [FIU](https://tinyurl.com/mhaseeb22)                                                | [mhaseeb123](https://github.com/mhaseeb123)   |
+| Fahad Saeed           |       [FIU](https://saeedlab.cis.fiu.edu)                                                 | [pcdslab](https://github.com/pcdslab)         |
 
 ## Contributions
 We welcome contributions via GitHub pull requests. For more information, please refer to [Contributing]({{ site.baseurl }}/contributing) document.

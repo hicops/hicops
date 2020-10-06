@@ -31,7 +31,7 @@ Get the desired protein sequence database from UniProt/Swissprot. Digest the pro
 HiCOPS currently only supports the `MS2` format for experimental MS/MS data. Please convert all experimental MS/MS data files into this format using the `raw2ms2` command line tool available with HiCOPS. Read more about the usage of `raw2ms2` tool [here]({{ site.baseurl }}/tools/ms2prep/raw2ms2).
 
 ### Setup Instrumentation
-Optional: If HiCOPS instrumentation was enabled during build, it can be configured and modified using the following environment variables. See how to enable HiCOPS instrumentation in the [Installation]({{ site.baseurl }}/installation) document:
+Optional: If HiCOPS instrumentation was enabled during build, it can be configured and modified using the following environment variables. See how to enable HiCOPS instrumentation in the [Install]({{ site.baseurl }}/installation) document.
 
 | Variable                 | Description                                                                                  |
 |--------------------------|----------------------------------------------------------------------------------------------|
