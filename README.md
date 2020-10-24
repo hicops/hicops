@@ -29,14 +29,8 @@ Please read and follow the following precautions to avoid any errors.
 * Do not modify the generated files such as uparams.txt manually and instead regenerate using the relevant tool.
 * Avoid using relative paths in the `sampleparams.txt` file to avoid any errors.
 
-# Contributing
-All contributions are welcome including new features, documentation and bug fixes through standard GitHub pull request method. Generic guidelines:
-
-1. Fork this repository to your local GitHub, checkout a new branch from the `develop` branch.
-2. Make your changes/updates.
-3. Make sure that you pull the latest changes from `hicops:develop` into your branch and merge before committing your changes.
-4. Commit your changes and push your branch to `origin`. i.e. `your_hicops_fork`.
-5. Open a pull request (PR) from `your_hicops_fork:new_branch` to `hicops:develop`.
+## Contributing
+All contributions are welcome including new features, documentation and bug fixes through standard GitHub pull request method.
 
 ## Issues and Feature Requests
 Open an issue [here](https://github.com/hicops/hicops/issues). Please include any logs, screenshots and/or helpful observations. Also, do not forget to describe the dataset(s), database, steps performed etc. so that the issue can be reproduced.
