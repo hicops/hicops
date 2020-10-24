@@ -2,7 +2,8 @@
 
 # HiCOPS
 *HiCOPS*: A computational framework for accelerated peptide identification from LC-MS/MS data on HPC systems.
-For full documentation [here](https://hicops.github.io).
+
+Full HiCOPS documentation can be found [here](https://hicops.github.io).
 
 ## Published Research
 *Placeholder for the published research paper*
