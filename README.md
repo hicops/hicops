@@ -3,31 +3,11 @@
 # HiCOPS
 *HiCOPS*: A computational framework for accelerated peptide identification from LC-MS/MS data on HPC systems.
 
-Full HiCOPS documentation can be found [here](https://hicops.github.io).
-
 ## Published Research
 *Placeholder for the published research paper*
 
-## Install
-Please refer to the documentation [here](https://hicops.github.io/installation).
-
-## Getting Started
-Please refer to the documentation [here](https://hicops.github.io/getting_started).
-
-## Integration
-Please refer to the documentation [here](https://hicops.github.io/getting_started/integrate).
-
-## Tools
-Please refer to the documentation [here](https://hicops.github.io/tools).
-
-## Precautions
-Please read and follow the following precautions to avoid any errors.
-
-* Always use a unique workspace directory for each experiment, specially for the simultaneously running HiCOPS instances to avoid overwriting intermediate results and other errors.
-* Always convert the TSV results into Excel file using `psm2excel` (last step) before using the same workspace folder for another experiment. It is always better to use a unique workspace folder for each experimental run.
-* Do not run too many simultaneous HiCOPS instances with large number of nodes allocated to each instance to avoid I/O bandwidth contention and thus, performance degradation.
-* Do not modify the generated files such as uparams.txt manually and instead regenerate using the relevant tool.
-* Avoid using relative paths in the `sampleparams.txt` file to avoid any errors.
+## Documentation
+Full HiCOPS documentation can be found [here](https://hicops.github.io).
 
 ## Contributing
 All contributions are welcome including new features, documentation and bug fixes through standard GitHub pull request method.
