@@ -8,10 +8,10 @@ For full documentation [here](https://hicops.github.io).
 *Placeholder for the published research paper*
 
 ## Install
-Please follow the documentation [here](https://hicops.github.io/installation).
+Please refer to the documentation [here](https://hicops.github.io/installation).
 
 ## Getting Started
-Please follow the documentation [here](https://hicops.github.io/getting_started).
+Please refer to the documentation [here](https://hicops.github.io/getting_started).
 
 ## Integration
 Please refer to the documentation [here](https://hicops.github.io/getting_started/integrate).
