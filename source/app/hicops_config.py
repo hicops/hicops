@@ -500,6 +500,6 @@ if __name__ == '__main__':
     print('After HiCOPS, run post-processing as: \n')
     print('$ ' + hicopspath + '/tools/psm2excel -i ' + workspace + '/output\n')
 
-    print ('#----------------------------------------------------------------------------------------------------#')
-    print ('     Read More: https://github.com/pcdslab/hicops/blob/develop/README.md')
-    print ('#----------------------------------------------------------------------------------------------------#\n\n')
+    print ('#---------------------------------------------#')
+    print ('     Read More: https://hicops.github.io')
+    print ('#---------------------------------------------#\n\n')
