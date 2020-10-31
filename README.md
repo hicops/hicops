@@ -1,6 +1,6 @@
 ![build](https://github.com/hicops/hicops/workflows/build/badge.svg) [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/hicops/hicops/blob/develop/README.md#contributing) [![pages yes](https://img.shields.io/badge/pages-yes-blue.svg)](https://hicops.github.io) [![GitHub forks](https://img.shields.io/github/forks/hicops/hicops.svg?style=social&label=Fork&maxAge=2592000)](https://GitHub.com/hicops/hicops/network/) [![GitHub stars](https://img.shields.io/github/stars/hicops/hicops.svg?style=social&label=Star&maxAge=2592000)](https://GitHub.com/hicops/hicops/stargazers/) [![GitHub contributors](https://img.shields.io/github/contributors/hicops/hicops.svg)](https://GitHub.com/hicops/hicops/graphs/contributors/) [![GitHub issues](https://img.shields.io/github/issues/hicops/hicops.svg)](https://GitHub.com/hicops/hicops/issues/) [![Github all releases](https://img.shields.io/github/downloads/hicops/hicops/total.svg)](https://GitHub.com/hicops/hicops/releases/)
 
-# HiCOPS
+# <img src="https://user-images.githubusercontent.com/14217455/97766105-66d7fd80-1aeb-11eb-9741-9938aec1b8d7.jpg" width="64" valign="middle" alt="HiCOPS"/> HiCOPS
 *HiCOPS*: A computational framework for accelerated peptide identification from LC-MS/MS data on HPC systems.
 
 ## Published Research
