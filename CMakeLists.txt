@@ -48,6 +48,15 @@ option(USE_TIMEMORY "Enable Timemory instrumentation" OFF)
 option(USE_MPIP_LIBRARY "Enable MPIP instrumentation via Timemory" OFF)
 
 ##########################################################################################
+#       GCC version check
+##########################################################################################
+set(GCC_EXPECTED_VERSION 7.2.0)
+
+if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS GCC_EXPECTED_VERSION)
+    message(FATAL_ERROR "GCC: HiCOPS requires GCC v${GCC_EXPECTED_VERSION} or higher to build but found v${CMAKE_CXX_COMPILER_VERSION}")
+endif()
+
+##########################################################################################
 #       MPI and OpenMP
 ##########################################################################################
 find_package(OpenMP REQUIRED)
