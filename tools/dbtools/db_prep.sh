@@ -60,19 +60,18 @@ sync
 mkdir -p ${OUTPUT}
 sync
 
-# Remove the FASTA header files and create a temp file
-sed -e '/>.*/d' ${PEPDB} > ${TEMPR}
+# Remove the FASTA headers and leading/trailing whitespaces, and dump to a file
+sed -e '/>.*/d' ${PEPDB} | sed 's/^[ \t]*//;s/[ \t]*$//' > ${TEMPR}
 
 # for loop to dump peptide sequences of increasing lengths
 for LOL in $(seq $MIN $MAX); do
     # Print status
     echo "Processing peptides of length: $LOL"
 
-    # separate by length, interchange K and L, lex sort, 
-    # remove duplicates, interchange K and L again
+    # separate by length, interchange K and L, lex sort, remove duplicates, interchange K and L again
     sed -nr '/^.{'$LOL','$LOL'}$/p' $TEMPR | sed 's/K/*/g' | sed 's/L/K/g'| sed 's/*/L/g' | sort | uniq | sed 's/L/*/g' | sed 's/K/L/g'| sed 's/*/K/g' > $OUTPUT/$LOL.peps
 
-    # do we want to separate peptides based on K/R terminal? No for now
+    # do we want to separate peptides based on K/R termini? No for now
 #    if [[ $WRNG == "y" ]]; then
 #        grep 'K$' $OUTPUT/$LOL.peps > $OUTPUT/$LOL.K.peps
 #        grep 'R$' $OUTPUT/$LOL.peps > $OUTPUT/$LOL.R.peps
