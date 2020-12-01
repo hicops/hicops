@@ -11,7 +11,6 @@
 #
 # imports
 #
-
 import os
 import sys
 import glob
@@ -23,7 +22,7 @@ import argparse
 from argparse import RawTextHelpFormatter
 from mpi4py import MPI
 
-# -------------------------------- Helper functions ------------------------------------------------------- #
+# --------------------------------- Helper functions --------------------------------- #
 
 #
 # Parse MS2 files
@@ -35,9 +34,12 @@ def parseMS2(file, meta, spectra, extra):
     nspecs = 0
     # empty list to contain tuples
     peaks = []
+
+    # clear the list if not already
     meta.clear()
-    # empty list to contain spectra as np.arrays
+    # clear list to contain spectra as np.arrays
     spectra.clear()
+
     # loop through all lines
     for line in file:
         # test for empty lines
@@ -53,38 +55,46 @@ def parseMS2(file, meta, spectra, extra):
 
                 # clear the peaks
                 peaks.clear()
-            # endif
+
             # S    1    2    m/z
             info = line.split()
             meta.append([['S', int(info[1]), int(info[2])]])
+
             # add the number of spectra
             nspecs += 1
+
         elif line[0] == 'I' or line[0] == 'D':
             # extract extra fields only if needed and present (of course)
             if extra ==True:
                 # I/D    Key    Value
                 info = line.split()
                 meta[-1].append([info[0]+'_'+info[1], info[2:]])
+
         elif line[0] == 'Z':
             # Z    charge    mass
             info = line.split()
             meta[-1].append(['mz', float(info[2]), int(info[1])])
+
         # else append data lines to peaks
         else:
             # split by whitespace
             peak = line.split()
             # convert to float and append as a tuple
             peaks.append(tuple(map(lambda x : float(x), peak)))
+
     # copy the last peaks list to spectra as well
     spectra.append(np.asarray(peaks))
+
     # clear the peaks
     peaks.clear()
+
     # close the MS2 file
     file.close()
 
 
 #
-# custom convert string to bool: https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
+# Custom convert string to bool
+# Ref: https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
 #
 def str2bool(v):
     if isinstance(v, bool):
@@ -110,41 +120,43 @@ def parseArgs(comm):
     # parse only at rank 0
     if comm.Get_rank() == 0:
         # add description and the data model
-        parser = argparse.ArgumentParser(description='Convert the MS2 dataset into HDF5 dataset for HiCOPS.\n\n'
-                                                     '******* DATA MODEL *******\n'
-                                                     'file: 1 (MS2 file)\n'
-                                                     '   group: 1 (batch of spectra)\n'
-                                                     '        metadata\n'
-                                                     '\n'
-                                                     '        dataset: 1 (spectrum)\n'
-                                                     '        dataset: 2\n'
-                                                     '        |\n'
-                                                     '        dataset: [CHUNK]\n'
-                                                     '    group: 2\n'
-                                                     '        metadata\n'
-                                                     '\n'
-                                                     '        dataset: 1\n'
-                                                     '        dataset: 2\n'
-                                                     '        |\n'
-                                                     '        dataset: [CHUNK]\n'
-                                                     '    |\n'
-                                                     '    group: j\n'
-                                                     '\n'
-                                                     'file: 2\n'
-                                                     '|\n'
-                                                     'file: n\n'
-                                                     '******* \DATA MODEL *******', formatter_class=RawTextHelpFormatter,
-                                                     epilog='MPI PARALLEL usage: mpirun -n [N] [OPTIONS] %(prog)s [OPTIONS] [ARGS]')
+        parser = argparse.ArgumentParser(description= 'Convert the MS2 dataset into HDF5 dataset for HiCOPS.\n\n'
+                                                      '******* DATA MODEL *******\n'
+                                                      'file: 1 (MS2 file)\n'
+                                                      '   group: 1 (batch of spectra)\n'
+                                                      '        attributes (metadata)\n'
+                                                      '\n'
+                                                      '        dataset: 1 (spectrum)\n'
+                                                      '            attrs\n'
+                                                      '        dataset: 2\n'
+                                                      '            attrs\n'
+                                                      '        |\n'
+                                                      '        dataset: [CHUNK]\n'
+                                                      '            attrs\n'
+                                                      '    group: 2\n'
+                                                      '    |\n'
+                                                      '    group: j\n'
+                                                      '\n'
+                                                      'file: 2\n'
+                                                      '|\n'
+                                                      'file: n\n'
+                                                      '******* \\DATA MODEL *******',
+                                            formatter_class = RawTextHelpFormatter,
+                                            epilog =  'MPI PARALLEL usage: mpirun -n [N] [OPTIONS] %(prog)s [OPTIONS] [ARGS]')
+
+        # make a new argument group
+        requiredNamed = parser.add_argument_group('required arguments')
 
         # argument for input MS2 data
-        requiredNamed = parser.add_argument_group('required arguments')
         requiredNamed.add_argument('-i', '--idir', dest='idir', type=str, required=True,
                         help='path to the MS2 dataset')
+
         # argument for output HDF5 data
         parser.add_argument('-o', '--odir', dest='odir', type=str, required=False,
                         help='path to the output HDF5 dataset, default: input_dir/hdf5')
+
         # argument for chunk size
-        parser.add_argument('-q', '--chunk', '--qchunk', dest='chunk', type=int, required=False, default=10000,
+        parser.add_argument('-q', '--chunk', '--group', dest='chunk', type=int, required=False, default=10000,
                         help='max spectra group size, default: 10000')
 
         # argument for chunk size
@@ -182,13 +194,14 @@ def parseArgs(comm):
     return ms2path, outpath, qchunk, extra
 
 
-# --------------------- The parallel MPI main function ------------------------------------------------------ #
+# --------------------------------- The parallel MPI main function --------------------------------- #
 
 #
-# The main function
-# MPI4Py and HDF5 ***core*** driver to convert a MS2 dataset into HDF5 dataset in parallel. <br>
+# MPI4Py and HDF5 ***core*** driver to convert a MS2 dataset 
+# into HDF5 dataset in parallel
 #
-# Parallelization Scheme: Distribute individual MS2 files among parallel processes in a round-robin fashion
+# Parallelization Scheme: Distribute individual MS2 files among 
+#                         parallel processes in a round-robin fashion
 #
 if __name__ == '__main__':
 
@@ -219,7 +232,7 @@ if __name__ == '__main__':
         print("FATAL: No MS2 file found at:" + ms2path)
         exit(-1)
 
-    # read all .MS2 files in ms2path 
+    # read all .MS2 files in ms2path
     nfiles = len(files)
 
     # files to process locally
@@ -236,7 +249,7 @@ if __name__ == '__main__':
         myfiles = files
 
     #
-    # parse all local MS2 files and create HDF5 output 
+    # parse all local MS2 files and create HDF5 output
     #
     for ms2file in myfiles:
         # read the file into spectra array
@@ -244,7 +257,7 @@ if __name__ == '__main__':
         # read the metadata into meta
         meta = []
 
-        print('Processing {} at rank: {}'.format(ms2file, rank))
+        print('Rank: {}, Processing {}'.format(rank, ms2file))
 
         # parse the file
         parseMS2(ms2path + '/' + ms2file, meta, spectra, extra)
@@ -289,8 +302,8 @@ if __name__ == '__main__':
                 remaining_specs -= qchunk
 
             # add the attributes to groups
-            g.attrs.create('gindex', gindex + i, dtype='int32')
-            g.attrs.create('gspectra', gspectra, dtype='int32')
+            #g.attrs.create('gindex', gindex + i, dtype='int32')
+            #g.attrs.create('gspectra', gspectra, dtype='int32')
             g.attrs.create('nspecs', specs, dtype='int32')
 
             # TODO: add the following attrs only in the first batch of file?
@@ -329,9 +342,16 @@ if __name__ == '__main__':
         #
         f.close()
 
+    # Wait for all parallel processes to complete
+    comm.Barrier()
+
+    # flush the stdio
+    sys.stdout.flush()
+
     # print status
     if rank == 0:
         # print help
         print('\nSUCCESS\n')
+
         # print more information
         print('INFO: Use the: "h5dump [-h] [file.h5]" to read HDF5 files')
