@@ -360,6 +360,9 @@ VOID MSQuery::ReadSpectrum()
                 {
                     val = string_t(mh);
                     spectrum.prec_mz = (double_t)std::atof(val.c_str());
+
+                    // divide by charge to get the precursor m/z
+                    spectrum.prec_mz /= MAX(1, spectrum.Z);
                 }
             }
             else if (line[0] == 'S')
