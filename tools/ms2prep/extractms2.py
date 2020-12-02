@@ -22,9 +22,6 @@
 
 # ## Import Packages
 
-# In[1]:
-
-
 import os
 import re
 import sys
@@ -37,12 +34,10 @@ import operator
 import argparse
 
 
-# ## Sanity Checking
-
-# In[3]:
+# Sanity Checking
 
 if __name__ == '__main__':
-
+    # parse user paramters
     parser = argparse.ArgumentParser(description='Extract spectra from MS2 files')
     parser.add_argument('-i', '--infile', dest='ifile', type=str, required=True,
                         help='The MS2 file to extract spectra from')
@@ -63,7 +58,7 @@ if __name__ == '__main__':
         print ("Error: The file %s does not exist\n", ms2file)
         exit (-1)
     
-    # ## Extract Spectra
+    # Extract Spectra
     
     # Empty list to store lines
     lines = []
@@ -111,18 +106,11 @@ if __name__ == '__main__':
                         lines.append(line)
     
     
-    # ## Write data to a new file
-    
-    # In[29]:
-    
+    # Write data to a new file
     
     ms2file2 = ms2file[:-4] + '_extracted.ms2'
     print ('Writing extracted data at: ' + ms2file2)
-    
-    
-    # In[30]:
-    
-    
+
     nfile = open(ms2file2, "w+")
     for line in lines:
         nfile.write(line)

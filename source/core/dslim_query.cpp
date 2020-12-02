@@ -165,7 +165,7 @@ static status_t DSLIM_InitializeMS2Data()
     qfPtrs = new lwqueue<MSQuery*>(nfiles, false);
 
 #ifdef USE_OMP
-#pragma omp parallel for schedule (static)
+#pragma omp parallel for schedule (dynamic, 1)
 #endif/* _OPENMP */
     for (auto fid = 0; fid < nfiles; fid++)
     {

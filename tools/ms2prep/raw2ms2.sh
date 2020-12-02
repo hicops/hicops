@@ -18,6 +18,8 @@
 # print usage
 function usage() {
     echo "USAGE: sudo raw2ms2 [fmt] [absolute/path/to/data*.fmt|.FMT]"
+    echo "DEPENDENCY: docker installed on the system"
+    echo "HELP: https://hub.docker.com/r/chambm/pwiz-skyline-i-agree-to-the-vendor-licenses"
 }
 
 # make sure of sudo acess
