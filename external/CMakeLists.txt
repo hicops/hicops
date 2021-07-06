@@ -33,7 +33,7 @@ FUNCTION(CHECKOUT_GIT_SUBMODULE)
 
     # default assumption
     if(NOT CHECKOUT_REPO_BRANCH)
-        set(CHECKOUT_REPO_BRANCH "master")
+        set(CHECKOUT_REPO_BRANCH "develop")
     endif()
 
     find_package(Git)

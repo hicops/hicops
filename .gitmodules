@@ -1,3 +1,6 @@
 [submodule "external/argparse"]
 	path = external/argparse
 	url = https://github.com/hicops/argparse
+[submodule "argparse"]
+	path = argparse
+	url = https://github.com/hicops/argparse
