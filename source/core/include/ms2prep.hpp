@@ -19,7 +19,6 @@
 
 #pragma once
 
-#include <mpi.h>
 #include "common.hpp"
 #include "msquery.hpp"
 #include "lwqueue.h"
