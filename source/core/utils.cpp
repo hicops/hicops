@@ -140,7 +140,7 @@ uint_t UTILS_GetNumProcs()
  * OUTPUT:
  * @factorial : the factorial of the input number n
  */
-ull_t UTILS_Factorial(ull_t n) { return (n < 2) ? 1 : UTILS_Factorial(n - 1) * n; }
+ull_t factorial(ull_t n) { return (n < 2) ? 1 : factorial(n - 1) * n; }
 
 /*
  * FUNCTION: UTILS_Shuffle

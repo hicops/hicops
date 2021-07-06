@@ -1,5 +1,4 @@
 /*
- *  This file is part of SLM-Transform
  *  Copyright (C) 2019  Muhammad Haseeb, Fahad Saeed
  *  Florida International University, Miami, FL
  *
@@ -18,236 +17,232 @@
  *
  */
 
-#include "lbe.h"
+#include <algorithm>
+#include "counter.hpp"
 
 using namespace std;
 
-/* Global Variables */
-string_t dbfile;
+std::vector<string_t> Seqs;
+ull_t cumusize = 0;
+ull_t ions = 0;
 
-extern ull_t cumusize;
-extern ull_t ions;
+ifstream file;
 
-gParams params;
+extern gParams params;
 
-static status_t ParseParams(char_t* paramfile);
+/* Calculates index in Amino Acid mass array */
+#define AAidx(x)                 (x - 'A')
 
-/* FUNCTION: SLM_Main (main)
- *
- * DESCRIPTION: Driver Application
- *
- * INPUT: none
- *
- * OUTPUT
- * @status: Status of execution
- */
-status_t SLM_Main(int_t argc, char_t* argv[])
+/* Mass of water - Added to each peptide mass */
+#define H2O                      18.015f
+#define PROTON                   1.00727647
+
+/* Not an Amino Acid (NAA) mass */
+#define NAA                      -20000
+
+/* Global Mods Info  */
+SLM_vMods      gModInfo;
+
+extern gParams params;
+
+/* Amino Acids Masses */
+float_t AAMass[26] = {
+                    71.03712,   // A
+                    NAA,        // B
+                    103.00919,  // C
+                    115.030,    // D
+                    129.0426,   // E
+                    147.068,    // F
+                    57.02146,   // G
+                    137.060,    // H
+                    113.084,    // I
+                    NAA,        // J
+                    128.094,    // K
+                    113.084,    // L
+                    131.0405,   // M
+                    114.043,    // N
+                    NAA,        // O
+                    97.0527,    // P
+                    128.05858,  // Q
+                    156.1012,   // R
+                    87.032,     // S
+                    101.0476,   // T
+                    NAA,        // U
+                    99.06841,   // V
+                    186.0793,   // W
+                    NAA,        // X
+                    163.0633,   // Y
+                    NAA,        // Z
+                    };
+
+/* Static Mods for Amino Acids */
+float_t StatMods[26] = {
+                      0,        // A
+                      0,        // B
+                      57.021464,// C + 57.02
+                      0,        // D
+                      0,        // E
+                      0,        // F
+                      0,        // G
+                      0,        // H
+                      0,        // I
+                      0,        // J
+                      0,        // K
+                      0,        // L
+                      0,        // M
+                      0,        // N
+                      0,        // O
+                      0,        // P
+                      0,        // Q
+                      0,        // R
+                      0,        // S
+                      0,        // T
+                      0,        // U
+                      0,        // V
+                      0,        // W
+                      0,        // X
+                      0,        // Y
+                      0,        // Z
+                      };
+
+/* Macros to extract AA masses */
+#define GETAA(x,z)                 ((AAMass[AAidx(x)]) + (StatMods[AAidx(x)]) + ((PROTON) * (z)))
+
+status_t DBCounter(char_t *filename)
 {
     status_t status = SLM_SUCCESS;
+    string_t line;
+    float_t pepmass = 0.0;
+    string_t modconditions = params.modconditions;
+    uint_t maxmass= params.max_mass;
+    uint_t minmass= params.min_mass;
+	
+	ull_t localpeps = 0;
 
-    char_t extension[] = ".peps";
+#ifndef VMODS
+    LBE_UNUSED_PARAM(modconditions);
+#endif /* VMODS */
 
-    if (argc < 2)
+    /* Open file */
+    file.open(filename);
+
+    if (file.is_open())
     {
-        std::cout << "ERROR: Missing arguments\n";
-        std::cout << "Format: ./counter.exe <uparams.txt>\n";
+        while (getline(file, line))
+        {
+            if (line.at(0) != '>')
+            {
+                /* Linux has a weird \r at end of each line */
+                if (line.at(line.length() - 1) == '\r')
+                {
+                    line = line.substr(0, line.size() - 1);
+                }
+
+                /* Transform to all upper case letters */
+                std::transform(line.begin(), line.end(), line.begin(), ::toupper);
+
+                /* Calculate mass of peptide */
+                pepmass = UTILS_CalculatePepMass((AA *)line.c_str(), line.length());
+
+                /* Check if the peptide mass is legal */
+                if (pepmass >= minmass && pepmass <= maxmass)
+                {
+                    Seqs.push_back(line);
+                    localpeps++;
+                }
+            }
+        }
+    }
+    else
+    {
+        std::cout << std::endl << "FATAL: Could not read FASTA file" << std::endl;
         status = ERR_INVLD_PARAM;
-        exit (status);
     }
 
-    /* Parse the parameters */
-    status = ParseParams(argv[1]);
-
-    /* Create local variables to avoid trouble */
-    uint_t minlen = params.min_len;
-    uint_t maxlen = params.max_len;
-
-    for (uint_t peplen = minlen; peplen <= maxlen; peplen++)
+#ifdef VMODS
+    /* Count the number of variable mods given
+     * modification information */
+    if (status == SLM_SUCCESS)
     {
-        dbfile = params.dbpath + "/" + std::to_string(peplen) + extension;
+        status = UTILS_InitializeModInfo(&params.vModInfo);
 
-        /* Count the number of ">" entries in FASTA */
-        status = LBE_CountPeps((char_t *) dbfile.c_str());
+        localpeps += MODS_ModCounter();
 
     }
 
-    /* The only output should be the cumulative size of the index */
-    std::cout << "spectra:" << cumusize << std::endl;
-	std::cout << "ions:" << ions << std::endl;
+#endif /* VMODS */
+
+    /* Print if everything is okay */
+    if (status == SLM_SUCCESS)
+    {
+        /* Close the file once done */
+        file.close();
+    }
+
+
+    cumusize += localpeps;
+    ions += (localpeps * ((Seqs.at(0).length() - 1) * params.maxz * iSERIES));
+
+    Seqs.clear();
 
     return status;
 }
 
-/* FUNCTION: ParseParams
- *
- * DESCRIPTION: Parse the input params and initialize
- *
- * INPUT: none
- *
- * OUTPUT
- * @status: Status of execution
+/*
+ * FUNCTION: UTILS_CalculatePepMass
  */
-static status_t ParseParams(char_t* paramfile)
+float_t UTILS_CalculatePepMass(AA *seq, uint_t len)
+{
+    /* Initialize mass to H2O */
+    float_t mass = H2O;
+
+    /* Calculate peptide mass */
+    for (uint_t l = 0; l < len; l++)
+    {
+        mass += AAMass[AAidx(seq[l])];
+        mass += StatMods[AAidx(seq[l])];
+    }
+
+    return mass;
+}
+
+/*
+ * FUNCTION: UTILS_InitializeModInfo
+ */
+status_t UTILS_InitializeModInfo(SLM_vMods *vMods)
 {
     status_t status = SLM_SUCCESS;
 
-    string_t line;
-
-    ifstream pfile(paramfile);
-
-    /* Check if mods file is open */
-    if (pfile.is_open())
-    {
-        /* Get path to DBparts */
-        getline(pfile, line);
-
-        /* Check for a dangling / character */
-        if (line.at(line.length()- 1) == '/')
-        {
-            line = line.substr(0, line.size() - 1);
-        }
-
-        params.dbpath = line;
-
-        /* Get path to MS2 data */
-        getline(pfile, line);
-
-        /* Check for a dangling / character */
-        if (line.at(line.length()- 1) == '/')
-        {
-            line = line.substr(0, line.size() - 1);
-        }
-
-        params.datapath = line;
-
-        /* Get the max threads to use */
-        getline(pfile, line);
-#ifdef USE_OMP
-        params.threads = std::atoi(line.c_str());
-#else
-        params.threads = 1;
-#endif /* USE_OMP */
-
-        /* Get the min peptide length */
-        getline(pfile, line);
-        params.min_len = std::atoi(line.c_str());
-
-        /* Get the max peptide length */
-        getline(pfile, line);
-        params.max_len = std::atoi(line.c_str());
-
-        /* Get the max fragment charge */
-        getline(pfile, line);
-        params.maxz = std::atoi(line.c_str());
-
-        /* Get the fragment mass tolerance */
-        getline(pfile, line);
-        params.dF = (uint_t)(std::atof(line.c_str()) * params.scale);
-
-        /* Get the precursor mass tolerance */
-        getline(pfile, line);
-        params.dM = std::atof(line.c_str());
-
-        /* Get the m/z axis resolution */
-        getline(pfile, line);
-        params.res = std::atof(line.c_str());
-
-        /* Get the scaling factor */
-        getline(pfile, line);
-        params.scale = std::atoi(line.c_str());
-
-        /* Get the min mass */
-        getline(pfile, line);
-        params.min_mass = std::atoi(line.c_str());
-
-        /* Get the max mass */
-        getline(pfile, line);
-        params.max_mass = std::atoi(line.c_str());
-
-        /* Get the top matches to report */
-        getline(pfile, line);
-        params.topmatches = std::atoi(line.c_str());
-
-        /* Get the shp threshold */
-        getline(pfile, line);
-        params.min_shp = std::atoi(line.c_str());
-
-        getline(pfile, line);
-        params.spadmem = std::atoi(line.c_str());
-
-        params.spadmem *= 1024 * 1024; // Convert to MBs (max scratch space for score card)
-
-        /* Get the distribution policy */
-        getline(pfile, line);
-
-        if (!line.compare("cyclic"))
-        {
-            params.policy = _cyclic;
-        }
-        else if (!line.compare("chunk"))
-        {
-            params.policy = _chunk;
-        }
-        else if (!line.compare("zigzag"))
-        {
-            params.policy = _zigzag;
-        }
-
-        /* Get number of mods */
-        getline(pfile, line);
-        params.vModInfo.num_vars = std::atoi((const char_t *) line.c_str());
-
-        /* If no mods then init to 0 M 0 */
-        if (params.vModInfo.num_vars == 0)
-        {
-            params.modconditions = "0 M 0";
-        }
-        else
-        {
-            /* Get max vmods per peptide sequence */
-            getline(pfile, line);
-            params.vModInfo.vmods_per_pep = std::atoi((const char_t *) line.c_str());
-            params.modconditions = std::to_string(params.vModInfo.vmods_per_pep);
-
-            /* Fill in information for each vmod */
-            for (ushort_t md = 0; md < params.vModInfo.num_vars; md++)
-            {
-                /* Get and set the modAAs */
-                getline(pfile, line);
-                params.modconditions += " " + line;
-
-                std::strncpy((char *) params.vModInfo.vmods[md].residues, (const char *) line.c_str(),
-                        std::min(4, (const int) line.length()));
-
-                /* get and set the modmass */
-                getline(pfile, line);
-                params.vModInfo.vmods[md].modMass = (uint_t) (std::atof((const char *) line.c_str()) * params.scale);
-
-                /* Get and set the modAAs_per_peptide */
-                getline(pfile, line);
-                params.modconditions += " " + line;
-
-                params.vModInfo.vmods[md].aa_per_peptide = std::atoi((const char *) line.c_str());
-            }
-        }
-
-        params.perf = new double_t[params.nodes];
-
-        /* Initialize to 1.0 for now */
-        for (uint_t nn = 0; nn < params.nodes; nn++)
-        {
-            params.perf[nn] = 1.0;
-        }
-
-        params.myid = 0;
-        params.nodes = 1;
-
-        pfile.close();
-    }
-    else
-    {
-        status = ERR_FILE_NOT_FOUND;
-    }
+    gModInfo = *vMods;
 
     return status;
+}
+/*
+ * FUNCTION: UTILS_CalculateModMass
+ */
+float_t UTILS_CalculateModMass(AA *seq, uint_t len, uint_t vModInfo)
+{
+    /* Initialize mass to H2O */
+    float_t mass = H2O;
+
+    /* Calculate peptide mass */
+    for (uint_t l = 0; l < len; l++)
+    {
+        mass += AAMass[AAidx(seq[l])];
+        mass += StatMods[AAidx(seq[l])];
+    }
+
+    /* Add the mass of modifications present in the peptide */
+    uint_t start = 0x0F;
+    uint_t modNum = vModInfo & start;
+
+    while (modNum != 0)
+    {
+        mass += ((float_t)(gModInfo.vmods[modNum - 1].modMass)/params.scale);
+        start = (start << 4);
+        modNum = ((vModInfo & start) >> start);
+    }
+
+
+    return mass;
 }

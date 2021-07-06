@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "common.h"
+#include "common.hpp"
 #include <limits>
 #include <iostream>
 

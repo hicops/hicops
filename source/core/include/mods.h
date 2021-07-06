@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
-#include "common.h"
+#include "common.hpp"
 #include "utils.h"
 
 #define MAX_COMBS                          64

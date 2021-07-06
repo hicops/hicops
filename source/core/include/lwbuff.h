@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "common.h"
+#include "common.hpp"
 #include "lwqueue.h"
 #include <semaphore.h>
 

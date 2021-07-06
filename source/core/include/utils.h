@@ -17,15 +17,14 @@
  *
  */
 
-#ifndef INCLUDE_UTILS_H_
-#define INCLUDE_UTILS_H_
+#pragma once
 
 #include <omp.h>
 #include <parallel/algorithm>
 #include <bits/stdc++.h>
 #include <functional>
 #include <cstdlib>
-#include "common.h"
+#include "common.hpp"
 #include "slm_dsts.h"
 #include "keyval.h"
 
@@ -100,7 +99,39 @@ uint_t   UTILS_GetNumProcs();
  * OUTPUT:
  * @factorial : the factorial of the input number n
  */
-ull_t UTILS_Factorial(ull_t);
+ull_t factorial(ull_t);
+
+
+namespace hcp
+{
+namespace utils
+{
+// max shared b- or y-ions
+const int maxshp = MAX_SHDPEAKS + 1;
+
+//
+// computes log(factorial(x)) at compile time
+//
+template<int N>
+struct lgfact {
+    constexpr lgfact() : val() {
+        
+        val[0] = val[1] = log10(1);
+
+        for (auto i = 2; i < N; i++) {
+            val[i] = log10(i) + val[i-1]; 
+        }
+    }
+
+    // needs to be const so it does not affect the val
+    auto operator[](int x) const { return val[x]; }
+
+    // array to store results
+    double val[N];
+};
+
+} // namespace utils
+} // namespace hcp
 
 /*
  * FUNCTION: UTILS_Shuffle
@@ -217,5 +248,3 @@ float_t UTILS_CalculateModMass(AA *, uint_t, uint_t);
  * @mass: Precursor mass of modified peptide
  */
 float_t UTILS_GenerateModSpectrum(char_t *, uint_t, uint_t *, modAA);
-
-#endif /* INCLUDE_UTILS_H_ */

@@ -197,30 +197,27 @@ status_t main(int_t argc, char_t* argv[])
     time_tuple_t index_inst("indexing");
 #endif
 
-    for (uint_t peplen = minlen; peplen <= maxlen; peplen++)
+    for (uint_t peplen = minlen; peplen <= maxlen && status == SLM_SUCCESS; peplen++)
     {
         dbfile = params.dbpath + "/" + std::to_string(peplen) + extension;
 
-        /* Set the peptide length in the pepIndex */
+        // set the peptide length in the pepIndex
         slm_index[peplen-minlen].pepIndex.peplen = peplen;
 
-        /* Count the number of ">" entries in FASTA */
-        if (status == SLM_SUCCESS)
+        MARK_START(lbe_cnt);
+
+        // Count the number of ">" entries in FASTA
+        status = LBE_CountPeps((char_t *) dbfile.c_str(), (slm_index + peplen-minlen), peplen);
+
+        MARK_END(lbe_cnt);
+
+        // Compute Duration
+        elapsed_seconds = ELAPSED_SECONDS(lbe_cnt);
+
+        if (params.myid == 0)
         {
-            MARK_START(lbe_cnt);
-
-            status = LBE_CountPeps((char_t *) dbfile.c_str(), (slm_index + peplen-minlen), peplen);
-
-            MARK_END(lbe_cnt);
-
-            /* Compute Duration */
-            elapsed_seconds = ELAPSED_SECONDS(lbe_cnt);
-
-            if (params.myid == 0)
-            {
-                std::cout << "DONE: Peptide Counting:\tstatus: " << status << std::endl << std::endl;
-                PRINT_ELAPSED(elapsed_seconds);
-            }
+            std::cout << "DONE: Peptide Counting:\tstatus: " << status << std::endl << std::endl;
+            PRINT_ELAPSED(elapsed_seconds);
         }
 
         if (status == SLM_SUCCESS)
@@ -359,8 +356,12 @@ status_t main(int_t argc, char_t* argv[])
     }
 
     /* De-initialize the ion index */
-    for (uint_t peplen = minlen; peplen <= maxlen; peplen++)
-        status = DSLIM_DeallocateIonIndex(slm_index + peplen - minlen);
+    if (status == SLM_SUCCESS)
+    {
+        /* De-initialize the ion index */
+        for (uint_t peplen = minlen; peplen <= maxlen; peplen++)
+            status = DSLIM_DeallocateIonIndex(slm_index + peplen - minlen);
+    }
 
 #if defined (USE_TIMEMORY)
     // stop instrumentation
@@ -600,9 +601,9 @@ static status_t ParseParams(char_t* paramfile)
         getline(pfile, line);
         params.min_cpsm = std::atoi(line.c_str());
 
-        /* Base Intensity */
+        /* Base Intensity x 1000 */
         getline(pfile, line);
-        params.base_int = std::atoi(line.c_str());
+        params.base_int = std::atoi(line.c_str()) * 1000;
 
         /* Cutoff intensity ratio */
         getline(pfile, line);

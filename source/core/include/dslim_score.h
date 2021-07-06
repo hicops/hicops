@@ -19,10 +19,10 @@
 
 #pragma once
 
-#include "common.h"
+#include "common.hpp"
 #include <thread>
 #include <unistd.h>
-#include "config.h"
+#include "config.hpp"
 #include "slm_dsts.h"
 #include "dslim.h"
 #include "slmerr.h"

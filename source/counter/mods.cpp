@@ -1,24 +1,24 @@
 /*
- * This file is part of SLM-Transform
- *  Copyright (C) 2019  Fatima Afzali, Muhammad Haseeb, Fahad Saeed
- *  Florida International University, Miami, FL
+ * Copyright (C) 2019  Fatima Afzali, Muhammad Haseeb, Fahad Saeed
+ * Florida International University, Miami, FL
  *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  */
-#include "mods.h"
-#include "lbe.h"
+#include "counter.hpp"
+
+#define MAX_COMBS                          64
 
 using namespace std;
 
@@ -245,7 +245,6 @@ ull_t MODS_ModCounter()
     uint_t threads = params.threads;
     string_t conditions = params.modconditions;
 
-#ifdef VMODS
     string_t token;
     stringstream ss(conditions);
 
@@ -272,7 +271,7 @@ ull_t MODS_ModCounter()
             }
 
 #else
-        LBE_UNUSED_PARAM(threads);
+        UNUSED_PARAM(threads);
 
        for (uint_t i = 0; i < Seqs.size(); i++)
        {
@@ -280,12 +279,6 @@ ull_t MODS_ModCounter()
        }
 
 #endif /* USE_OMP */
-
-#endif /* VMODS */
-
-#ifndef VMODS
-        LBE_UNUSED_PARAM(conditions);
-#endif /* VMODS */
     }
 
     lclcntr = 0;

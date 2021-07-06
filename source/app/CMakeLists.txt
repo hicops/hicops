@@ -5,11 +5,10 @@ project(hicops LANGUAGES C CXX)
 add_executable(hicops ${_EXCLUDE}
     ${CMAKE_CURRENT_LIST_DIR}/hicops.cpp)
 
-# include core/include
-target_include_directories(hicops PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../core/include)
+add_dependencies(hicops argparse)
 
-# to include the generated config.hpp
-include_directories(${CMAKE_BINARY_DIR})
+# include core/include and generated files
+target_include_directories(hicops PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../core/include ${CMAKE_BINARY_DIR} ${ARGPARSE_INCLUDE_DIR})
 
 # link appropriate libraries
 target_link_libraries(hicops hicops-core ${MPI_LIBRARIES})
@@ -21,7 +20,7 @@ endif()
 
 set_target_properties(hicops
     PROPERTIES
-        CXX_STANDARD 14
+        CXX_STANDARD ${CMAKE_CXX_STANDARD}
         CXX_STANDARD_REQUIRED YES
         CXX_EXTENSIONS NO
         INSTALL_RPATH_USE_LINK_PATH ON

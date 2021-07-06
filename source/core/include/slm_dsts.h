@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include "common.h"
-#include "config.h"
+#include "common.hpp"
+#include "config.hpp"
 #include "minheap.h"
 #include <cstring>
 
@@ -289,10 +289,10 @@ typedef struct _pepEntry
  */
 typedef struct _BYC
 {
-    ushort_t   bc;        /* b ion count */
-    ushort_t   yc;        /* y ion count */
-    uint_t    ibc;
-    uint_t    iyc;
+    short_t      bc; // b ion count
+    short_t      yc; // y ion count
+    long_t      ibc; // b ion intensities
+    long_t      iyc; // y ion intensities
 
     _BYC()
     {
@@ -305,8 +305,8 @@ typedef struct _BYC
 
 typedef struct _SLMchunk
 {
-    uint_t    *iA; /* Ions Array (iA)   */
-    uint_t    *bA; /* Bucket Array (bA) */
+    uint_t    *iA; // Ions Array (iA)  
+    uint_t    *bA; // Bucket Array (bA)
 
     _SLMchunk()
     {
@@ -315,7 +315,7 @@ typedef struct _SLMchunk
     }
 
 #ifdef FUTURE
-    uchar_t *bits = NULL; /* Scorecard bits    */
+    uchar_t *bits = NULL; // Scorecard bits
 #endif /* FUTURE */
 } SLMchunk;
 
@@ -425,6 +425,8 @@ typedef struct _queries
     uint_t  *intensity; /* Stores the intensity values of the experimental spectra */
     uint_t        *idx; /* Row ptr. Starting index of each row */
     float_t  *precurse; /* Stores the precursor mass of each spectrum. */
+    int_t     *charges;
+    float_t    *rtimes;
     int_t     numPeaks;
     int_t     numSpecs; /* Number of theoretical spectra */
     int_t     batchNum;
@@ -444,6 +446,7 @@ typedef struct _queries
         this->idx       = NULL;
         this->precurse  = NULL;
         this->moz       = NULL;
+        this->charges   = NULL;
         this->intensity = NULL;
         numPeaks        = 0;
         numSpecs        = 0;
@@ -454,6 +457,8 @@ typedef struct _queries
     {
         this->idx       = new uint_t[QCHUNK + 1];
         this->precurse  = new float_t[QCHUNK];
+        this->charges   = new int_t[QCHUNK];
+        this->rtimes   = new float_t[QCHUNK];
         this->moz       = new uint_t[QCHUNK * QALEN];
         this->intensity = new uint_t[QCHUNK * QALEN];
         fileNum         = 0;
@@ -488,6 +493,18 @@ typedef struct _queries
             this->precurse = NULL;
         }
 
+        if (this->charges != NULL)
+        {
+            delete[] this->charges;
+            this->charges = NULL;
+        }
+
+        if (this->rtimes != NULL)
+        {
+            delete[] this->rtimes;
+            this->rtimes = NULL;
+        }
+
         if (this->idx != NULL)
         {
             delete[] this->idx;
@@ -520,6 +537,18 @@ typedef struct _queries
             this->precurse = NULL;
         }
 
+        if (this->charges != NULL)
+        {
+            delete[] this->charges;
+            this->charges = NULL;
+        }
+
+        if (this->rtimes != NULL)
+        {
+            delete[] this->rtimes;
+            this->rtimes = NULL;
+        }
+
         if (this->idx != NULL)
         {
             delete[] this->idx;
@@ -545,8 +574,9 @@ typedef struct _heapEntry
 
     /* Parent spectrum ID in the respective chunk of index */
     int_t        psid;
-
     float_t     pmass;
+    int_t        pchg;
+    float_t     rtime;
 
     /* Computed hyperscore */
     float_t hyperscore;
@@ -561,6 +591,8 @@ typedef struct _heapEntry
         sharedions = 0;
         totalions  = 0;
         pmass      = 0;
+        pchg       = 0;
+        rtime      = 0;
     }
 
     /* Copy constructor */
@@ -596,6 +628,8 @@ typedef struct _heapEntry
         this->sharedions = rhs;
         this->totalions = rhs;
         this->pmass = rhs;
+        this->pchg = rhs;
+        this->rtime = rhs;
 
         return *this;
     }

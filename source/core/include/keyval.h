@@ -28,7 +28,7 @@
 #pragma once
 
 #include <omp.h>
-#include "common.h"
+#include "common.hpp"
 
 #ifdef USE_OMP
 /*

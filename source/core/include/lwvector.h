@@ -24,7 +24,7 @@
 #include <math.h>
 #include <string>
 #include <cstring>
-#include "common.h"
+#include "common.hpp"
 
 using namespace std;
 

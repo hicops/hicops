@@ -23,8 +23,8 @@
 #include <valarray>
 #include <algorithm>
 #include "lwvector.h"
-#include "config.h"
-#include "common.h"
+#include "config.hpp"
+#include "common.hpp"
 #include "slm_dsts.h"
 
 using dvector = std::vector<double_t>;

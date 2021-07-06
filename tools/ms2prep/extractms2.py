@@ -33,9 +33,9 @@ import pandas as pd
 import operator
 import argparse
 
-
-# Sanity Checking
-
+#
+# main function
+#
 if __name__ == '__main__':
     # parse user paramters
     parser = argparse.ArgumentParser(description='Extract spectra from MS2 files')
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     ms2file = args.ifile.lstrip(' ')
     spectralist = np.array(args.specs)
 
-    spectralist[spectralist < 1] = 1
+    spectralist = spectralist[spectralist >= 0]
 
     # Check if file exists
     if not os.path.isfile(ms2file):
@@ -59,7 +59,7 @@ if __name__ == '__main__':
         exit (-1)
     
     # Extract Spectra
-    
+
     # Empty list to store lines
     lines = []
     
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     currSpec = 0
     
     # Current spectrum number
-    specno = 1
+    specno = 0
     
     # Boolean to keep the data or not
     keep = False
@@ -75,7 +75,6 @@ if __name__ == '__main__':
     # Extract the required data
     with open(ms2file) as file:
         for line in file:
-    
             # Check if we want to keep the line
             if line[:2] == 'H\t':
                 lines.append(line)
@@ -88,7 +87,7 @@ if __name__ == '__main__':
                     break
     
                 # If we want to keep it
-                if specno == spectralist[currSpec]:
+                if specno in spectralist:
                     keep = True
                     currSpec += 1
                     lines.append(line)
@@ -104,10 +103,8 @@ if __name__ == '__main__':
             else:
                 if keep == True:
                         lines.append(line)
-    
-    
+
     # Write data to a new file
-    
     ms2file2 = ms2file[:-4] + '_extracted.ms2'
     print ('Writing extracted data at: ' + ms2file2)
 

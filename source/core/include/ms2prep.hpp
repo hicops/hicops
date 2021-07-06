@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2020  Muhammad Haseeb, and Fahad Saeed
- * Florida International University (FIU), Miami, FL
+ * Copyright (C) 2021  Muhammad Haseeb, and Fahad Saeed
+ * Florida International University, Miami, FL
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,30 +19,32 @@
 
 #pragma once
 
+#include <mpi.h>
 #include "common.hpp"
-#include "slm_dsts.h"
-#include "expeRT.h"
-#include "dslim.h"
+#include "msquery.hpp"
+#include "lwqueue.h"
+#include "lwbuff.h"
+#include "hicops_instr.hpp"
 
-#ifdef USE_MPI
+//
+// Superstep 2
+//
 
-class DSLIM_Comm
+namespace hcp
 {
-private:
-    int_t nBatches;
+namespace ms2
+{
+// synchronize superstep 2
+status_t synchronize();
 
-    int_t *sizeArray;
-    int_t *fileArray;
+// get instance of ptrs
+MSQuery **& get_instance();
 
-    int_t myRXsize;
+// initialize MS2 data index
+status_t initialize(lwqueue<MSQuery *>**, int_t&, int_t&);
 
-public:
+// delete the index
+void deinitialize();
 
-    friend status_t DSLIM_CarryForward(Index *index, DSLIM_Comm *CommHandle, expeRT *ePtr, hCell *CandidatePSMS, int_t cpsmSize);
-    DSLIM_Comm();
-    DSLIM_Comm(int_t);
-    virtual ~DSLIM_Comm();
-    status_t AddBatch(int_t, int_t, int_t);
-};
-
-#endif /* USE_MPI */
+} // namespace ms2
+} // namespace hcp

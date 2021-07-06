@@ -16,7 +16,6 @@
 *.jekyll-metadata
 
 #IDE files
-/CMakeLists.txt.user*
 /.vscode
 /.vs
 /*.nja
@@ -99,7 +98,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 env/
-build/
+build*/
 develop-eggs/
 dist/
 downloads/
@@ -183,3 +182,16 @@ ENV/
 # vscode
 .vscode/
 .vs/
+
+# cmake 
+CMakeLists.txt.user*
+CMakeCache.txt*
+CMakeFiles*
+CMakeScripts*
+Testing*
+Makefile*
+cmake_install.cmake*
+install_manifest.txt*
+compile_commands.json*
+CTestTestfile.cmake*
+_deps*

@@ -40,6 +40,7 @@
 #define ERR_INVLD_MOD            (SLM_ERROR_BASE - 10)
 #define ERR_INVLD_NODE_RANK      (SLM_ERROR_BASE - 11)
 #define ERR_NOT_ENOUGH_DATA      (SLM_ERROR_BASE - 12)
+#define ERR_FILE_ERROR           (SLM_ERROR_BASE - 13)
 
 
 #define ENDSIGNAL                (SLM_ERROR_BASE - 100)

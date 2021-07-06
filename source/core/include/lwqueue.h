@@ -19,7 +19,7 @@
 
 #pragma once 
 
-#include "common.h"
+#include "common.hpp"
 #include <semaphore.h>
 
 using namespace std;

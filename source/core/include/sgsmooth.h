@@ -21,7 +21,7 @@
 #pragma once
 
 #include <vector>
-#include "common.h"
+#include "common.hpp"
 #include "lwvector.h"
 
 // savitzky golay smoothing.

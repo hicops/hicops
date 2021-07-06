@@ -65,10 +65,11 @@ status_t DFile_InitFiles()
                 string_t filename = common + "_" + std::to_string(f) + ".tsv";
                 tsvs[f].open(filename);
 
-                tsvs[f] << "file\t" << "scan_num\t" << "prec_mass\t" << "peptide\t"
-                        << "matched_ions\t" << "total_ions\t"
-                        << "calc_pep_mass\t" << "mass_diff\t" << "mod_info\t"
-                        << "hyperscore\t" << "expectscore\t" << "num_hits" << std::endl;
+                tsvs[f] << "file\t" << "scan_num\t" << "prec_mass\t" << "charge\t" 
+                        << "retention_time\t" << "peptide\t" << "matched_ions\t" 
+                        << "total_ions\t" << "calc_pep_mass\t" << "mass_diff\t" 
+                        << "mod_info\t" << "hyperscore\t" << "expectscore\t" 
+                        << "num_hits" << std::endl;
             }
         }
     }
@@ -133,12 +134,14 @@ status_t DFile_PrintScore(Index *index, uint_t specid, float_t pmass, hCell *psm
     tsvs[thno]         << queryfiles[psm->fileIndex];
     tsvs[thno] << '\t' << std::to_string(specid + 1);
     tsvs[thno] << '\t' << std::to_string(pmass);
+    tsvs[thno] << '\t' << std::to_string(psm->pchg);
+    tsvs[thno] << '\t' << std::to_string(psm->rtime);
     tsvs[thno] << '\t' << pep;
     tsvs[thno] << '\t' << std::to_string(psm->sharedions);
     tsvs[thno] << '\t' << std::to_string(psm->totalions);
     tsvs[thno] << '\t' << std::to_string(lclindex->pepEntries[pepid].Mass);
     tsvs[thno] << '\t' << std::to_string((pmass - lclindex->pepEntries[pepid].Mass));
-    tsvs[thno] << '\t'; // TODO: mod_info
+    tsvs[thno] << '\t'; // TODO: print (mod_info) here
     tsvs[thno] << '\t' << std::to_string(psm->hyperscore);
     tsvs[thno] << '\t' << std::to_string(e_x);
     tsvs[thno] << '\t' << std::to_string(npsms);

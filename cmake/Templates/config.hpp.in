@@ -1,0 +1,86 @@
+/*
+ * Copyright (C) 2020  Muhammad Haseeb and Fahad Saeed
+ * Florida International University, Miami, FL
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+// CMake generated header file. Do not modify
+
+#pragma once
+
+// use MPI based build
+#cmakedefine USE_MPI
+
+// enable Timemory based instrumentation
+#cmakedefine USE_TIMEMORY
+
+// enable MPIP instrumentation via Timemory
+#cmakedefine USE_MPIP_LIBRARY
+
+// use the Tail-fit method for expect score computations
+// if undefined then gumbel distribution fit method will be used
+#cmakedefine TAILFIT
+
+// print progress marks
+#cmakedefine PROGRESS
+
+// match fragment-ions to only the database ions with charge = precursor charge - 1
+// also do not match to the b1 ions that have low probability of generation.
+#cmakedefine MATCH_CHARGE
+
+// maximum peptide sequence length in the database: max 62 allowed
+#cmakedefine MAX_SEQ_LEN              @MAX_SEQ_LEN@
+
+// maximum fragments (peaks) per query spectrum */
+#cmakedefine QALEN                    @QALEN@
+
+// maximum query spectra per batch
+#cmakedefine QCHUNK                   @QCHUNK@
+
+// maximum hyperscore that is possible
+#cmakedefine MAX_HYPERSCORE           @MAX_HYPERSCORE@
+
+// maximum possible shared b- or y-ions
+#cmakedefine MAX_SHDPEAKS             @MAX_SHDPEAKS@
+
+// Max RX buffer size = 512MB 
+#define  RXBUFFERSIZE                 (512 * 1024 * 1024)
+
+// chunk size in number ions per chunk (def: 2 billion)
+#define MAX_IONS                       0x80000000
+
+// FUTURE:  Only b- and y-ions used in current implementation
+
+// Define the Ion Series and add it to iSERIES
+#define aIONS                          0
+#define bIONS                          1
+#define cIONS                          0
+#define xIONS                          0
+#define yIONS                          1
+#define zIONS                          0
+#define NLOSS                          0
+#define IMMONIUM                       0
+
+// Number of ion series generated per spectrum 
+#define iSERIES                        (aIONS + \
+                                        bIONS + \
+                                        cIONS + \
+                                        xIONS + \
+                                        yIONS + \
+                                        zIONS + \
+                                        NLOSS + \
+                                        IMMONIUM)
+
+// -------------------------------------------------------------------------------- //
