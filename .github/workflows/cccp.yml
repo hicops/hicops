@@ -27,8 +27,8 @@ jobs:
     - name: build
       run: |
         cd build-rel
-        make install -j 4
+        # make install -j 4
         cd ../build-deb
-        make install -j 4
+        # make install -j 4
         cd ../build-relwithdeb
-        make install -j 4
+        # make install -j 4
