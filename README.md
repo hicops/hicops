@@ -2,19 +2,15 @@
 
 # <img src="https://user-images.githubusercontent.com/14217455/97767279-84a86100-1af1-11eb-92db-52edf709cb1f.png" width="100" valign="middle" alt="HiCOPS"/> HiCOPS
 
-*HiCOPS*: Computational framework for accelerating database peptide search workloads on supercomputing systems.
-
-## Published Research
-
-*Placeholder for the published research paper*
+*HiCOPS*: Computational framework for scalably accelerating database peptide search workflows on supercomputers.
 
 ## Documentation
 
 Full HiCOPS documentation can be found [here](https://hicops.github.io).
 
-## Contributing
+## License
 
-All contributions are welcome including new features, documentation and bug fixes through standard GitHub pull request method.
+This software is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. All contributions are welcome including new features, documentation and bug fixes through standard GitHub pull request method. 
 
 ## Issues and Feature Requests
 
@@ -24,6 +20,3 @@ Open an issue [here](https://github.com/hicops/hicops/issues). Please include an
 
 1. [Muhammad Haseeb](https://sites.google.com/fiu.edu/muhammadhaseeb) [![Twitter](https://flat.badgen.net/twitter/follow/iHaseebM?icon=twitter)](https://twitter.com/iHaseebM)
 2. [Fahad Saeed](https://prof-s.github.io) [![Twitter](https://flat.badgen.net/twitter/follow/Prof_FahadSaeed?icon=twitter)](https://twitter.com/Prof_FahadSaeed)
-  
-# License
-This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
