@@ -43,7 +43,7 @@ endif()
 ##########################################################################################
 #       CMake settings
 ##########################################################################################
-option(USE_MPI "Enable MPI in hicops" ON)
+set(USE_MPI ON) # setting USE_MPI permanently ON
 option(USE_TIMEMORY "Enable Timemory instrumentation" OFF)
 option(USE_MPIP_LIBRARY "Enable MPIP instrumentation via Timemory" OFF)
 

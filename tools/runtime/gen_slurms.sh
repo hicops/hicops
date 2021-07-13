@@ -1,12 +1,13 @@
 #!/bin/bash
 #
 # SLURM duplicator for MSFragger experiments
-# Copyrights(C) 2019 PCDS Laboratory
-# Muhammad Haseeb, and Fahad Saeed
-# School of Computing and Information Sciences
-# Florida International University (FIU), Miami, FL
-# Email: {mhaseeb, fsaeed}@fiu.edu
-#
+# 
+# Copyright (C) 2021  Muhammad Haseeb and Fahad Saeed
+# Florida International University, Miami, FL# 
+# This program is licensed under the
+# Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
+# See full license terms here: http://creativecommons.org/licenses/by-nc-nd/4.0/
+# 
 
 # print usage
 function usage() {

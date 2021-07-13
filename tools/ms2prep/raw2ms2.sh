@@ -15,6 +15,15 @@
 # HELP: https://hub.docker.com/r/chambm/pwiz-skyline-i-agree-to-the-vendor-licenses
 # --------------------------------------------------------------------------------- #
 
+# 
+# Copyright (C) 2021  Muhammad Haseeb and Fahad Saeed
+# Florida International University, Miami, FL# 
+# This program is licensed under the
+# Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License.
+# See full license terms here: http://creativecommons.org/licenses/by-nc-nd/4.0/
+# 
+
+
 # print usage
 function usage() {
     echo "USAGE: sudo raw2ms2 [fmt] [absolute/path/to/data*.fmt|.FMT]"
