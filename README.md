@@ -4,6 +4,9 @@
 
 *HiCOPS*: Computational framework for scalably accelerating database peptide search workflows on supercomputers.
 
+## Announcement
+This is the legacy version of the HiCOPS codebase. The maintained HiCOPS and GPU-accelerated HiCOPS (GiCOPS) repository has moved [here](https://github.com/pcdslab/hicops). 
+
 ## Documentation
 
 Full HiCOPS documentation can be found [here](https://hicops.github.io).
