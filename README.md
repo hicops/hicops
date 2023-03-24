@@ -4,13 +4,16 @@
 
 *HiCOPS*: Computational framework for scalably accelerating database peptide search workflows on supercomputers.
 
+## Announcement
+This is the legacy version of the HiCOPS codebase only. The maintained HiCOPS and GPU-accelerated HiCOPS (GiCOPS) repository has moved [here](https://github.com/pcdslab/gicops). 
+
 ## Documentation
 
-Full HiCOPS documentation can be found [here](https://hicops.github.io).
+Full (legacy) HiCOPS documentation can be found [here](https://hicops.github.io).
 
 ## License
 
-This software is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>. All contributions are welcome including new features, documentation and bug fixes through standard GitHub pull request method. 
+This software is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-nd/4.0/">Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License</a>. All contributions are welcome including new features, documentation and bug fixes through standard GitHub pull request method. 
 
 ## Issues and Feature Requests
 
